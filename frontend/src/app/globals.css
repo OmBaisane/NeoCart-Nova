@@ -1,6 +1,13 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@theme {
+  --color-brand-indigo: #0b0f19;
+  --color-brand-blue: #2563eb;
+  --color-brand-cyan: #06b6d4;
+  --color-brand-surface: #ffffff;
+  --color-brand-bg: #f8fafc;
+  --color-brand-charcoal: #0f172a;
+}
 
 :root {
   --background: #f8fafc;
