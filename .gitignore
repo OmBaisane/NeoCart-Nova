@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Testing & Coverage
+coverage/
+
+# Next.js Build Output
+frontend/.next/
+frontend/out/
+
+# Backend Build Output
+backend/dist/
+backend/build/
+
+# Environment Files (Never commit these)
+.env
+.env.local
+.env.*.local
+backend/.env
+frontend/.env.local
+
+# OS & Editor Files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
