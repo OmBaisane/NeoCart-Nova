@@ -21,24 +21,46 @@
   - **Surface White:** `#FFFFFF`
   - **Deep Charcoal:** `#0F172A` (Typography)
 
-## 3. Security & Validation Rules
+## 3. Development Phases Roadmap
 
-- **Passwords:** Minimum 8 characters, hashed using `bcryptjs` via Mongoose pre-save hook.
-- **Sessions:** JWT with 7-day expiration, stored strictly in `httpOnly`, `sameSite`, and environment-aware `secure` cookies.
-- **Request Boundaries:** Strict server-side Zod validation before controller execution.
-- **Business Logic Guard:** Zero trust on frontend prices, totals, or inventory numbers. Backend calculates all order totals and validates live stock.
+- **Phase 1 — Foundation (Completed):**
+  - Git repository & monorepo hygiene (`.gitignore`, `.env.example`).
+  - Next.js App Router + TypeScript + Tailwind CSS v4 setup.
+  - Node.js + Express + TypeScript backend scaffolding.
+  - MongoDB + Mongoose connection lifecycle & error events.
+  - Official vector logo component & base layout.
+- **Phase 2 — Backend Core (In Progress):**
+  - Database Models (User, Category, Product, Cart, Order, Review).
+  - Authentication (JWT HttpOnly cookies, password hashing with bcrypt, 8-character min).
+  - Middlewares (`protect`, `adminOnly`, Zod validation, central error handler).
+  - Core REST APIs (Auth, Users, Products, Categories, Cart, Orders, Reviews, Admin).
+  - Server-side business logic & stock validation.
+- **Phase 3 — Frontend Core:**
+  - Storefront UI, design system, responsive Navbar & Footer.
+  - Home landing, Product listing (search, filter, sort, pagination).
+  - Product details & customer reviews.
+  - Authentication UI (Register, Login, Profile).
+  - Persistent Cart & Checkout flow (Cash on Delivery).
+  - Order success & tracking pages.
+  - TanStack Query server-state integration.
+- **Phase 4 — Admin Portal:**
+  - Admin authentication & authorization.
+  - Admin Dashboard analytics overview.
+  - Product CRUD & live inventory/stock management.
+  - Order management (status transitions: pending -> confirmed -> processing -> shipped -> delivered -> cancelled, tracking numbers).
+  - Customer directory view.
+- **Phase 5 — Integration & Polish:**
+  - Full end-to-end integration, loading skeletons, empty states, error boundaries.
+  - Edge cases (stock race conditions, price manipulation guard, cart clearance on order).
+  - Accessibility & mobile responsiveness audit.
+- **Phase 6 — Production & Deployment:**
+  - Production environment configs, CORS, secure cookies.
+  - Backend & frontend deployments.
 
-## 4. Locked V1 Scope
-
-- **Customer Storefront:** Landing page, product catalog, search, filter (category/price), sort, product details, ratings/reviews.
-- **Authentication:** Register, login, logout, profile view, HttpOnly cookie sessions, protected customer and admin routes.
-- **Shopping Flow:** Server-validated Cart, stock checks, Checkout, Shipping details, Cash on Delivery (COD).
-- **Orders:** Order snapshot creation, tracking number, status tracking, customer order history, cancellation.
-- **Reviews:** 1–5 rating, comment, 1 review per user/product, edit/delete own review.
-- **Admin Portal:** Protected Dashboard, product CRUD, inventory management, order status update, customer management.
-
-## 5. Architectural Rules
+## 4. Architectural & Security Rules
 
 - Never duplicate business/database logic inside Next.js API routes; Express handles all REST APIs.
-- Never trust frontend calculations for prices, discounts, totals, or stock.
-- Every completed milestone must follow: Explain -> Implement -> Verify -> Git commit/push -> Report -> Wait.
+- Never trust frontend calculations for prices, discounts, totals, or stock. All order totals are calculated server-side.
+- Passwords must be minimum 8 characters and hashed with bcrypt.
+- Passwords must never leak (`select: false`).
+- Terminal-first, milestone-by-milestone approach: Explain -> Implement -> Verify -> Git commit/push -> Report -> Wait for "Done bhai ab next".
