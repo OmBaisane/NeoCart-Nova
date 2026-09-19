@@ -112,3 +112,25 @@ export const updateProductSchema = z.object({
 
 export type CreateProductInput = z.infer<typeof createProductSchema>;
 export type UpdateProductInput = z.infer<typeof updateProductSchema>;
+
+export const addToCartSchema = z.object({
+  productId: z
+    .string()
+    .trim()
+    .regex(/^[0-9a-fA-F]{24}$/, "Invalid product ID format"),
+  quantity: z
+    .number()
+    .int("Quantity must be an integer")
+    .min(1, "Quantity must be at least 1")
+    .default(1),
+});
+
+export const updateCartItemSchema = z.object({
+  quantity: z
+    .number()
+    .int("Quantity must be an integer")
+    .min(0, "Quantity cannot be negative"),
+});
+
+export type AddToCartInput = z.infer<typeof addToCartSchema>;
+export type UpdateCartItemInput = z.infer<typeof updateCartItemSchema>;
