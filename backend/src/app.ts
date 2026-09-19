@@ -5,6 +5,7 @@ import { ENV } from "./config/env.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import authRoutes from "./routes/auth.routes.js";
 import categoryRoutes from "./routes/category.routes.js";
+import productRoutes from "./routes/product.routes.js";
 
 const app: Application = express();
 
@@ -32,6 +33,7 @@ app.get("/api/health", (req: Request, res: Response) => {
 // Mount Feature API Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/categories", categoryRoutes);
+app.use("/api/products", productRoutes);
 
 // Centralized error handling
 app.use(errorHandler);
