@@ -211,3 +211,36 @@ export const updateReviewSchema = z.object({
 
 export type CreateReviewInput = z.infer<typeof createReviewSchema>;
 export type UpdateReviewInput = z.infer<typeof updateReviewSchema>;
+
+export const updateProfileSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(2, "Name must be at least 2 characters")
+    .max(50, "Name cannot exceed 50 characters")
+    .optional(),
+  phone: z.string().trim().optional(),
+  avatar: z
+    .string()
+    .url("Avatar must be a valid URL")
+    .or(z.literal(""))
+    .optional(),
+  address: z
+    .object({
+      street: z.string().trim().optional(),
+      city: z.string().trim().optional(),
+      state: z.string().trim().optional(),
+      pincode: z.string().trim().optional(),
+    })
+    .optional(),
+});
+
+export const updatePasswordSchema = z.object({
+  currentPassword: z.string().min(1, "Current password is required"),
+  newPassword: z
+    .string()
+    .min(8, "New password must be at least 8 characters long"),
+});
+
+export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
+export type UpdatePasswordInput = z.infer<typeof updatePasswordSchema>;
