@@ -6,9 +6,13 @@ import {
   updateProduct,
   deleteProduct,
 } from "../controllers/product.controller.js";
+import reviewRouter from "./review.routes.js";
 import { protect, adminOnly } from "../middleware/auth.middleware.js";
 
 const router = Router();
+
+// Re-route into review router for reviews on a product
+router.use("/:productId/reviews", reviewRouter);
 
 // Public storefront routes
 router.get("/", getProducts);
