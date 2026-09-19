@@ -134,3 +134,49 @@ export const updateCartItemSchema = z.object({
 
 export type AddToCartInput = z.infer<typeof addToCartSchema>;
 export type UpdateCartItemInput = z.infer<typeof updateCartItemSchema>;
+
+export const shippingAddressSchema = z.object({
+  fullName: z
+    .string()
+    .trim()
+    .min(2, "Full name must be at least 2 characters")
+    .max(100, "Full name cannot exceed 100 characters"),
+  phone: z
+    .string()
+    .trim()
+    .min(10, "Phone number must be at least 10 digits")
+    .max(15, "Phone number cannot exceed 15 digits"),
+  address: z
+    .string()
+    .trim()
+    .min(5, "Street address must be at least 5 characters"),
+  city: z.string().trim().min(2, "City must be at least 2 characters"),
+  state: z.string().trim().min(2, "State must be at least 2 characters"),
+  pincode: z
+    .string()
+    .trim()
+    .min(4, "Pincode must be at least 4 characters")
+    .max(10, "Pincode cannot exceed 10 characters"),
+});
+
+export const createOrderSchema = z.object({
+  shippingAddress: shippingAddressSchema,
+  paymentMethod: z.literal("COD").default("COD"),
+});
+
+export const updateOrderStatusSchema = z.object({
+  orderStatus: z.enum([
+    "pending",
+    "confirmed",
+    "processing",
+    "shipped",
+    "delivered",
+    "cancelled",
+  ]),
+  paymentStatus: z.enum(["pending", "paid", "failed", "refunded"]).optional(),
+  trackingNumber: z.string().trim().optional(),
+});
+
+export type ShippingAddressInput = z.infer<typeof shippingAddressSchema>;
+export type CreateOrderInput = z.infer<typeof createOrderSchema>;
+export type UpdateOrderStatusInput = z.infer<typeof updateOrderStatusSchema>;
