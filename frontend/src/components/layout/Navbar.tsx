@@ -41,12 +41,9 @@ export const Navbar = () => {
     <header className="sticky top-0 z-50 w-full border-b border-slate-200 bg-white/95 backdrop-blur-md">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
         {/* Brand Logo */}
-        <Link
-          href="/"
-          className="flex items-center gap-3 transition-opacity hover:opacity-90"
-        >
+        <div className="flex items-center">
           <Logo size="md" />
-        </Link>
+        </div>
 
         {/* Global Search Bar (Desktop) */}
         <form

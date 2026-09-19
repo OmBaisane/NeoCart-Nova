@@ -11,6 +11,7 @@ export const metadata: Metadata = {
     "Production-oriented full-stack e-commerce experience built with Next.js, Express, and TypeScript.",
   icons: {
     icon: "/icon.svg",
+    shortcut: "/icon.svg",
   },
 };
 
