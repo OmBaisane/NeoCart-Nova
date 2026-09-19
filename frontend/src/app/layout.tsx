@@ -2,11 +2,16 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { QueryProvider } from "@/providers/QueryProvider";
 import { AuthProvider } from "@/context/AuthContext";
+import { Navbar } from "@/components/layout/Navbar";
+import { Footer } from "@/components/layout/Footer";
 
 export const metadata: Metadata = {
   title: "NeoCart Nova — Modern E-Commerce Platform",
   description:
     "Production-oriented full-stack e-commerce experience built with Next.js, Express, and TypeScript.",
+  icons: {
+    icon: "/icon.svg",
+  },
 };
 
 export default function RootLayout({
@@ -16,9 +21,13 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="bg-brand-bg text-brand-charcoal antialiased selection:bg-brand-blue selection:text-white">
+      <body className="flex min-h-screen flex-col bg-brand-bg text-brand-charcoal antialiased selection:bg-brand-blue selection:text-white">
         <QueryProvider>
-          <AuthProvider>{children}</AuthProvider>
+          <AuthProvider>
+            <Navbar />
+            <main className="flex-1">{children}</main>
+            <Footer />
+          </AuthProvider>
         </QueryProvider>
       </body>
     </html>
