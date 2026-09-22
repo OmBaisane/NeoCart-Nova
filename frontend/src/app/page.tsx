@@ -59,7 +59,7 @@ export default function HomePage() {
 
             <h1 className="text-4xl font-extrabold tracking-tight sm:text-6xl sm:leading-tight">
               Curated gear,{" "}
-              <span className="bg-gradient-to-r from-brand-blue to-cyan-accent bg-clip-text text-transparent">
+              <span className="bg-linear-to-r from-brand-blue to-cyan-accent bg-clip-text text-transparent">
                 verified delivery.
               </span>
             </h1>
