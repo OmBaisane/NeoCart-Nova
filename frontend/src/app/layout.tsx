@@ -4,6 +4,7 @@ import { QueryProvider } from "@/providers/QueryProvider";
 import { AuthProvider } from "@/context/AuthContext";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
+import { StoreLayoutWrapper } from "@/components/layout/StoreLayoutWrapper";
 
 export const metadata: Metadata = {
   title: "NeoCart Nova — Modern E-Commerce Platform",
@@ -25,9 +26,7 @@ export default function RootLayout({
       <body className="flex min-h-screen flex-col bg-brand-bg text-brand-charcoal antialiased selection:bg-brand-blue selection:text-white">
         <QueryProvider>
           <AuthProvider>
-            <Navbar />
-            <main className="flex-1">{children}</main>
-            <Footer />
+            <StoreLayoutWrapper>{children}</StoreLayoutWrapper>
           </AuthProvider>
         </QueryProvider>
       </body>
