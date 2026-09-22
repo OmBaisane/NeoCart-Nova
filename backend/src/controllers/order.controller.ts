@@ -130,7 +130,7 @@ export const createOrder = async (
   }
 };
 
-// GET /api/orders (Protected - Customer Order History)
+// GET /api/orders (Protected - Customer & Admin Order History)
 export const getMyOrders = async (
   req: Request,
   res: Response,
@@ -138,7 +138,14 @@ export const getMyOrders = async (
 ): Promise<void> => {
   try {
     const userId = req.user!._id;
-    const orders = await Order.find({ user: userId }).sort({ createdAt: -1 });
+    const isAdmin = req.user!.role === "admin";
+
+    // If admin then without any user restriction can fetch orders
+    const filter = isAdmin ? {} : { user: userId };
+
+    const orders = await Order.find(filter)
+      .populate("user", "name email")
+      .sort({ createdAt: -1 });
 
     res.status(200).json({
       success: true,
