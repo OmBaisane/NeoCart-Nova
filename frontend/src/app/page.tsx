@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { ProductCard, ProductItem } from "@/components/ui/ProductCard";
+import { ProductGridSkeleton } from "@/components/ui/Skeletons";
 import {
   ArrowRight,
   ShieldCheck,
@@ -44,9 +45,8 @@ export default function HomePage() {
 
   return (
     <div className="flex flex-col gap-16 pb-20">
-      {/* 1. Hero Section (Explicit Deep Indigo Background for 100% Contrast) */}
+      {/* 1. Hero Section */}
       <section className="relative overflow-hidden bg-brand-indigo px-4 py-24 text-white sm:px-6 lg:px-8 border-b border-slate-800/80">
-        {/* Ambient Glows */}
         <div className="absolute -top-16 -left-20 h-96 w-96 rounded-full bg-blue-600/25 blur-3xl pointer-events-none" />
         <div className="absolute -bottom-20 right-0 h-96 w-96 rounded-full bg-cyan-400/20 blur-3xl pointer-events-none" />
 
@@ -92,7 +92,7 @@ export default function HomePage() {
       {/* 2. Value Propositions Bar */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 w-full">
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
               <Truck className="h-6 w-6" />
             </div>
@@ -106,7 +106,7 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-cyan-50 text-cyan-600">
               <ShieldCheck className="h-6 w-6" />
             </div>
@@ -120,7 +120,7 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
               <RotateCcw className="h-6 w-6" />
             </div>
@@ -134,7 +134,7 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
               <Sparkles className="h-6 w-6" />
             </div>
@@ -194,7 +194,7 @@ export default function HomePage() {
         )}
       </section>
 
-      {/* 4. Featured Products Grid */}
+      {/* 4. Featured Products Grid with Skeletons */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 w-full">
         <div className="flex items-center justify-between border-b border-slate-200 pb-4">
           <div>
@@ -215,8 +215,8 @@ export default function HomePage() {
         </div>
 
         {isFeaturedLoading ? (
-          <div className="flex justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+          <div className="mt-8">
+            <ProductGridSkeleton count={4} />
           </div>
         ) : featuredData && featuredData.length > 0 ? (
           <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">

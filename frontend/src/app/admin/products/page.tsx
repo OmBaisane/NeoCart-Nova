@@ -4,6 +4,8 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { TableSkeleton } from "@/components/ui/Skeletons";
+import { EmptyState } from "@/components/ui/EmptyState";
 import {
   Package,
   Plus,
@@ -13,7 +15,6 @@ import {
   AlertTriangle,
   CheckCircle2,
   XCircle,
-  Loader2,
   ExternalLink,
 } from "lucide-react";
 
@@ -38,7 +39,6 @@ export default function AdminProductsPage() {
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
 
-  // 1. Fetch all products for admin
   const { data, isLoading } = useQuery<{
     products: AdminProductItem[];
     totalProducts: number;
@@ -50,7 +50,6 @@ export default function AdminProductsPage() {
     },
   });
 
-  // 2. Delete Product Mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       return api.delete(`/products/${id}`);
@@ -77,10 +76,9 @@ export default function AdminProductsPage() {
 
   return (
     <main className="space-y-6">
-      {/* Header bar */}
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-6">
         <div>
-          <h1 className="text-2xl font-extrabold tracking-tight text-brand-charcoal sm:text-3xl">
+          <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
             Inventory & Catalog Management
           </h1>
           <p className="mt-1 text-xs text-slate-500">
@@ -91,14 +89,13 @@ export default function AdminProductsPage() {
 
         <Link
           href="/admin/products/new"
-          className="flex items-center gap-1.5 rounded-xl bg-brand-blue px-4 py-2.5 text-xs font-bold text-white shadow-md shadow-blue-500/20 hover:bg-blue-600 transition"
+          className="flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-bold text-white shadow-md shadow-blue-500/20 hover:bg-blue-500 transition"
         >
           <Plus className="h-4 w-4" />
           <span>Add New Product</span>
         </Link>
       </div>
 
-      {/* Filter and Search Bar */}
       <div className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs">
         <div className="relative flex-1 max-w-md">
           <input
@@ -106,7 +103,7 @@ export default function AdminProductsPage() {
             placeholder="Search by title or category..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full rounded-lg border border-slate-300 py-2 pl-9 pr-3 text-xs outline-none focus:border-brand-blue"
+            className="w-full rounded-lg border border-slate-300 py-2 pl-9 pr-3 text-xs outline-none focus:border-blue-600"
           />
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
         </div>
@@ -116,15 +113,19 @@ export default function AdminProductsPage() {
         </span>
       </div>
 
-      {/* Table Container */}
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xs">
         {isLoading ? (
-          <div className="flex min-h-[40vh] items-center justify-center">
-            <Loader2 className="h-8 w-8 animate-spin text-brand-blue" />
+          <div className="p-4">
+            <TableSkeleton rows={6} cols={6} />
           </div>
         ) : filteredProducts.length === 0 ? (
-          <div className="p-12 text-center text-xs text-slate-400">
-            No products matched your search keyword.
+          <div className="p-6">
+            <EmptyState
+              title="No inventory records found"
+              description="No catalog products match your search keyword or criteria."
+              actionLabel="Clear Search"
+              onAction={() => setSearchTerm("")}
+            />
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -161,7 +162,6 @@ export default function AdminProductsPage() {
                       key={product._id}
                       className="transition hover:bg-slate-50/60"
                     >
-                      {/* Product identity */}
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-3">
                           <img
@@ -173,7 +173,7 @@ export default function AdminProductsPage() {
                             className="h-10 w-10 shrink-0 rounded-lg object-cover bg-slate-100"
                           />
                           <div className="min-w-0 max-w-xs">
-                            <h4 className="font-bold text-brand-charcoal truncate">
+                            <h4 className="font-bold text-slate-900 truncate">
                               {product.name}
                             </h4>
                             <div className="flex items-center gap-1.5 mt-0.5">
@@ -185,7 +185,7 @@ export default function AdminProductsPage() {
                               <Link
                                 href={`/products/${product.slug}`}
                                 target="_blank"
-                                className="text-[10px] text-brand-blue hover:underline flex items-center gap-0.5"
+                                className="text-[10px] text-blue-600 hover:underline flex items-center gap-0.5"
                               >
                                 <span>View in Store</span>
                                 <ExternalLink className="h-2.5 w-2.5" />
@@ -195,15 +195,13 @@ export default function AdminProductsPage() {
                         </div>
                       </td>
 
-                      {/* Category */}
                       <td className="py-3 px-4 font-medium text-slate-700">
                         {product.category?.name || "Unassigned"}
                       </td>
 
-                      {/* Price */}
                       <td className="py-3 px-4">
                         <div className="flex flex-col">
-                          <span className="font-bold text-brand-charcoal">
+                          <span className="font-bold text-slate-900">
                             ₹
                             {(
                               product.discountPrice || product.price
@@ -217,7 +215,6 @@ export default function AdminProductsPage() {
                         </div>
                       </td>
 
-                      {/* Stock Badge */}
                       <td className="py-3 px-4">
                         {isOutOfStock ? (
                           <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-bold text-rose-700">
@@ -237,7 +234,6 @@ export default function AdminProductsPage() {
                         )}
                       </td>
 
-                      {/* Active Status */}
                       <td className="py-3 px-4">
                         {product.isActive ? (
                           <span className="inline-block rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
@@ -250,12 +246,11 @@ export default function AdminProductsPage() {
                         )}
                       </td>
 
-                      {/* Actions */}
                       <td className="py-3 px-4 text-right">
                         <div className="flex items-center justify-end gap-2">
                           <Link
                             href={`/admin/products/${product._id}/edit`}
-                            className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 hover:text-brand-blue transition"
+                            className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 hover:text-blue-600 transition"
                             title="Edit Product"
                           >
                             <Edit className="h-4 w-4" />
