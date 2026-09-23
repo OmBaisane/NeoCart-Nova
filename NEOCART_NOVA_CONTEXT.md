@@ -36,6 +36,8 @@ Lucide React for consistent icons
 
 Layout Isolation via StoreLayoutWrapper: Public storefront (Navbar + Footer) completely detached from dedicated /admin control shell
 
+Responsive Admin Sidebar: Desktop navigation with mobile slide-over drawer and hamburger toggle
+
 No Redux unless real complexity later requires it
 
 Backend
@@ -52,6 +54,8 @@ JWT authentication
 
 Strict HttpOnly, SameSite, and environment-aware secure cookies (No JWT/token storage in localStorage)
 
+Cross-site cookie attribute parity (sameSite: 'none', secure: true in production) across login and logout endpoints
+
 bcryptjs password hashing via Mongoose pre-save hook (minimum 8 characters enforced)
 
 Backend-enforced role authorization (protect and adminOnly middlewares)
@@ -67,7 +71,9 @@ Premium home/landing page with dark hero banner, value pillars, category discove
 
 Product catalog with live text search, category filters, price range filter, multi-criteria sorting, and responsive pagination
 
-Product details page (/products/[slug]) with image gallery switcher, discount badges, stock alert guards, and verified reviews list
+Suspense boundary wrapped catalog for static prerendering compatibility with useSearchParams()
+
+Product details page (/products/[slug]) with image gallery switcher, discount badges, out-of-stock lock guards, and verified reviews list
 
 Verified ratings and reviews system (1–5 stars, comments, 1 review per user/product constraint)
 
@@ -81,13 +87,15 @@ Customer and admin route protection
 User profile management, structured shipping address pre-fill, and password change (/profile)
 
 Shopping, Orders & Checkout
-Add to cart, update exact quantities, remove items (/cart)
+Add to cart, update exact quantities, remove items (/cart) with dynamic mutations
 
 Per-user persistent cart
 
 Strict server-side stock validation and price retrieval directly from MongoDB
 
 Cash on Delivery (COD) checkout flow with auto-prefilled addresses (/checkout)
+
+Direct-access empty cart protection on checkout with graceful fallback states
 
 Immutable historical order item snapshots (freezes price, name, image, and quantity)
 
@@ -98,11 +106,11 @@ Immediate invoice and tracking screen (/order-success/[id])
 Customer order history with self-service cancellation and automatic warehouse restock (/orders)
 
 Admin Portal
-Isolated administrative shell: Dedicated sidebar navigation, executive topbar, and removal of storefront navbar/footer
+Isolated administrative shell: Dedicated sidebar navigation, responsive mobile drawer, executive topbar, and complete removal of storefront navbar/footer
 
 Executive Dashboard overview with real-time KPI telemetry (catalog items, customer accounts, low stock alerts) (/admin)
 
-Product inventory table with live search, stock alerts, and direct deletion (/admin/products)
+Product inventory table with live search, stock badges, and direct deletion (/admin/products)
 
 Reusable product creation and edit forms with category selectors and image arrays (/admin/products/new, /admin/products/[id]/edit)
 
@@ -186,6 +194,8 @@ STATUS: 100% COMPLETED
 
 [x] Dedicated Admin Layout with Sidebar, Executive Header, and adminOnly Role Guard (/admin)
 
+[x] Responsive Mobile Slide-over Drawer with Hamburger Navigation for Admin
+
 [x] Executive KPI Dashboard with warehouse inventory alerts (/admin)
 
 [x] Inventory Management Table with live search and product deletion (/admin/products)
@@ -197,18 +207,38 @@ STATUS: 100% COMPLETED
 [x] Registered Customer Directory with address and contact audits (/admin/users)
 
 Phase 5 — Integration & Polish
-STATUS: UPCOMING NEXT
+STATUS: 100% COMPLETED
 
-Loading skeletons & empty state polish
+[x] Shimmer loading skeleton components (ProductCardSkeleton, ProductGridSkeleton, TableSkeleton)
 
-Global error boundary check
+[x] Reusable EmptyState component integrated across Catalog, Cart, Checkout, and Admin tables
 
-Edge-case audits (out-of-stock handling, zero items fallback, concurrent checkouts)
+[x] Global Error Boundary (frontend/src/app/error.tsx)
 
-Production build & clean linter check
+[x] Custom 404 Route (frontend/src/app/not-found.tsx)
+
+[x] Next.js App Router Suspense boundary on /products for production build prerendering
+
+[x] Direct-access empty cart guard on /checkout
+
+[x] Out-of-stock purchase lock and stock boundary checks on /products/[slug]
 
 Phase 6 — Production & Deployment
-STATUS: PENDING
+STATUS: READY FOR LIVE DEPLOYMENT (Starting Tomorrow)
+
+[x] Dynamic production CORS origin handler in backend
+
+[x] Secure cross-origin cookie attributes (sameSite: 'none', secure: true) aligned across token creation and logout
+
+[x] Full production TypeScript build verification for both backend (tsc) and frontend (next build)
+
+[ ] MongoDB Atlas Cloud database setup & connection string verification
+
+[ ] Backend deployment on Render/Railway
+
+[ ] Frontend deployment on Vercel
+
+[ ] Live cross-origin cookie authentication and end-to-end checkout verification
 
 5. Current Project Structure
 Plaintext
@@ -251,6 +281,8 @@ NeoCart-Nova/
     │   │   │   ├── [slug]/page.tsx
     │   │   │   └── page.tsx
     │   │   ├── profile/page.tsx
+    │   │   ├── error.tsx
+    │   │   ├── not-found.tsx
     │   │   ├── globals.css
     │   │   ├── icon.svg
     │   │   ├── layout.tsx
@@ -262,7 +294,9 @@ NeoCart-Nova/
     │   │   │   ├── Navbar.tsx
     │   │   │   └── StoreLayoutWrapper.tsx
     │   │   └── ui/
-    │   │       └── ProductCard.tsx
+    │   │       ├── EmptyState.tsx
+    │   │       ├── ProductCard.tsx
+    │   │       └── Skeletons.tsx
     │   ├── context/
     │   │   └── AuthContext.tsx
     │   ├── lib/
@@ -291,5 +325,5 @@ Report status and wait for "Done bhai ab next"
 Never commit secrets, .env, or passwords.
 
 7. Next Immediate Milestone
-Milestone 5.1: Integration Polish & Loading Skeletons — Storefront aur Catalog mein shimmer loading skeleton cards add karna, empty state illustrations aur error boundaries lagana before final deployment prep.
+Milestone 6.2: Live Production Deployment — MongoDB Atlas cloud database synchronization, deploying backend to Render/Railway, deploying frontend to Vercel, and validating live cross-origin authenticated checkout flow.
 ```
