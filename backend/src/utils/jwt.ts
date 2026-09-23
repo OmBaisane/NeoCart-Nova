@@ -1,5 +1,5 @@
 import jwt from "jsonwebtoken";
-import { Response } from "express";
+import { CookieOptions, Response } from "express";
 import { ENV } from "../config/env.js";
 
 export interface TokenPayload {
@@ -9,6 +9,16 @@ export interface TokenPayload {
 
 const JWT_EXPIRES_IN = "7d";
 const COOKIE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
+
+const isProduction = ENV.NODE_ENV === "production";
+
+// Shared production-aware cookie configuration
+const baseCookieOptions: CookieOptions = {
+  httpOnly: true,
+  secure: isProduction,
+  sameSite: isProduction ? "none" : "lax",
+  path: "/",
+};
 
 export const signToken = (payload: TokenPayload): string => {
   return jwt.sign(payload, ENV.JWT_SECRET, {
@@ -27,11 +37,8 @@ export const sendTokenCookie = (
   const token = signToken(payload);
 
   res.cookie("token", token, {
-    httpOnly: true,
-    secure: ENV.NODE_ENV === "production",
-    sameSite: ENV.NODE_ENV === "production" ? "none" : "lax",
+    ...baseCookieOptions,
     maxAge: COOKIE_MAX_AGE_MS,
-    path: "/",
   });
 
   return token;
@@ -39,8 +46,7 @@ export const sendTokenCookie = (
 
 export const clearTokenCookie = (res: Response): void => {
   res.cookie("token", "", {
-    httpOnly: true,
+    ...baseCookieOptions,
     expires: new Date(0),
-    path: "/",
   });
 };

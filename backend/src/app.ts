@@ -17,7 +17,17 @@ const app: Application = express();
 
 app.use(
   cors({
-    origin: ENV.CLIENT_URL,
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps, curl) or matched frontend
+      const allowedOrigins = [
+        process.env.CLIENT_URL || "http://localhost:3000",
+      ];
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     credentials: true,
   }),
 );
