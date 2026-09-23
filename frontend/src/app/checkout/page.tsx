@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
+import { EmptyState } from "@/components/ui/EmptyState";
 import {
   ShieldCheck,
   Truck,
@@ -17,6 +18,7 @@ import {
   AlertCircle,
   Loader2,
   Lock,
+  ShoppingBag,
 } from "lucide-react";
 
 interface ShippingAddressState {
@@ -59,6 +61,13 @@ export default function CheckoutPage() {
     }
   }, [user]);
 
+  // Auth Guard
+  useEffect(() => {
+    if (!isAuthLoading && !user) {
+      router.push("/login?redirect=/checkout");
+    }
+  }, [user, isAuthLoading, router]);
+
   // 1. Fetch Cart to Verify Items Before Ordering
   const { data: cartData, isLoading: isCartLoading } = useQuery({
     queryKey: ["cart"],
@@ -79,15 +88,16 @@ export default function CheckoutPage() {
       return res.data;
     },
     onSuccess: (data) => {
-      // Invalidate cart so the navbar counter & cart page become empty
       queryClient.invalidateQueries({ queryKey: ["cart"] });
       queryClient.invalidateQueries({ queryKey: ["orders"] });
+      queryClient.invalidateQueries({ queryKey: ["my-orders"] });
       const orderId = data.order._id;
       router.push(`/order-success/${orderId}`);
     },
     onError: (err: any) => {
       setValidationError(
-        err.message ||
+        err.response?.data?.message ||
+          err.message ||
           "Failed to place order. Please check your stock and try again.",
       );
     },
@@ -101,9 +111,7 @@ export default function CheckoutPage() {
     );
   }
 
-  // Auth Guard
   if (!user) {
-    router.push("/login");
     return null;
   }
 
@@ -112,23 +120,17 @@ export default function CheckoutPage() {
   const shippingFee = subtotal >= 1000 || subtotal === 0 ? 0 : 99;
   const total = subtotal + shippingFee;
 
-  // Empty cart guard
+  // Empty cart direct access guard with unified EmptyState
   if (items.length === 0) {
     return (
-      <main className="mx-auto max-w-7xl px-4 py-20 text-center">
-        <AlertCircle className="mx-auto h-12 w-12 text-slate-300" />
-        <h1 className="mt-4 text-xl font-bold text-brand-charcoal">
-          Your Cart is Empty
-        </h1>
-        <p className="mt-2 text-xs text-slate-500">
-          You must add items to your cart before proceeding to checkout.
-        </p>
-        <Link
-          href="/products"
-          className="mt-6 inline-block rounded-lg bg-brand-blue px-6 py-2.5 text-xs font-semibold text-white hover:bg-blue-600"
-        >
-          Browse Catalog
-        </Link>
+      <main className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8 text-center">
+        <EmptyState
+          icon={ShoppingBag}
+          title="Cannot Checkout With an Empty Bag"
+          description="You must add items to your cart before proceeding to checkout."
+          actionLabel="Return to Catalog"
+          actionHref="/products"
+        />
       </main>
     );
   }
@@ -142,7 +144,6 @@ export default function CheckoutPage() {
     e.preventDefault();
     setValidationError(null);
 
-    // Client validation matching backend Zod schema
     if (form.fullName.trim().length < 2) {
       setValidationError("Full name must be at least 2 characters long.");
       return;

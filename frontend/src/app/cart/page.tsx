@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
+import { EmptyState } from "@/components/ui/EmptyState";
 import {
   Trash2,
   Plus,
@@ -14,7 +15,6 @@ import {
   ShieldCheck,
   Truck,
   Loader2,
-  AlertCircle,
 } from "lucide-react";
 
 interface CartItemPopulated {
@@ -46,11 +46,9 @@ export default function CartPage() {
   const queryClient = useQueryClient();
 
   // 1. Fetch Cart Data
-  const {
-    data: cartData,
-    isLoading: isCartLoading,
-    isError,
-  } = useQuery<{ cart: CartResponse }>({
+  const { data: cartData, isLoading: isCartLoading } = useQuery<{
+    cart: CartResponse;
+  }>({
     queryKey: ["cart"],
     queryFn: async () => {
       const res = await api.get("/cart");
@@ -97,30 +95,13 @@ export default function CartPage() {
   if (!user) {
     return (
       <main className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8 text-center">
-        <div className="mx-auto max-w-md rounded-2xl border border-slate-200 bg-white p-8 shadow-xs">
-          <ShoppingBag className="mx-auto h-12 w-12 text-slate-300" />
-          <h1 className="mt-4 text-xl font-bold text-brand-charcoal">
-            Your Cart is Waiting
-          </h1>
-          <p className="mt-2 text-xs text-slate-500">
-            Sign in to view your saved items, synchronize inventory, and proceed
-            to checkout.
-          </p>
-          <div className="mt-6 flex justify-center gap-3">
-            <Link
-              href="/login"
-              className="rounded-lg bg-brand-blue px-6 py-2.5 text-xs font-semibold text-white shadow-xs hover:bg-blue-600"
-            >
-              Sign In
-            </Link>
-            <Link
-              href="/products"
-              className="rounded-lg border border-slate-300 px-6 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-            >
-              Browse Catalog
-            </Link>
-          </div>
-        </div>
+        <EmptyState
+          icon={ShoppingBag}
+          title="Your Cart is Waiting"
+          description="Sign in to view your saved items, synchronize inventory, and proceed to checkout."
+          actionLabel="Sign In"
+          actionHref="/login"
+        />
       </main>
     );
   }
@@ -135,22 +116,13 @@ export default function CartPage() {
   if (items.length === 0) {
     return (
       <main className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8 text-center">
-        <div className="mx-auto max-w-md rounded-2xl border border-dashed border-slate-200 bg-white p-12">
-          <ShoppingBag className="mx-auto h-12 w-12 text-slate-300" />
-          <h1 className="mt-4 text-xl font-bold text-brand-charcoal">
-            Your Shopping Cart is Empty
-          </h1>
-          <p className="mt-2 text-xs text-slate-500">
-            Looks like you haven&apos;t added any items to your bag yet.
-          </p>
-          <Link
-            href="/products"
-            className="mt-6 inline-flex items-center gap-2 rounded-lg bg-brand-blue px-6 py-2.5 text-xs font-semibold text-white shadow-xs hover:bg-blue-600"
-          >
-            <span>Explore Catalog</span>
-            <ArrowRight className="h-4 w-4" />
-          </Link>
-        </div>
+        <EmptyState
+          icon={ShoppingBag}
+          title="Your Shopping Cart is Empty"
+          description="Looks like you haven't added any items to your bag yet."
+          actionLabel="Explore Catalog"
+          actionHref="/products"
+        />
       </main>
     );
   }

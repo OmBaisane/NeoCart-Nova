@@ -20,6 +20,7 @@ import {
   Plus,
   Minus,
   MessageSquare,
+  XCircle,
 } from "lucide-react";
 
 interface ReviewItem {
@@ -97,7 +98,11 @@ export default function ProductDetailsPage({
       setTimeout(() => setCartSuccess(false), 3500);
     },
     onError: (err: any) => {
-      setCartError(err.message || "Failed to add item to cart");
+      setCartError(
+        err.response?.data?.message ||
+          err.message ||
+          "Failed to add item to cart",
+      );
     },
   });
 
@@ -118,13 +123,15 @@ export default function ProductDetailsPage({
       queryClient.invalidateQueries({ queryKey: ["product", slug] });
     },
     onError: (err: any) => {
-      setReviewError(err.message || "Failed to submit review");
+      setReviewError(
+        err.response?.data?.message || err.message || "Failed to submit review",
+      );
     },
   });
 
   const handleAddToCart = () => {
     if (!user) {
-      router.push("/login");
+      router.push(`/login?redirect=/products/${slug}`);
       return;
     }
     setCartError(null);
@@ -134,7 +141,7 @@ export default function ProductDetailsPage({
   const handleReviewSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) {
-      router.push("/login");
+      router.push(`/login?redirect=/products/${slug}`);
       return;
     }
     if (reviewComment.trim().length < 3) {
@@ -308,11 +315,12 @@ export default function ProductDetailsPage({
             </span>
             {isOutOfStock ? (
               <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-bold text-rose-700">
-                <AlertCircle className="h-3.5 w-3.5" />
+                <XCircle className="h-3.5 w-3.5" />
                 Out of Stock
               </span>
             ) : product.stock <= 5 ? (
               <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-bold text-amber-700">
+                <AlertCircle className="h-3.5 w-3.5" />
                 Only {product.stock} units left in stock
               </span>
             ) : (
