@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
@@ -13,7 +13,6 @@ import {
   ChevronLeft,
   ChevronRight,
   RotateCcw,
-  Layers,
 } from "lucide-react";
 
 interface CategoryItem {
@@ -22,7 +21,7 @@ interface CategoryItem {
   slug: string;
 }
 
-export default function ProductsCatalogPage() {
+function ProductsCatalogContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -307,5 +306,20 @@ export default function ProductsCatalogPage() {
         </section>
       </div>
     </main>
+  );
+}
+
+// Suspense boundary wraps the client search-params component for Next.js build prerendering
+export default function ProductsCatalogPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+          <ProductGridSkeleton count={8} />
+        </div>
+      }
+    >
+      <ProductsCatalogContent />
+    </Suspense>
   );
 }
