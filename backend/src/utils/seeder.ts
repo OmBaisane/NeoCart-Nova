@@ -10,17 +10,18 @@ import { Order } from "../models/order.model.js";
 
 const seedDatabase = async () => {
   try {
-    await connectDB();
-    console.log("🔄 Connecting to MongoDB for seeding...");
+    const isProduction = process.env.NODE_ENV === "production";
+    const forceFlag = process.argv.includes("--force-production-seed");
 
-    // 1. Purana demo data safely wipe out karo
-    await User.deleteMany();
-    await Category.deleteMany();
-    await Product.deleteMany();
-    await Review.deleteMany();
-    await Cart.deleteMany();
-    await Order.deleteMany();
-    console.log("🧹 Existing collections cleared.");
+    if (isProduction && !forceFlag) {
+      console.error(
+        "CRITICAL ERROR: Destructive database seeding is prohibited in production without the explicit '--force-production-seed' flag.",
+      );
+      process.exit(1);
+    }
+
+    await connectDB();
+    console.log("Connected to MongoDB. Starting database seed...");
 
     // 2. Admin User create karo
     const adminUser = await User.create({

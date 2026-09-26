@@ -28,9 +28,14 @@ export const getProducts = async (
 
     // 1. Text Search (Name or Description)
     if (search && typeof search === "string" && search.trim() !== "") {
+      // Escape special regex characters to prevent ReDoS injection and cap search query length
+      const sanitized = search
+        .trim()
+        .slice(0, 80)
+        .replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       query.$or = [
-        { name: { $regex: search.trim(), $options: "i" } },
-        { description: { $regex: search.trim(), $options: "i" } },
+        { name: { $regex: sanitized, $options: "i" } },
+        { description: { $regex: sanitized, $options: "i" } },
       ];
     }
 
