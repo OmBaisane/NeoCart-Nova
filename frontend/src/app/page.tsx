@@ -44,7 +44,7 @@ export default function HomePage() {
   });
 
   return (
-    <div className="flex flex-col gap-16 pb-20">
+    <main className="flex flex-col gap-16 pb-20">
       {/* 1. Hero Section */}
       <section className="relative overflow-hidden bg-brand-indigo px-4 py-24 text-white sm:px-6 lg:px-8 border-b border-slate-800/80">
         <div className="absolute -top-16 -left-20 h-96 w-96 rounded-full bg-blue-600/25 blur-3xl pointer-events-none" />
@@ -244,6 +244,6 @@ export default function HomePage() {
           </div>
         )}
       </section>
-    </div>
+    </main>
   );
 }

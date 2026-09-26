@@ -14,15 +14,14 @@ export const StoreLayoutWrapper = ({
   const isAdminRoute = pathname.startsWith("/admin");
 
   if (isAdminRoute) {
-    // Admin routes par customer navbar aur footer render nahi honge
-    return <main className="flex-1">{children}</main>;
+    return <div className="flex min-h-screen flex-col">{children}</div>;
   }
 
   return (
-    <>
+    <div className="flex min-h-screen flex-col">
       <Navbar />
-      <main className="flex-1">{children}</main>
+      <div className="flex-1">{children}</div>
       <Footer />
-    </>
+    </div>
   );
 };

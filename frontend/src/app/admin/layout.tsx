@@ -29,12 +29,12 @@ export default function AdminLayout({
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Route change hone par mobile drawer automatically band ho jaye
+  // Close mobile drawer upon route transitions
   useEffect(() => {
     setMobileMenuOpen(false);
   }, [pathname]);
 
-  // Role Guard: Redirect non-admins away
+  // Enforce administrative privileges
   useEffect(() => {
     if (!isLoading) {
       if (!user) {
@@ -48,7 +48,10 @@ export default function AdminLayout({
   if (isLoading || !user || user.role !== "admin") {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-slate-900 text-white">
-        <Loader2 className="h-8 w-8 animate-spin text-cyan-400" />
+        <Loader2
+          className="h-8 w-8 animate-spin text-cyan-400"
+          aria-hidden="true"
+        />
         <p className="text-xs font-semibold text-slate-400">
           Verifying administrative privileges...
         </p>
@@ -90,8 +93,11 @@ export default function AdminLayout({
 
   return (
     <div className="flex min-h-screen bg-slate-100/70">
-      {/* 1. Desktop Dedicated Sidebar */}
-      <aside className="hidden w-64 shrink-0 flex-col justify-between border-r border-slate-200 bg-white md:flex">
+      {/* Desktop Sidebar */}
+      <aside
+        aria-label="Admin Desktop Navigation"
+        className="hidden w-64 shrink-0 flex-col justify-between border-r border-slate-200 bg-white md:flex"
+      >
         <div className="space-y-6 p-4">
           <div className="flex items-center gap-3 border-b border-slate-100 px-2 pb-4">
             <Logo size="sm" />
@@ -100,7 +106,7 @@ export default function AdminLayout({
             </span>
           </div>
 
-          <nav className="space-y-1">
+          <nav aria-label="Admin Navigation Links" className="space-y-1">
             {navLinks.map((link) => {
               const Icon = link.icon;
               return (
@@ -114,10 +120,12 @@ export default function AdminLayout({
                   }`}
                 >
                   <div className="flex items-center gap-2.5">
-                    <Icon className="h-4 w-4" />
+                    <Icon className="h-4 w-4" aria-hidden="true" />
                     <span>{link.name}</span>
                   </div>
-                  {link.active && <ChevronRight className="h-3.5 w-3.5" />}
+                  {link.active && (
+                    <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
+                  )}
                 </Link>
               );
             })}
@@ -129,31 +137,39 @@ export default function AdminLayout({
             href="/"
             className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50"
           >
-            <Store className="h-4 w-4 text-slate-500" />
+            <Store className="h-4 w-4 text-slate-500" aria-hidden="true" />
             <span>Storefront View</span>
           </Link>
 
           <button
+            type="button"
             onClick={handleLogout}
             className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs font-bold text-rose-600 transition hover:bg-rose-50"
           >
-            <LogOut className="h-4 w-4" />
+            <LogOut className="h-4 w-4" aria-hidden="true" />
             <span>Sign Out</span>
           </button>
         </div>
       </aside>
 
-      {/* 2. Mobile Drawer Overlay & Sidebar */}
+      {/* Mobile Drawer Overlay */}
       {mobileMenuOpen && (
-        <div className="fixed inset-0 z-50 flex md:hidden">
-          {/* Backdrop */}
+        <div
+          className="fixed inset-0 z-50 flex md:hidden"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Admin navigation drawer"
+        >
           <div
             className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity"
+            aria-hidden="true"
             onClick={() => setMobileMenuOpen(false)}
           />
 
-          {/* Slide-over Menu Panel */}
-          <div className="relative flex w-4/5 max-w-xs flex-1 flex-col justify-between bg-white p-5 shadow-2xl">
+          <div
+            id="admin-mobile-drawer"
+            className="relative flex w-4/5 max-w-xs flex-1 flex-col justify-between bg-white p-5 shadow-2xl"
+          >
             <div className="space-y-6">
               <div className="flex items-center justify-between border-b border-slate-100 pb-4">
                 <div className="flex items-center gap-2">
@@ -163,16 +179,16 @@ export default function AdminLayout({
                   </span>
                 </div>
                 <button
+                  type="button"
                   onClick={() => setMobileMenuOpen(false)}
                   className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100"
-                  aria-label="Close mobile navigation"
+                  aria-label="Close navigation drawer"
                 >
-                  <X className="h-5 w-5" />
+                  <X className="h-5 w-5" aria-hidden="true" />
                 </button>
               </div>
 
-              {/* Mobile Navigation Links */}
-              <nav className="space-y-1.5">
+              <nav aria-label="Mobile Admin Links" className="space-y-1.5">
                 {navLinks.map((link) => {
                   const Icon = link.icon;
                   return (
@@ -187,32 +203,37 @@ export default function AdminLayout({
                       }`}
                     >
                       <div className="flex items-center gap-2.5">
-                        <Icon className="h-4 w-4" />
+                        <Icon className="h-4 w-4" aria-hidden="true" />
                         <span>{link.name}</span>
                       </div>
-                      {link.active && <ChevronRight className="h-3.5 w-3.5" />}
+                      {link.active && (
+                        <ChevronRight
+                          className="h-3.5 w-3.5"
+                          aria-hidden="true"
+                        />
+                      )}
                     </Link>
                   );
                 })}
               </nav>
             </div>
 
-            {/* Mobile Footer Shortcuts */}
             <div className="space-y-2 border-t border-slate-100 pt-4">
               <Link
                 href="/"
                 onClick={() => setMobileMenuOpen(false)}
                 className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2.5 text-xs font-bold text-slate-700 transition hover:bg-slate-50"
               >
-                <Store className="h-4 w-4 text-slate-500" />
+                <Store className="h-4 w-4 text-slate-500" aria-hidden="true" />
                 <span>Storefront View</span>
               </Link>
 
               <button
+                type="button"
                 onClick={handleLogout}
                 className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-xs font-bold text-rose-600 transition hover:bg-rose-50"
               >
-                <LogOut className="h-4 w-4" />
+                <LogOut className="h-4 w-4" aria-hidden="true" />
                 <span>Sign Out</span>
               </button>
             </div>
@@ -220,22 +241,26 @@ export default function AdminLayout({
         </div>
       )}
 
-      {/* 3. Main Admin Area */}
+      {/* Main Administrative Container */}
       <div className="flex min-w-0 flex-1 flex-col">
-        {/* Responsive Admin Header */}
         <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-slate-200 bg-white/95 px-4 backdrop-blur-md sm:px-8">
           <div className="flex items-center gap-3">
-            {/* Mobile Hamburger Trigger */}
             <button
+              type="button"
               onClick={() => setMobileMenuOpen(true)}
               className="rounded-lg p-1.5 text-slate-600 hover:bg-slate-100 md:hidden"
-              aria-label="Open mobile navigation"
+              aria-label="Open administrative navigation drawer"
+              aria-expanded={mobileMenuOpen}
+              aria-controls="admin-mobile-drawer"
             >
-              <Menu className="h-5 w-5" />
+              <Menu className="h-5 w-5" aria-hidden="true" />
             </button>
 
             <div className="flex items-center gap-2">
-              <ShieldCheck className="h-4 w-4 text-brand-blue" />
+              <ShieldCheck
+                className="h-4 w-4 text-brand-blue"
+                aria-hidden="true"
+              />
               <span className="text-xs font-bold tracking-tight text-slate-800 truncate max-w-47.5 sm:max-w-none">
                 Admin Control Center
               </span>
@@ -244,7 +269,10 @@ export default function AdminLayout({
 
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 py-1 px-2.5 sm:px-3 text-xs font-semibold text-slate-800">
-              <div className="flex h-5 w-5 items-center justify-center rounded-full bg-brand-blue text-[10px] font-bold text-white uppercase">
+              <div
+                className="flex h-5 w-5 items-center justify-center rounded-full bg-brand-blue text-[10px] font-bold text-white uppercase"
+                aria-hidden="true"
+              >
                 {user.name.charAt(0)}
               </div>
               <span className="hidden sm:inline max-w-32 truncate">
@@ -254,8 +282,8 @@ export default function AdminLayout({
           </div>
         </header>
 
-        {/* Dynamic Admin Page Content */}
-        <main className="flex-1 p-3 sm:p-8 overflow-x-hidden">{children}</main>
+        {/* Content View Area */}
+        <div className="flex-1 p-3 sm:p-8 overflow-x-hidden">{children}</div>
       </div>
     </div>
   );
