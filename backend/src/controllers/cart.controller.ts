@@ -49,7 +49,7 @@ export const addToCart = async (
     const { productId, quantity } = validationResult.data;
     const userId = req.user!._id;
 
-    // 1. Fetch live product from DB
+    // Fetch live product from DB
     const product = await Product.findById(productId);
     if (!product || !product.isActive) {
       res.status(404).json({
@@ -59,13 +59,12 @@ export const addToCart = async (
       return;
     }
 
-    // 2. Fetch or initialize user cart
+    // Fetch or initialize user cart
     let cart = await Cart.findOne({ user: userId });
     if (!cart) {
       cart = new Cart({ user: userId, items: [] });
     }
 
-    // 3. Check if product is already in cart
     const existingItemIndex = cart.items.findIndex(
       (item) => item.product.toString() === productId,
     );
@@ -74,7 +73,6 @@ export const addToCart = async (
       existingItemIndex > -1 ? cart.items[existingItemIndex].quantity : 0;
     const finalQuantity = currentQtyInCart + quantity;
 
-    // 4. Validate stock against final desired quantity
     if (finalQuantity > product.stock) {
       res.status(400).json({
         success: false,
@@ -83,7 +81,6 @@ export const addToCart = async (
       return;
     }
 
-    // 5. Trusted price snapshot (use discount price if present)
     const effectivePrice =
       product.discountPrice !== undefined && product.discountPrice > 0
         ? product.discountPrice
@@ -91,16 +88,15 @@ export const addToCart = async (
 
     if (existingItemIndex > -1) {
       cart.items[existingItemIndex].quantity = finalQuantity;
-      cart.items[existingItemIndex].price = effectivePrice; // Refresh price snapshot
+      cart.items[existingItemIndex].price = effectivePrice;
     } else {
       cart.items.push({
-        product: product._id as any,
+        product: product._id,
         quantity,
         price: effectivePrice,
       });
     }
 
-    // 6. Recalculate totals server-side and save
     recalculateCart(cart);
     await cart.save();
 
@@ -161,11 +157,9 @@ export const updateCartItemQuantity = async (
       return;
     }
 
-    // If quantity is 0, remove item entirely
     if (quantity === 0) {
       cart.items.splice(itemIndex, 1);
     } else {
-      // Validate live stock before updating
       const product = await Product.findById(productId);
       if (!product || !product.isActive) {
         res.status(400).json({
