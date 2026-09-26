@@ -24,11 +24,10 @@ export const getProducts = async (
       limit = "12",
     } = req.query;
 
-    const query: Record<string, any> = { isActive: true };
+    const query: Record<string, unknown> = { isActive: true };
 
     // 1. Text Search (Name or Description)
     if (search && typeof search === "string" && search.trim() !== "") {
-      // Escape special regex characters to prevent ReDoS injection and cap search query length
       const sanitized = search
         .trim()
         .slice(0, 80)
@@ -53,9 +52,10 @@ export const getProducts = async (
 
     // 3. Price Range Filtering
     if (minPrice || maxPrice) {
-      query.price = {};
-      if (minPrice) query.price.$gte = Number(minPrice);
-      if (maxPrice) query.price.$lte = Number(maxPrice);
+      const priceFilter: Record<string, number> = {};
+      if (minPrice) priceFilter.$gte = Number(minPrice);
+      if (maxPrice) priceFilter.$lte = Number(maxPrice);
+      query.price = priceFilter;
     }
 
     // 4. Featured Flag
@@ -64,7 +64,7 @@ export const getProducts = async (
     }
 
     // 5. Sorting Setup
-    let sortOptions: Record<string, any> = { createdAt: -1 }; // default newest
+    let sortOptions: Record<string, 1 | -1> = { createdAt: -1 };
     if (sort === "price-asc") sortOptions = { price: 1 };
     if (sort === "price-desc") sortOptions = { price: -1 };
     if (sort === "rating") sortOptions = { rating: -1 };
@@ -153,7 +153,6 @@ export const createProduct = async (
       isActive,
     } = validationResult.data;
 
-    // Validate if Category exists
     const categoryDoc = await Category.findById(category);
     if (!categoryDoc) {
       res.status(404).json({
@@ -163,7 +162,6 @@ export const createProduct = async (
       return;
     }
 
-    // Validate discount price logic
     if (discountPrice && discountPrice >= price) {
       res.status(400).json({
         success: false,
@@ -174,7 +172,6 @@ export const createProduct = async (
 
     const generatedSlug = slugify(name);
 
-    // Prevent slug conflicts by appending a unique timestamp if needed
     let finalSlug = generatedSlug;
     const existingProduct = await Product.findOne({ slug: generatedSlug });
     if (existingProduct) {
@@ -231,7 +228,6 @@ export const updateProduct = async (
 
     const data = validationResult.data;
 
-    // If updating category, check existence
     if (data.category) {
       const categoryDoc = await Category.findById(data.category);
       if (!categoryDoc) {
@@ -241,10 +237,9 @@ export const updateProduct = async (
         });
         return;
       }
-      product.category = categoryDoc._id as any;
+      product.category = categoryDoc._id;
     }
 
-    // Validate relative prices
     const targetPrice = data.price !== undefined ? data.price : product.price;
     const targetDiscount =
       data.discountPrice !== undefined

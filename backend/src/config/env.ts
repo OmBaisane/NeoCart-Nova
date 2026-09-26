@@ -37,8 +37,10 @@ if (isProduction) {
 export const ENV = {
   PORT: process.env.PORT || "5000",
   NODE_ENV: process.env.NODE_ENV || "development",
-  MONGO_URI: process.env.MONGO_URI || process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/neocart_nova",
-  MONGODB_URI: process.env.MONGODB_URI || process.env.MONGO_URI || "mongodb://127.0.0.1:27017/neocart_nova",
+  MONGO_URI:
+    process.env.MONGO_URI ||
+    process.env.MONGODB_URI ||
+    "mongodb://127.0.0.1:27017/neocart_nova",
   JWT_SECRET: process.env.JWT_SECRET || "dev_jwt_secret_key_12345",
   CLIENT_URL: process.env.CLIENT_URL || "http://localhost:3000",
 };

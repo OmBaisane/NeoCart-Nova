@@ -3,7 +3,7 @@ import { ENV } from "./env.js";
 
 export const connectDB = async (): Promise<void> => {
   try {
-    const conn = await mongoose.connect(ENV.MONGODB_URI);
+    const conn = await mongoose.connect(ENV.MONGO_URI);
     console.log(
       `[NeoCart Nova Database] MongoDB connected successfully: ${conn.connection.host}`,
     );
