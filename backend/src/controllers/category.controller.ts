@@ -4,6 +4,7 @@ import {
   createCategorySchema,
   updateCategorySchema,
 } from "../utils/validators.js";
+import { Product } from "../models/product.model.js";
 
 // GET /api/categories (Public)
 export const getCategories = async (
@@ -159,15 +160,28 @@ export const updateCategory = async (
   }
 };
 
-// DELETE /api/categories/:id (Admin Only)
 export const deleteCategory = async (
   req: Request,
   res: Response,
   next: NextFunction,
 ): Promise<void> => {
   try {
-    const category = await Category.findByIdAndDelete(req.params.id);
+    const categoryId = req.params.id;
 
+    // Check if any product is associated with this category
+    const linkedProductsCount = await Product.countDocuments({
+      category: categoryId,
+    });
+
+    if (linkedProductsCount > 0) {
+      res.status(400).json({
+        success: false,
+        message: `Cannot delete category. There are ${linkedProductsCount} product(s) linked to it.`,
+      });
+      return;
+    }
+
+    const category = await Category.findByIdAndDelete(categoryId);
     if (!category) {
       res.status(404).json({
         success: false,

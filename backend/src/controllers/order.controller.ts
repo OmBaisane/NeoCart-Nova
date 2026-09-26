@@ -14,7 +14,7 @@ const generateTrackingNumber = (): string => {
   return `NC-NOV-${timestamp}-${randomSuffix}`;
 };
 
-// POST /api/orders (Protected - Checkout Flow)
+// POST /api/orders (Protected - Checkout Flow with Atomic Stock Reservation)
 export const createOrder = async (
   req: Request,
   res: Response,
@@ -43,14 +43,21 @@ export const createOrder = async (
       return;
     }
 
-    // 2. Validate all products, stock, and build server-verified snapshots
     const orderItems: IOrderItemSnapshot[] = [];
     let calculatedSubtotal = 0;
+    const reservedProducts: Array<{ productId: string; quantity: number }> = [];
 
+    // 2. Atomic Stock Reservation Step
     for (const cartItem of cart.items) {
       const product = await Product.findById(cartItem.product);
 
       if (!product || !product.isActive) {
+        // Rollback any items already decremented
+        for (const reserved of reservedProducts) {
+          await Product.findByIdAndUpdate(reserved.productId, {
+            $inc: { stock: reserved.quantity },
+          });
+        }
         res.status(400).json({
           success: false,
           message: `Product "${cartItem.product}" is no longer available.`,
@@ -58,13 +65,35 @@ export const createOrder = async (
         return;
       }
 
-      if (product.stock < cartItem.quantity) {
+      // Atomic conditional update: ONLY decrements if stock >= requested quantity
+      const updatedProduct = await Product.findOneAndUpdate(
+        {
+          _id: product._id,
+          stock: { $gte: cartItem.quantity },
+          isActive: true,
+        },
+        { $inc: { stock: -cartItem.quantity } },
+        { new: true },
+      );
+
+      if (!updatedProduct) {
+        // Rollback any items already decremented in this transaction
+        for (const reserved of reservedProducts) {
+          await Product.findByIdAndUpdate(reserved.productId, {
+            $inc: { stock: reserved.quantity },
+          });
+        }
         res.status(400).json({
           success: false,
-          message: `Insufficient stock for "${product.name}". Only ${product.stock} left.`,
+          message: `Insufficient stock for "${product.name}".`,
         });
         return;
       }
+
+      reservedProducts.push({
+        productId: product._id.toString(),
+        quantity: cartItem.quantity,
+      });
 
       // Trusted price snapshot directly from DB
       const effectivePrice =
@@ -73,7 +102,7 @@ export const createOrder = async (
           : product.price;
 
       orderItems.push({
-        product: product._id as any,
+        product: product._id,
         name: product.name,
         image: product.images[0] || "",
         price: effectivePrice,
@@ -86,11 +115,11 @@ export const createOrder = async (
     // 3. Calculate delivery fee & grand total server-side
     calculatedSubtotal = Math.round(calculatedSubtotal * 100) / 100;
     const shippingFee = calculatedSubtotal >= 1000 ? 0 : 99;
-    const discount = 0; // V1 has no coupon deduction
+    const discount = 0;
     const total =
       Math.round((calculatedSubtotal + shippingFee - discount) * 100) / 100;
 
-    // 4. Create the Order Document
+    // 4. Create the Order Document with tracking number
     const trackingNumber = generateTrackingNumber();
 
     const order = await Order.create({
@@ -101,20 +130,13 @@ export const createOrder = async (
       shippingFee,
       discount,
       total,
-      paymentMethod,
+      paymentMethod: paymentMethod || "COD",
       paymentStatus: "pending",
       orderStatus: "pending",
       trackingNumber,
     });
 
-    // 5. Decrement live stock for all purchased items
-    for (const item of orderItems) {
-      await Product.findByIdAndUpdate(item.product, {
-        $inc: { stock: -item.quantity },
-      });
-    }
-
-    // 6. Clear user's cart
+    // 5. Clear user's cart
     cart.items = [];
     cart.totalItems = 0;
     cart.subtotal = 0;
@@ -140,7 +162,6 @@ export const getMyOrders = async (
     const userId = req.user!._id;
     const isAdmin = req.user!.role === "admin";
 
-    // If admin then without any user restriction can fetch orders
     const filter = isAdmin ? {} : { user: userId };
 
     const orders = await Order.find(filter)
@@ -174,7 +195,6 @@ export const getOrderById = async (
       return;
     }
 
-    // Ownership & Admin Guard: User must own the order OR be an admin
     const isOwner = order.user.toString() === req.user!._id.toString();
     const isAdmin = req.user!.role === "admin";
 
@@ -196,49 +216,49 @@ export const getOrderById = async (
   }
 };
 
-// PATCH /api/orders/:id/cancel (Protected - Customer Cancellation)
+// PATCH /api/orders/:id/cancel (Protected - Atomic & Idempotent Customer Cancellation)
 export const cancelOrder = async (
   req: Request,
   res: Response,
   next: NextFunction,
 ): Promise<void> => {
   try {
-    const order = await Order.findById(req.params.id);
+    const userId = req.user!._id;
+    const isAdmin = req.user!.role === "admin";
+    const orderId = req.params.id;
+
+    // Build ownership query
+    const query: Record<string, unknown> = {
+      _id: orderId,
+      orderStatus: { $in: ["pending", "confirmed"] },
+    };
+
+    if (!isAdmin) {
+      query.user = userId;
+    }
+
+    // Atomically transition status from pending/confirmed to cancelled
+    const order = await Order.findOneAndUpdate(
+      query,
+      {
+        $set: {
+          orderStatus: "cancelled",
+          cancelledAt: new Date(),
+        },
+      },
+      { new: true },
+    );
 
     if (!order) {
-      res.status(404).json({
-        success: false,
-        message: "Order not found",
-      });
-      return;
-    }
-
-    // Check ownership
-    if (
-      order.user.toString() !== req.user!._id.toString() &&
-      req.user!.role !== "admin"
-    ) {
-      res.status(403).json({
-        success: false,
-        message: "Access denied. You can only cancel your own orders.",
-      });
-      return;
-    }
-
-    // Cancellation policy: Only allowed if pending or confirmed
-    if (order.orderStatus !== "pending" && order.orderStatus !== "confirmed") {
       res.status(400).json({
         success: false,
-        message: `Cannot cancel an order that is already in '${order.orderStatus}' status.`,
+        message:
+          "Order cannot be cancelled. It may already be processed, dispatched, or cancelled.",
       });
       return;
     }
 
-    order.orderStatus = "cancelled";
-    order.cancelledAt = new Date();
-    await order.save();
-
-    // Restock items back to database
+    // Restock items back to database (executes exactly once)
     for (const item of order.items) {
       await Product.findByIdAndUpdate(item.product, {
         $inc: { stock: item.quantity },
@@ -295,7 +315,7 @@ export const updateOrderStatus = async (
 
     if (orderStatus === "delivered") {
       order.deliveredAt = new Date();
-      order.paymentStatus = "paid"; // COD orders get paid when delivered
+      order.paymentStatus = "paid";
     }
 
     await order.save();

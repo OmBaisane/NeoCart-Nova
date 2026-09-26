@@ -280,14 +280,18 @@ export const updateProduct = async (
   }
 };
 
-// DELETE /api/products/:id (Admin Only)
+// DELETE /api/products/:id (Admin Soft-Delete / Deactivation)
 export const deleteProduct = async (
   req: Request,
   res: Response,
   next: NextFunction,
 ): Promise<void> => {
   try {
-    const product = await Product.findByIdAndDelete(req.params.id);
+    const product = await Product.findByIdAndUpdate(
+      req.params.id,
+      { $set: { isActive: false } },
+      { new: true },
+    );
 
     if (!product) {
       res.status(404).json({
@@ -299,7 +303,7 @@ export const deleteProduct = async (
 
     res.status(200).json({
       success: true,
-      message: "Product deleted successfully",
+      message: "Product deactivated successfully (soft-deleted)",
     });
   } catch (error) {
     next(error);
