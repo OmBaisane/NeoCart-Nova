@@ -3,17 +3,17 @@ import { ENV } from "./config/env.js";
 import { connectDB } from "./config/db.js";
 
 const startServer = async () => {
-  // 1. Pehle database connect hoga
+  // Establish database connection prior to binding the HTTP listener
   await connectDB();
 
-  // 2. Phir server listen karega
+  // Start HTTP server listener
   const server = app.listen(ENV.PORT, () => {
     console.log(
       `[NeoCart Nova Engine] Server listening on port ${ENV.PORT} in ${ENV.NODE_ENV} mode`,
     );
   });
 
-  // Graceful shutdown handling
+  // Handle graceful process termination on operational signals
   const shutdown = () => {
     console.log("Closing HTTP server and database connections gracefully...");
     server.close(() => {

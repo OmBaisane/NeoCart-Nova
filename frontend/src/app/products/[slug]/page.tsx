@@ -105,7 +105,10 @@ export default function ProductDetailsPage({
       queryClient.invalidateQueries({ queryKey: ["cart"] });
       setTimeout(() => setCartSuccess(false), 3500);
     },
-    onError: (err: any) => {
+    onError: (err: {
+      response?: { data?: { message?: string } };
+      message?: string;
+    }) => {
       setCartError(
         err.response?.data?.message ||
           err.message ||
@@ -130,7 +133,10 @@ export default function ProductDetailsPage({
       queryClient.invalidateQueries({ queryKey: ["reviews", product?._id] });
       queryClient.invalidateQueries({ queryKey: ["product", slug] });
     },
-    onError: (err: any) => {
+    onError: (err: {
+      response?: { data?: { message?: string } };
+      message?: string;
+    }) => {
       setReviewError(
         err.response?.data?.message || err.message || "Failed to submit review",
       );
@@ -156,7 +162,10 @@ export default function ProductDetailsPage({
       queryClient.invalidateQueries({ queryKey: ["reviews", product?._id] });
       queryClient.invalidateQueries({ queryKey: ["product", slug] });
     },
-    onError: (err: any) => {
+    onError: (err: {
+      response?: { data?: { message?: string } };
+      message?: string;
+    }) => {
       setActionError(
         err.response?.data?.message || err.message || "Failed to update review",
       );
@@ -173,7 +182,10 @@ export default function ProductDetailsPage({
       queryClient.invalidateQueries({ queryKey: ["reviews", product?._id] });
       queryClient.invalidateQueries({ queryKey: ["product", slug] });
     },
-    onError: (err: any) => {
+    onError: (err: {
+      response?: { data?: { message?: string } };
+      message?: string;
+    }) => {
       setActionError(
         err.response?.data?.message || err.message || "Failed to delete review",
       );

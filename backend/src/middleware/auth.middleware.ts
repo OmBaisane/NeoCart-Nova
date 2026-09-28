@@ -40,7 +40,7 @@ export const protect = async (
     // Attach user to express request object for subsequent controllers
     req.user = currentUser;
     next();
-  } catch (error: any) {
+  } catch (error: unknown) {
     res.status(401).json({
       success: false,
       message: "Invalid or expired session. Please log in again.",
