@@ -21,6 +21,8 @@ import {
   Minus,
   MessageSquare,
   XCircle,
+  Edit2,
+  Trash2,
 } from "lucide-react";
 
 interface ReviewItem {
@@ -54,6 +56,12 @@ export default function ProductDetailsPage({
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState("");
   const [reviewError, setReviewError] = useState<string | null>(null);
+
+  // Review Edit States
+  const [editingReviewId, setEditingReviewId] = useState<string | null>(null);
+  const [editRating, setEditRating] = useState(5);
+  const [editComment, setEditComment] = useState("");
+  const [actionError, setActionError] = useState<string | null>(null);
 
   // 1. Fetch Product by Slug
   const {
@@ -129,6 +137,49 @@ export default function ProductDetailsPage({
     },
   });
 
+  // 5. Update Review Mutation (Author only)
+  const updateReviewMutation = useMutation({
+    mutationFn: async ({
+      id,
+      rating,
+      comment,
+    }: {
+      id: string;
+      rating: number;
+      comment: string;
+    }) => {
+      return api.patch(`/reviews/${id}`, { rating, comment });
+    },
+    onSuccess: () => {
+      setEditingReviewId(null);
+      setActionError(null);
+      queryClient.invalidateQueries({ queryKey: ["reviews", product?._id] });
+      queryClient.invalidateQueries({ queryKey: ["product", slug] });
+    },
+    onError: (err: any) => {
+      setActionError(
+        err.response?.data?.message || err.message || "Failed to update review",
+      );
+    },
+  });
+
+  // 6. Delete Review Mutation (Author or Admin)
+  const deleteReviewMutation = useMutation({
+    mutationFn: async (reviewId: string) => {
+      return api.delete(`/reviews/${reviewId}`);
+    },
+    onSuccess: () => {
+      setActionError(null);
+      queryClient.invalidateQueries({ queryKey: ["reviews", product?._id] });
+      queryClient.invalidateQueries({ queryKey: ["product", slug] });
+    },
+    onError: (err: any) => {
+      setActionError(
+        err.response?.data?.message || err.message || "Failed to delete review",
+      );
+    },
+  });
+
   const handleAddToCart = () => {
     if (!user) {
       router.push(`/login?redirect=/products/${slug}`);
@@ -149,6 +200,32 @@ export default function ProductDetailsPage({
       return;
     }
     submitReviewMutation.mutate();
+  };
+
+  const handleStartEdit = (rev: ReviewItem) => {
+    setEditingReviewId(rev._id);
+    setEditRating(rev.rating);
+    setEditComment(rev.comment);
+    setActionError(null);
+  };
+
+  const handleSaveEdit = (e: React.FormEvent, id: string) => {
+    e.preventDefault();
+    if (editComment.trim().length < 3) {
+      setActionError("Comment must be at least 3 characters long.");
+      return;
+    }
+    updateReviewMutation.mutate({
+      id,
+      rating: editRating,
+      comment: editComment.trim(),
+    });
+  };
+
+  const handleDeleteReview = (id: string) => {
+    if (window.confirm("Are you sure you want to delete this review?")) {
+      deleteReviewMutation.mutate(id);
+    }
   };
 
   if (isProductLoading) {
@@ -443,6 +520,12 @@ export default function ProductDetailsPage({
           </div>
         </div>
 
+        {actionError && (
+          <div className="mt-4 rounded-lg bg-rose-50 p-2.5 text-xs text-rose-700">
+            {actionError}
+          </div>
+        )}
+
         <div className="mt-8 grid grid-cols-1 gap-12 lg:grid-cols-3">
           {/* Write a Review Box */}
           <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs h-fit">
@@ -531,45 +614,137 @@ export default function ProductDetailsPage({
                 <Loader2 className="h-6 w-6 animate-spin text-brand-blue" />
               </div>
             ) : reviewsData && reviewsData.reviews.length > 0 ? (
-              reviewsData.reviews.map((rev) => (
-                <article
-                  key={rev._id}
-                  className="rounded-xl border border-slate-200 bg-white p-5 shadow-2xs"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2.5">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-xs font-bold text-white uppercase">
-                        {rev.user?.name ? rev.user.name.charAt(0) : "U"}
-                      </div>
-                      <div>
-                        <h4 className="text-xs font-bold text-brand-charcoal">
-                          {rev.user?.name || "Customer"}
-                        </h4>
-                        <span className="text-[10px] text-slate-400">
-                          {new Date(rev.createdAt).toLocaleDateString()}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-1 text-amber-500">
-                      {[...Array(5)].map((_, i) => (
-                        <Star
-                          key={i}
-                          className={`h-3.5 w-3.5 ${
-                            i < rev.rating
-                              ? "fill-amber-400 text-amber-400"
-                              : "text-slate-200"
-                          }`}
+              reviewsData.reviews.map((rev) => {
+                const authUser = user as
+                  | (typeof user & { _id?: string; id?: string })
+                  | null;
+                const currentUserId = authUser?._id || authUser?.id;
+                const isAuthor = Boolean(
+                  currentUserId &&
+                  rev.user?._id &&
+                  currentUserId === rev.user._id,
+                );
+                const isAdmin = user?.role === "admin";
+                const isEditing = editingReviewId === rev._id;
+                return (
+                  <article
+                    key={rev._id}
+                    className="rounded-xl border border-slate-200 bg-white p-5 shadow-2xs"
+                  >
+                    {isEditing ? (
+                      <form
+                        onSubmit={(e) => handleSaveEdit(e, rev._id)}
+                        className="space-y-3"
+                      >
+                        <div className="flex items-center gap-1">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <button
+                              type="button"
+                              key={star}
+                              onClick={() => setEditRating(star)}
+                              className="p-1 text-amber-400"
+                            >
+                              <Star
+                                className={`h-4 w-4 ${
+                                  star <= editRating
+                                    ? "fill-amber-400 text-amber-400"
+                                    : "text-slate-300"
+                                }`}
+                              />
+                            </button>
+                          ))}
+                        </div>
+                        <textarea
+                          rows={3}
+                          required
+                          value={editComment}
+                          onChange={(e) => setEditComment(e.target.value)}
+                          className="w-full rounded-lg border border-slate-300 p-2 text-xs outline-none focus:border-brand-blue"
                         />
-                      ))}
-                    </div>
-                  </div>
+                        <div className="flex gap-2">
+                          <button
+                            type="submit"
+                            disabled={updateReviewMutation.isPending}
+                            className="rounded-md bg-brand-blue px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-600 disabled:opacity-50"
+                          >
+                            {updateReviewMutation.isPending
+                              ? "Saving..."
+                              : "Save"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setEditingReviewId(null)}
+                            className="rounded-md border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </form>
+                    ) : (
+                      <>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2.5">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-xs font-bold text-white uppercase">
+                              {rev.user?.name ? rev.user.name.charAt(0) : "U"}
+                            </div>
+                            <div>
+                              <h4 className="text-xs font-bold text-brand-charcoal">
+                                {rev.user?.name || "Customer"}
+                              </h4>
+                              <span className="text-[10px] text-slate-400">
+                                {new Date(rev.createdAt).toLocaleDateString()}
+                              </span>
+                            </div>
+                          </div>
 
-                  <p className="mt-3 text-xs leading-relaxed text-slate-600">
-                    {rev.comment}
-                  </p>
-                </article>
-              ))
+                          <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-1 text-amber-500">
+                              {[...Array(5)].map((_, i) => (
+                                <Star
+                                  key={i}
+                                  className={`h-3.5 w-3.5 ${
+                                    i < rev.rating
+                                      ? "fill-amber-400 text-amber-400"
+                                      : "text-slate-200"
+                                  }`}
+                                />
+                              ))}
+                            </div>
+
+                            {/* Author Edit / Delete or Admin Delete actions */}
+                            <div className="flex items-center gap-1 border-l border-slate-100 pl-2">
+                              {isAuthor && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleStartEdit(rev)}
+                                  className="p-1 text-slate-400 hover:text-brand-blue"
+                                  title="Edit your review"
+                                >
+                                  <Edit2 className="h-3.5 w-3.5" />
+                                </button>
+                              )}
+                              {(isAuthor || isAdmin) && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteReview(rev._id)}
+                                  className="p-1 text-slate-400 hover:text-rose-600"
+                                  title="Delete review"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        <p className="mt-3 text-xs leading-relaxed text-slate-600">
+                          {rev.comment}
+                        </p>
+                      </>
+                    )}
+                  </article>
+                );
+              })
             ) : (
               <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-12 text-center text-xs text-slate-400">
                 No customer reviews yet. Be the first to review this product!
