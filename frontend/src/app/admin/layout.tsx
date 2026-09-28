@@ -168,7 +168,7 @@ export default function AdminLayout({
 
           <div
             id="admin-mobile-drawer"
-            className="relative flex w-4/5 max-w-xs flex-1 flex-col justify-between bg-white p-5 shadow-2xl"
+            className="relative flex w-4/5 max-w-xs flex-1 flex-col justify-between bg-white p-4 sm:p-5 shadow-2xl"
           >
             <div className="space-y-6">
               <div className="flex items-center justify-between border-b border-slate-100 pb-4">
@@ -243,12 +243,12 @@ export default function AdminLayout({
 
       {/* Main Administrative Container */}
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-slate-200 bg-white/95 px-4 backdrop-blur-md sm:px-8">
-          <div className="flex items-center gap-3">
+        <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-slate-200 bg-white/95 px-3 backdrop-blur-md sm:px-6 lg:px-8">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
             <button
               type="button"
               onClick={() => setMobileMenuOpen(true)}
-              className="rounded-lg p-1.5 text-slate-600 hover:bg-slate-100 md:hidden"
+              className="rounded-lg p-1.5 text-slate-600 hover:bg-slate-100 md:hidden shrink-0"
               aria-label="Open administrative navigation drawer"
               aria-expanded={mobileMenuOpen}
               aria-controls="admin-mobile-drawer"
@@ -256,21 +256,21 @@ export default function AdminLayout({
               <Menu className="h-5 w-5" aria-hidden="true" />
             </button>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
               <ShieldCheck
-                className="h-4 w-4 text-brand-blue"
+                className="h-4 w-4 text-brand-blue shrink-0"
                 aria-hidden="true"
               />
-              <span className="text-xs font-bold tracking-tight text-slate-800 truncate max-w-47.5 sm:max-w-none">
+              <span className="text-xs font-bold tracking-tight text-slate-800 truncate">
                 Admin Control Center
               </span>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 py-1 px-2.5 sm:px-3 text-xs font-semibold text-slate-800">
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-1.5 sm:gap-2 rounded-full border border-slate-200 bg-slate-50 py-1 px-2 sm:px-3 text-xs font-semibold text-slate-800">
               <div
-                className="flex h-5 w-5 items-center justify-center rounded-full bg-brand-blue text-[10px] font-bold text-white uppercase"
+                className="flex h-5 w-5 items-center justify-center rounded-full bg-brand-blue text-[10px] font-bold text-white uppercase shrink-0"
                 aria-hidden="true"
               >
                 {user.name.charAt(0)}
@@ -283,7 +283,9 @@ export default function AdminLayout({
         </header>
 
         {/* Content View Area */}
-        <div className="flex-1 p-3 sm:p-8 overflow-x-hidden">{children}</div>
+        <div className="flex-1 p-3.5 sm:p-6 lg:p-8 overflow-x-hidden">
+          {children}
+        </div>
       </div>
     </div>
   );

@@ -8,17 +8,23 @@ import {
   Package,
   ShoppingBag,
   Users,
-  IndianRupee,
   ArrowUpRight,
   AlertTriangle,
   Plus,
   Loader2,
-  CheckCircle2,
 } from "lucide-react";
+
+interface AdminDashboardProductItem {
+  _id: string;
+  stock: number;
+}
 
 export default function AdminDashboardPage() {
   // 1. Fetch live products for inventory analysis
-  const { data: productsData, isLoading: isProductsLoading } = useQuery({
+  const { data: productsData, isLoading: isProductsLoading } = useQuery<{
+    products: AdminDashboardProductItem[];
+    totalProducts: number;
+  }>({
     queryKey: ["admin-products"],
     queryFn: async () => {
       const res = await api.get("/products?limit=100");
@@ -27,7 +33,9 @@ export default function AdminDashboardPage() {
   });
 
   // 2. Fetch customer directory
-  const { data: usersData, isLoading: isUsersLoading } = useQuery({
+  const { data: usersData, isLoading: isUsersLoading } = useQuery<{
+    count: number;
+  }>({
     queryKey: ["admin-users"],
     queryFn: async () => {
       const res = await api.get("/admin/users");
@@ -39,20 +47,20 @@ export default function AdminDashboardPage() {
   const totalProducts = productsData?.totalProducts || 0;
   const totalCustomers = usersData?.count || 0;
 
-  // Inventory calculations
+  // Inventory calculations with strict typing
   const lowStockCount = products.filter(
-    (p: any) => p.stock > 0 && p.stock <= 5,
+    (p) => p.stock > 0 && p.stock <= 5,
   ).length;
-  const outOfStockCount = products.filter((p: any) => p.stock <= 0).length;
+  const outOfStockCount = products.filter((p) => p.stock <= 0).length;
 
   const isLoading = isProductsLoading || isUsersLoading;
 
   return (
-    <main className="space-y-8">
+    <main className="space-y-6 sm:space-y-8">
       {/* Header section */}
-      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 border-b border-slate-200 pb-4 sm:pb-6">
         <div>
-          <h1 className="text-2xl font-extrabold tracking-tight text-brand-charcoal sm:text-3xl">
+          <h1 className="text-xl font-extrabold tracking-tight text-brand-charcoal sm:text-3xl">
             Executive Dashboard
           </h1>
           <p className="mt-1 text-xs text-slate-500">
@@ -61,10 +69,10 @@ export default function AdminDashboardPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 self-start sm:self-auto">
           <Link
             href="/admin/products/new"
-            className="flex items-center gap-1.5 rounded-xl bg-brand-blue px-4 py-2.5 text-xs font-bold text-white shadow-md shadow-blue-500/20 hover:bg-blue-600 transition"
+            className="flex items-center gap-1.5 rounded-xl bg-brand-blue px-3.5 py-2 sm:px-4 sm:py-2.5 text-xs font-bold text-white shadow-md shadow-blue-500/20 hover:bg-blue-600 transition"
           >
             <Plus className="h-4 w-4" />
             <span>Create New Product</span>
@@ -79,82 +87,82 @@ export default function AdminDashboardPage() {
       ) : (
         <>
           {/* KPI Metric Cards Grid */}
-          <section className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
             {/* Total Active Inventory */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-2xs">
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-2xs">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-slate-400">
                   Total Catalog Items
                 </span>
                 <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-brand-blue">
                   <Package className="h-5 w-5" />
                 </div>
               </div>
-              <div className="mt-4 flex items-baseline gap-2">
-                <span className="text-3xl font-black text-brand-charcoal">
+              <div className="mt-3 sm:mt-4 flex items-baseline gap-2">
+                <span className="text-2xl sm:text-3xl font-black text-brand-charcoal">
                   {totalProducts}
                 </span>
-                <span className="text-[11px] font-semibold text-emerald-600">
+                <span className="text-[10px] sm:text-[11px] font-semibold text-emerald-600">
                   Live in Store
                 </span>
               </div>
             </div>
 
             {/* Registered Customers */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-2xs">
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-2xs">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-slate-400">
                   Total Customers
                 </span>
                 <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
                   <Users className="h-5 w-5" />
                 </div>
               </div>
-              <div className="mt-4 flex items-baseline gap-2">
-                <span className="text-3xl font-black text-brand-charcoal">
+              <div className="mt-3 sm:mt-4 flex items-baseline gap-2">
+                <span className="text-2xl sm:text-3xl font-black text-brand-charcoal">
                   {totalCustomers}
                 </span>
-                <span className="text-[11px] font-semibold text-slate-400">
+                <span className="text-[10px] sm:text-[11px] font-semibold text-slate-400">
                   Accounts
                 </span>
               </div>
             </div>
 
             {/* Low Stock Alerts */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-2xs">
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-2xs">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-slate-400">
                   Low Stock Items
                 </span>
                 <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
                   <AlertTriangle className="h-5 w-5" />
                 </div>
               </div>
-              <div className="mt-4 flex items-baseline gap-2">
-                <span className="text-3xl font-black text-brand-charcoal">
+              <div className="mt-3 sm:mt-4 flex items-baseline gap-2">
+                <span className="text-2xl sm:text-3xl font-black text-brand-charcoal">
                   {lowStockCount}
                 </span>
-                <span className="text-[11px] font-semibold text-amber-600">
-                  ≤ 5 units remaining
+                <span className="text-[10px] sm:text-[11px] font-semibold text-amber-600">
+                  ≤ 5 units left
                 </span>
               </div>
             </div>
 
             {/* Out of Stock Alerts */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-2xs">
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-2xs">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-slate-400">
                   Out of Stock
                 </span>
                 <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-rose-50 text-rose-600">
                   <AlertTriangle className="h-5 w-5" />
                 </div>
               </div>
-              <div className="mt-4 flex items-baseline gap-2">
-                <span className="text-3xl font-black text-brand-charcoal">
+              <div className="mt-3 sm:mt-4 flex items-baseline gap-2">
+                <span className="text-2xl sm:text-3xl font-black text-brand-charcoal">
                   {outOfStockCount}
                 </span>
-                <span className="text-[11px] font-semibold text-rose-600">
+                <span className="text-[10px] sm:text-[11px] font-semibold text-rose-600">
                   Action Required
                 </span>
               </div>
@@ -162,74 +170,74 @@ export default function AdminDashboardPage() {
           </section>
 
           {/* Quick Management Shortcuts */}
-          <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-2xs">
-            <h2 className="text-sm font-bold text-brand-charcoal uppercase tracking-wider border-b border-slate-100 pb-3">
+          <section className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 shadow-2xs">
+            <h2 className="text-xs sm:text-sm font-bold text-brand-charcoal uppercase tracking-wider border-b border-slate-100 pb-3">
               Operational Management Shortcuts
             </h2>
 
-            <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div className="mt-4 sm:mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
               <Link
                 href="/admin/products"
-                className="group flex flex-col justify-between rounded-xl border border-slate-200 p-4 transition hover:border-brand-blue hover:shadow-xs"
+                className="group flex flex-col justify-between rounded-xl border border-slate-200 p-3.5 sm:p-4 transition hover:border-brand-blue hover:shadow-xs"
               >
                 <div>
                   <div className="flex items-center justify-between">
                     <Package className="h-5 w-5 text-brand-blue" />
                     <ArrowUpRight className="h-4 w-4 text-slate-400 group-hover:text-brand-blue transition" />
                   </div>
-                  <h3 className="mt-3 text-sm font-bold text-brand-charcoal">
+                  <h3 className="mt-2.5 sm:mt-3 text-xs sm:text-sm font-bold text-brand-charcoal">
                     Product Management
                   </h3>
-                  <p className="mt-1 text-xs text-slate-500">
+                  <p className="mt-1 text-[11px] sm:text-xs text-slate-500">
                     Edit pricing, upload product images, adjust warehouse
                     inventory levels.
                   </p>
                 </div>
-                <span className="mt-4 text-[11px] font-bold text-brand-blue">
+                <span className="mt-3 sm:mt-4 text-[11px] font-bold text-brand-blue">
                   Manage Catalog →
                 </span>
               </Link>
 
               <Link
                 href="/admin/orders"
-                className="group flex flex-col justify-between rounded-xl border border-slate-200 p-4 transition hover:border-brand-blue hover:shadow-xs"
+                className="group flex flex-col justify-between rounded-xl border border-slate-200 p-3.5 sm:p-4 transition hover:border-brand-blue hover:shadow-xs"
               >
                 <div>
                   <div className="flex items-center justify-between">
                     <ShoppingBag className="h-5 w-5 text-indigo-600" />
                     <ArrowUpRight className="h-4 w-4 text-slate-400 group-hover:text-indigo-600 transition" />
                   </div>
-                  <h3 className="mt-3 text-sm font-bold text-brand-charcoal">
+                  <h3 className="mt-2.5 sm:mt-3 text-xs sm:text-sm font-bold text-brand-charcoal">
                     Order Processing
                   </h3>
-                  <p className="mt-1 text-xs text-slate-500">
+                  <p className="mt-1 text-[11px] sm:text-xs text-slate-500">
                     Update fulfillment status (Confirmed, Shipped, Delivered)
                     and dispatch tracking codes.
                   </p>
                 </div>
-                <span className="mt-4 text-[11px] font-bold text-indigo-600">
+                <span className="mt-3 sm:mt-4 text-[11px] font-bold text-indigo-600">
                   Process Orders →
                 </span>
               </Link>
 
               <Link
                 href="/admin/users"
-                className="group flex flex-col justify-between rounded-xl border border-slate-200 p-4 transition hover:border-brand-blue hover:shadow-xs"
+                className="group flex flex-col justify-between rounded-xl border border-slate-200 p-3.5 sm:p-4 transition hover:border-brand-blue hover:shadow-xs"
               >
                 <div>
                   <div className="flex items-center justify-between">
                     <Users className="h-5 w-5 text-cyan-accent" />
                     <ArrowUpRight className="h-4 w-4 text-slate-400 group-hover:text-cyan-accent transition" />
                   </div>
-                  <h3 className="mt-3 text-sm font-bold text-brand-charcoal">
+                  <h3 className="mt-2.5 sm:mt-3 text-xs sm:text-sm font-bold text-brand-charcoal">
                     Customer Directory
                   </h3>
-                  <p className="mt-1 text-xs text-slate-500">
+                  <p className="mt-1 text-[11px] sm:text-xs text-slate-500">
                     Inspect registered user accounts, phone numbers, and address
                     integrity.
                   </p>
                 </div>
-                <span className="mt-4 text-[11px] font-bold text-cyan-600">
+                <span className="mt-3 sm:mt-4 text-[11px] font-bold text-cyan-600">
                   View Directory →
                 </span>
               </Link>

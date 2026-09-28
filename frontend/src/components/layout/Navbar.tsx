@@ -52,8 +52,8 @@ export const Navbar = () => {
 
   return (
     <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/95 backdrop-blur-md">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center gap-6">
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-2 px-3 sm:gap-4 sm:px-6 lg:px-8">
+        <div className="flex items-center gap-3 sm:gap-6 shrink-0">
           <Logo />
           <nav
             aria-label="Main Navigation"
@@ -73,7 +73,7 @@ export const Navbar = () => {
 
         <form
           onSubmit={handleSearch}
-          className="hidden sm:flex flex-1 max-w-md relative"
+          className="hidden sm:flex flex-1 max-w-md relative mx-2"
           role="search"
         >
           <input
@@ -90,11 +90,11 @@ export const Navbar = () => {
           />
         </form>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           <Link
             href="/cart"
             aria-label={`Shopping bag containing ${cartCount} items`}
-            className="relative flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-slate-700 transition hover:bg-slate-50 hover:text-brand-blue"
+            className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 text-slate-700 transition hover:bg-slate-50 hover:text-brand-blue"
           >
             <ShoppingCart className="h-4 w-4" aria-hidden="true" />
             {cartCount > 0 && (
@@ -113,10 +113,10 @@ export const Navbar = () => {
                 aria-expanded={profileDropdownOpen}
                 aria-controls="profile-menu-dropdown"
                 onClick={() => setProfileDropdownOpen((prev) => !prev)}
-                className="flex items-center gap-2 rounded-full border border-slate-200 p-1 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 sm:px-3 sm:py-1.5"
+                className="flex items-center gap-1.5 rounded-full border border-slate-200 p-1 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 sm:gap-2 sm:px-3 sm:py-1.5"
               >
                 <div
-                  className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-blue text-[11px] font-bold text-white uppercase"
+                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-blue text-[11px] font-bold text-white uppercase"
                   aria-hidden="true"
                 >
                   {user.name ? user.name.charAt(0) : "U"}
@@ -198,16 +198,16 @@ export const Navbar = () => {
               )}
             </div>
           ) : (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2">
               <Link
                 href="/login"
-                className="rounded-xl px-3.5 py-1.5 text-xs font-bold text-slate-700 transition hover:bg-slate-50 hover:text-brand-charcoal"
+                className="hidden xs:inline-block rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-700 transition hover:bg-slate-50 sm:px-3.5"
               >
                 Sign In
               </Link>
               <Link
                 href="/register"
-                className="rounded-xl bg-brand-blue px-3.5 py-1.5 text-xs font-bold text-white shadow-xs transition hover:bg-blue-600"
+                className="rounded-xl bg-brand-blue px-2.5 py-1.5 text-xs font-bold text-white shadow-xs transition hover:bg-blue-600 sm:px-3.5"
               >
                 Sign Up
               </Link>
@@ -220,7 +220,7 @@ export const Navbar = () => {
             aria-expanded={mobileMenuOpen}
             aria-controls="mobile-nav-menu"
             onClick={() => setMobileMenuOpen((prev) => !prev)}
-            className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 text-slate-600 md:hidden hover:bg-slate-50"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 text-slate-600 md:hidden hover:bg-slate-50"
           >
             {mobileMenuOpen ? (
               <X className="h-4 w-4" aria-hidden="true" />
@@ -235,9 +235,13 @@ export const Navbar = () => {
         <nav
           id="mobile-nav-menu"
           aria-label="Mobile Navigation"
-          className="border-t border-slate-200 bg-white px-4 py-4 md:hidden space-y-4"
+          className="border-t border-slate-200 bg-white px-4 py-4 md:hidden space-y-4 shadow-lg"
         >
-          <form onSubmit={handleSearch} className="relative" role="search">
+          <form
+            onSubmit={handleSearch}
+            className="relative sm:hidden"
+            role="search"
+          >
             <input
               type="search"
               aria-label="Search product catalog"
@@ -267,6 +271,15 @@ export const Navbar = () => {
             >
               New Arrivals
             </Link>
+            {!user && (
+              <Link
+                href="/login"
+                onClick={() => setMobileMenuOpen(false)}
+                className="block rounded-lg px-3 py-2 text-xs font-semibold text-brand-blue hover:bg-blue-50"
+              >
+                Sign In to Account
+              </Link>
+            )}
           </div>
         </nav>
       )}

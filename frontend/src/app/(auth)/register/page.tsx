@@ -27,7 +27,6 @@ export default function RegisterPage() {
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // If already logged in, redirect
   useEffect(() => {
     if (user) {
       router.push("/");
@@ -38,7 +37,6 @@ export default function RegisterPage() {
     e.preventDefault();
     setError(null);
 
-    // Frontend validation matching backend Zod rules
     if (name.trim().length < 2) {
       setError("Name must be at least 2 characters.");
       return;
@@ -62,24 +60,30 @@ export default function RegisterPage() {
         login(response.data.user);
         router.push("/");
       }
-    } catch (err: any) {
-      setError(err.message || "Registration failed. Please try again.");
+    } catch (err: unknown) {
+      const message =
+        (err as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message ||
+        (err instanceof Error
+          ? err.message
+          : "Registration failed. Please try again.");
+      setError(message);
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <section className="flex min-h-[calc(100vh-140px)] items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
-      <div className="w-full max-w-md space-y-8 rounded-2xl border border-slate-200 bg-white p-8 shadow-xl shadow-slate-100/80">
+    <section className="flex min-h-[calc(100vh-140px)] items-center justify-center px-3 py-8 sm:px-6 sm:py-12 lg:px-8">
+      <div className="w-full max-w-md space-y-6 sm:space-y-8 rounded-2xl border border-slate-200 bg-white p-5 sm:p-8 shadow-xl shadow-slate-100/80">
         <div className="text-center">
           <div className="flex justify-center">
             <Logo size="lg" />
           </div>
-          <h1 className="mt-6 text-2xl font-bold tracking-tight text-brand-charcoal">
+          <h1 className="mt-5 sm:mt-6 text-xl sm:text-2xl font-bold tracking-tight text-brand-charcoal">
             Create an Account
           </h1>
-          <p className="mt-2 text-xs text-slate-500">
+          <p className="mt-1.5 sm:mt-2 text-xs text-slate-500">
             Join NeoCart Nova to track orders, save shipping details, and access
             exclusive drops.
           </p>
@@ -92,7 +96,7 @@ export default function RegisterPage() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+        <form onSubmit={handleSubmit} className="mt-5 sm:mt-6 space-y-4">
           <div>
             <label
               htmlFor="name"
@@ -108,7 +112,7 @@ export default function RegisterPage() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="John Doe"
-                className="w-full rounded-lg border border-slate-300 py-2.5 pl-10 pr-4 text-sm text-brand-charcoal outline-none transition placeholder:text-slate-400 focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20"
+                className="w-full rounded-lg border border-slate-300 py-2.5 pl-10 pr-4 text-xs sm:text-sm text-brand-charcoal outline-none transition placeholder:text-slate-400 focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20"
               />
               <User className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
             </div>
@@ -129,7 +133,7 @@ export default function RegisterPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="name@example.com"
-                className="w-full rounded-lg border border-slate-300 py-2.5 pl-10 pr-4 text-sm text-brand-charcoal outline-none transition placeholder:text-slate-400 focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20"
+                className="w-full rounded-lg border border-slate-300 py-2.5 pl-10 pr-4 text-xs sm:text-sm text-brand-charcoal outline-none transition placeholder:text-slate-400 focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20"
               />
               <Mail className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
             </div>
@@ -150,7 +154,7 @@ export default function RegisterPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full rounded-lg border border-slate-300 py-2.5 pl-10 pr-4 text-sm text-brand-charcoal outline-none transition placeholder:text-slate-400 focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20"
+                className="w-full rounded-lg border border-slate-300 py-2.5 pl-10 pr-4 text-xs sm:text-sm text-brand-charcoal outline-none transition placeholder:text-slate-400 focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20"
               />
               <Lock className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
             </div>
@@ -170,7 +174,7 @@ export default function RegisterPage() {
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="+91 98765 43210"
-                className="w-full rounded-lg border border-slate-300 py-2.5 pl-10 pr-4 text-sm text-brand-charcoal outline-none transition placeholder:text-slate-400 focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20"
+                className="w-full rounded-lg border border-slate-300 py-2.5 pl-10 pr-4 text-xs sm:text-sm text-brand-charcoal outline-none transition placeholder:text-slate-400 focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20"
               />
               <Phone className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
             </div>
@@ -179,7 +183,7 @@ export default function RegisterPage() {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="flex w-full items-center justify-center gap-2 rounded-lg bg-brand-blue py-3 text-sm font-semibold text-white shadow-md shadow-blue-500/20 transition hover:bg-blue-600 focus:ring-2 focus:ring-brand-blue focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-brand-blue py-2.5 sm:py-3 text-xs sm:text-sm font-semibold text-white shadow-md shadow-blue-500/20 transition hover:bg-blue-600 focus:ring-2 focus:ring-brand-blue focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isSubmitting ? (
               <>
@@ -195,7 +199,7 @@ export default function RegisterPage() {
           </button>
         </form>
 
-        <div className="border-t border-slate-100 pt-6 text-center text-xs text-slate-500">
+        <div className="border-t border-slate-100 pt-5 sm:pt-6 text-center text-xs text-slate-500">
           Already have an account?{" "}
           <Link
             href="/login"

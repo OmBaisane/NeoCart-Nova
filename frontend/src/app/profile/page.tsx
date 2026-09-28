@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
@@ -20,7 +19,6 @@ import {
 } from "lucide-react";
 
 export default function ProfilePage() {
-  const router = useRouter();
   const { user, isLoading: isAuthLoading, refetchUser } = useAuth();
 
   // Profile details state
@@ -42,7 +40,6 @@ export default function ProfilePage() {
   const [passwordSuccess, setPasswordSuccess] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
 
-  // Sync state when user context is loaded
   useEffect(() => {
     if (user) {
       setName(user.name || "");
@@ -75,8 +72,15 @@ export default function ProfilePage() {
       await refetchUser();
       setTimeout(() => setProfileSuccess(false), 4000);
     },
-    onError: (err: any) => {
-      setProfileError(err.message || "Failed to update profile details.");
+    onError: (err: {
+      response?: { data?: { message?: string } };
+      message?: string;
+    }) => {
+      setProfileError(
+        err.response?.data?.message ||
+          err.message ||
+          "Failed to update profile details.",
+      );
     },
   });
 
@@ -97,8 +101,15 @@ export default function ProfilePage() {
       setConfirmPassword("");
       setTimeout(() => setPasswordSuccess(false), 4000);
     },
-    onError: (err: any) => {
-      setPasswordError(err.message || "Failed to update password.");
+    onError: (err: {
+      response?: { data?: { message?: string } };
+      message?: string;
+    }) => {
+      setPasswordError(
+        err.response?.data?.message ||
+          err.message ||
+          "Failed to update password.",
+      );
     },
   });
 
@@ -110,7 +121,6 @@ export default function ProfilePage() {
     );
   }
 
-  // Auth Guard
   if (!user) {
     return (
       <main className="mx-auto max-w-7xl px-4 py-20 text-center">
@@ -166,11 +176,11 @@ export default function ProfilePage() {
   };
 
   return (
-    <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
+    <main className="mx-auto max-w-5xl px-3 sm:px-6 lg:px-8 py-6 sm:py-8">
       {/* Header Info */}
-      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-4 sm:pb-6">
         <div>
-          <h1 className="text-2xl font-extrabold tracking-tight text-brand-charcoal sm:text-3xl">
+          <h1 className="text-xl font-extrabold tracking-tight text-brand-charcoal sm:text-3xl">
             Account Settings
           </h1>
           <p className="mt-1 text-xs text-slate-500">
@@ -179,26 +189,26 @@ export default function ProfilePage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-brand-blue uppercase tracking-wider">
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-[10px] sm:text-xs font-bold text-brand-blue uppercase tracking-wider">
             Role: {user.role}
           </span>
-          <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
+          <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-[10px] sm:text-xs font-bold text-emerald-700">
             Active Session
           </span>
         </div>
       </div>
 
-      <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-3">
-        {/* Left 2 Cols: Profile Information & Saved Address */}
-        <section className="lg:col-span-2 space-y-6">
+      <div className="mt-6 sm:mt-8 grid grid-cols-1 gap-6 lg:grid-cols-3 lg:gap-8">
+        {/* Left 2 Cols: Profile Information */}
+        <section className="lg:col-span-2 space-y-4 sm:space-y-6">
           <form
             onSubmit={handleProfileSubmit}
-            className="rounded-2xl border border-slate-200 bg-white p-6 shadow-2xs space-y-6"
+            className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 shadow-2xs space-y-4 sm:space-y-6"
           >
             <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
-              <UserIcon className="h-4 w-4 text-brand-blue" />
-              <h2 className="text-sm font-bold text-brand-charcoal uppercase tracking-wider">
+              <UserIcon className="h-4 w-4 text-brand-blue shrink-0" />
+              <h2 className="text-xs sm:text-sm font-bold text-brand-charcoal uppercase tracking-wider">
                 Personal Information & Delivery Details
               </h2>
             </div>
@@ -217,7 +227,7 @@ export default function ProfilePage() {
               </div>
             )}
 
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 sm:gap-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-700">
                   Full Name *
@@ -267,9 +277,9 @@ export default function ProfilePage() {
             </div>
 
             {/* Saved Address Block */}
-            <div className="border-t border-slate-100 pt-4 space-y-4">
+            <div className="border-t border-slate-100 pt-4 space-y-3.5 sm:space-y-4">
               <div className="flex items-center gap-2">
-                <MapPin className="h-4 w-4 text-brand-blue" />
+                <MapPin className="h-4 w-4 text-brand-blue shrink-0" />
                 <h3 className="text-xs font-bold uppercase tracking-wider text-brand-charcoal">
                   Default Shipping Address
                 </h3>
@@ -288,7 +298,7 @@ export default function ProfilePage() {
                 />
               </div>
 
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700">
                     City
@@ -343,15 +353,15 @@ export default function ProfilePage() {
           </form>
         </section>
 
-        {/* Right Col: Password Change & Security */}
-        <aside className="space-y-6">
+        {/* Right Col: Password Change */}
+        <aside className="space-y-4 sm:space-y-6">
           <form
             onSubmit={handlePasswordSubmit}
-            className="rounded-2xl border border-slate-200 bg-white p-6 shadow-2xs space-y-4"
+            className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 shadow-2xs space-y-3.5 sm:space-y-4"
           >
             <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
-              <KeyRound className="h-4 w-4 text-brand-blue" />
-              <h2 className="text-sm font-bold text-brand-charcoal uppercase tracking-wider">
+              <KeyRound className="h-4 w-4 text-brand-blue shrink-0" />
+              <h2 className="text-xs sm:text-sm font-bold text-brand-charcoal uppercase tracking-wider">
                 Change Password
               </h2>
             </div>
@@ -434,12 +444,12 @@ export default function ProfilePage() {
           </form>
 
           {/* Security Information Box */}
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 space-y-2 text-xs text-slate-500">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5 space-y-2 text-xs text-slate-500">
             <div className="flex items-center gap-2 font-bold text-slate-700">
-              <ShieldCheck className="h-4 w-4 text-brand-blue" />
+              <ShieldCheck className="h-4 w-4 text-brand-blue shrink-0" />
               <span>Security Standards</span>
             </div>
-            <p className="leading-relaxed text-[11px]">
+            <p className="leading-relaxed text-[10px] sm:text-[11px]">
               Passwords are salted and hashed via bcrypt before database
               storage. Your active session is bound to secure HttpOnly cookies,
               guarding against client-side script tampering.

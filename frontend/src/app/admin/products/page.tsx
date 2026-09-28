@@ -76,9 +76,9 @@ export default function AdminProductsPage() {
 
   return (
     <main className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 border-b border-slate-200 pb-4 sm:pb-6">
         <div>
-          <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
+          <h1 className="text-xl sm:text-3xl font-extrabold tracking-tight text-slate-900">
             Inventory & Catalog Management
           </h1>
           <p className="mt-1 text-xs text-slate-500">
@@ -89,14 +89,14 @@ export default function AdminProductsPage() {
 
         <Link
           href="/admin/products/new"
-          className="flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-bold text-white shadow-md shadow-blue-500/20 hover:bg-blue-500 transition"
+          className="flex items-center gap-1.5 self-start sm:self-auto rounded-xl bg-blue-600 px-3.5 py-2 sm:px-4 sm:py-2.5 text-xs font-bold text-white shadow-md shadow-blue-500/20 hover:bg-blue-500 transition"
         >
           <Plus className="h-4 w-4" />
           <span>Add New Product</span>
         </Link>
       </div>
 
-      <div className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs">
         <div className="relative flex-1 max-w-md">
           <input
             type="text"
@@ -129,7 +129,8 @@ export default function AdminProductsPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-slate-600">
+            <table className="w-full min-w-175 text-left text-xs text-slate-600">
+              {" "}
               <thead className="border-b border-slate-200 bg-slate-50/70 text-[11px] font-bold uppercase tracking-wider text-slate-500">
                 <tr>
                   <th scope="col" className="py-3.5 px-4">

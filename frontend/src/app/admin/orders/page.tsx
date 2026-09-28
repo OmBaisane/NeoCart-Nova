@@ -3,19 +3,7 @@
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import {
-  ShoppingBag,
-  Truck,
-  CheckCircle2,
-  Clock,
-  XCircle,
-  Search,
-  Eye,
-  Loader2,
-  Package,
-  MapPin,
-  X,
-} from "lucide-react";
+import { Search, Eye, Loader2, MapPin, X } from "lucide-react";
 
 interface OrderItemSnapshot {
   product: string;
@@ -119,11 +107,11 @@ export default function AdminOrdersPage() {
   };
 
   return (
-    <main className="space-y-6">
+    <main className="space-y-4 sm:space-y-6">
       {/* Header bar */}
-      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 border-b border-slate-200 pb-4 sm:pb-6">
         <div>
-          <h1 className="text-2xl font-extrabold tracking-tight text-brand-charcoal sm:text-3xl">
+          <h1 className="text-xl sm:text-3xl font-extrabold tracking-tight text-brand-charcoal">
             Customer Fulfillment & Orders
           </h1>
           <p className="mt-1 text-xs text-slate-500">
@@ -134,8 +122,8 @@ export default function AdminOrdersPage() {
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs">
-        <div className="relative flex-1 max-w-md">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-3.5 sm:p-4 shadow-2xs">
+        <div className="relative flex-1 max-w-full sm:max-w-md">
           <input
             type="text"
             placeholder="Search by tracking code, customer name, city..."
@@ -146,7 +134,7 @@ export default function AdminOrdersPage() {
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
         </div>
 
-        <span className="text-xs font-semibold text-slate-500">
+        <span className="text-[11px] sm:text-xs font-semibold text-slate-500">
           Showing {filteredOrders.length} of {orders.length} orders
         </span>
       </div>
@@ -158,12 +146,12 @@ export default function AdminOrdersPage() {
             <Loader2 className="h-8 w-8 animate-spin text-brand-blue" />
           </div>
         ) : filteredOrders.length === 0 ? (
-          <div className="p-12 text-center text-xs text-slate-400">
+          <div className="p-8 sm:p-12 text-center text-xs text-slate-400">
             No customer orders matched your criteria.
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-slate-600">
+            <table className="w-full min-w-180 text-left text-xs text-slate-600">
               <thead className="border-b border-slate-200 bg-slate-50/70 text-[11px] font-bold uppercase tracking-wider text-slate-500">
                 <tr>
                   <th scope="col" className="py-3.5 px-4">
@@ -195,7 +183,7 @@ export default function AdminOrdersPage() {
                     {/* Tracking & Date */}
                     <td className="py-3 px-4">
                       <div className="flex flex-col">
-                        <span className="font-mono font-bold text-brand-charcoal">
+                        <span className="font-mono font-bold text-brand-charcoal text-[11px] sm:text-xs">
                           {order.trackingNumber}
                         </span>
                         <span className="text-[10px] text-slate-400">
@@ -207,10 +195,10 @@ export default function AdminOrdersPage() {
                     {/* Customer */}
                     <td className="py-3 px-4">
                       <div className="flex flex-col">
-                        <span className="font-bold text-brand-charcoal">
+                        <span className="font-bold text-brand-charcoal truncate max-w-40">
                           {order.shippingAddress.fullName}
                         </span>
-                        <span className="text-[10px] text-slate-400">
+                        <span className="text-[10px] text-slate-400 truncate max-w-40">
                           {order.shippingAddress.city},{" "}
                           {order.shippingAddress.state}
                         </span>
@@ -273,12 +261,12 @@ export default function AdminOrdersPage() {
 
       {/* Order Inspection Modal */}
       {selectedOrder && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs">
-          <div className="w-full max-w-xl rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3 sm:p-4 backdrop-blur-xs">
+          <div className="w-full max-w-xl rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 shadow-2xl space-y-4 sm:space-y-6 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div>
-                <h3 className="text-sm font-bold text-brand-charcoal uppercase tracking-wider">
-                  Order Invoice: {selectedOrder.trackingNumber}
+              <div className="min-w-0">
+                <h3 className="text-xs sm:text-sm font-bold text-brand-charcoal uppercase tracking-wider truncate">
+                  Invoice: {selectedOrder.trackingNumber}
                 </h3>
                 <span className="text-[10px] text-slate-400">
                   Placed on {new Date(selectedOrder.createdAt).toLocaleString()}
@@ -286,16 +274,16 @@ export default function AdminOrdersPage() {
               </div>
               <button
                 onClick={() => setSelectedOrder(null)}
-                className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 shrink-0"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
             {/* Delivery address */}
-            <div className="rounded-xl bg-slate-50 p-4 space-y-1 text-xs text-slate-600">
+            <div className="rounded-xl bg-slate-50 p-3.5 sm:p-4 space-y-1 text-xs text-slate-600">
               <div className="flex items-center gap-1.5 font-bold text-slate-800">
-                <MapPin className="h-3.5 w-3.5 text-brand-blue" />
+                <MapPin className="h-3.5 w-3.5 text-brand-blue shrink-0" />
                 <span>Shipping Address</span>
               </div>
               <p className="font-semibold text-brand-charcoal">
@@ -312,32 +300,32 @@ export default function AdminOrdersPage() {
 
             {/* Items breakdown */}
             <div>
-              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 mb-3">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 mb-2.5">
                 Frozen Snapshot Items ({selectedOrder.items.length})
               </h4>
               <div className="divide-y divide-slate-100 border-y border-slate-100">
                 {selectedOrder.items.map((item, idx) => (
                   <div
                     key={idx}
-                    className="flex items-center justify-between py-2.5 text-xs"
+                    className="flex items-center justify-between gap-3 py-2.5 text-xs"
                   >
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2.5 min-w-0">
                       <img
                         src={item.image || ""}
                         alt={item.name}
-                        className="h-10 w-10 rounded-lg object-cover bg-slate-100"
+                        className="h-10 w-10 rounded-lg object-cover bg-slate-100 shrink-0"
                       />
-                      <div>
-                        <h5 className="font-bold text-brand-charcoal">
+                      <div className="min-w-0">
+                        <h5 className="font-bold text-brand-charcoal truncate text-[11px] sm:text-xs">
                           {item.name}
                         </h5>
-                        <p className="text-[11px] text-slate-400">
+                        <p className="text-[10px] sm:text-[11px] text-slate-400">
                           {item.quantity} × ₹
                           {item.price.toLocaleString("en-IN")}
                         </p>
                       </div>
                     </div>
-                    <span className="font-bold text-brand-charcoal">
+                    <span className="font-bold text-brand-charcoal text-xs shrink-0">
                       ₹{(item.price * item.quantity).toLocaleString("en-IN")}
                     </span>
                   </div>

@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
@@ -46,7 +45,6 @@ export default function CheckoutPage() {
 
   const [validationError, setValidationError] = useState<string | null>(null);
 
-  // Pre-fill user information if already available in context
   useEffect(() => {
     if (user) {
       setForm((prev) => ({
@@ -61,14 +59,12 @@ export default function CheckoutPage() {
     }
   }, [user]);
 
-  // Auth Guard
   useEffect(() => {
     if (!isAuthLoading && !user) {
       router.push("/login?redirect=/checkout");
     }
   }, [user, isAuthLoading, router]);
 
-  // 1. Fetch Cart to Verify Items Before Ordering
   const { data: cartData, isLoading: isCartLoading } = useQuery({
     queryKey: ["cart"],
     queryFn: async () => {
@@ -78,7 +74,6 @@ export default function CheckoutPage() {
     enabled: !!user,
   });
 
-  // 2. Place Order Mutation
   const placeOrderMutation = useMutation({
     mutationFn: async () => {
       const res = await api.post("/orders", {
@@ -94,7 +89,10 @@ export default function CheckoutPage() {
       const orderId = data.order._id;
       router.push(`/order-success/${orderId}`);
     },
-    onError: (err: any) => {
+    onError: (err: {
+      response?: { data?: { message?: string } };
+      message?: string;
+    }) => {
       setValidationError(
         err.response?.data?.message ||
           err.message ||
@@ -120,7 +118,6 @@ export default function CheckoutPage() {
   const shippingFee = subtotal >= 1000 || subtotal === 0 ? 0 : 99;
   const total = subtotal + shippingFee;
 
-  // Empty cart direct access guard with unified EmptyState
   if (items.length === 0) {
     return (
       <main className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8 text-center">
@@ -165,9 +162,9 @@ export default function CheckoutPage() {
   };
 
   return (
-    <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <main className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8 py-6 sm:py-8">
       <div className="border-b border-slate-200 pb-4">
-        <h1 className="text-2xl font-extrabold tracking-tight text-brand-charcoal sm:text-3xl">
+        <h1 className="text-xl font-extrabold tracking-tight text-brand-charcoal sm:text-3xl">
           Secure Checkout
         </h1>
         <p className="mt-1 text-xs text-slate-500">
@@ -176,27 +173,27 @@ export default function CheckoutPage() {
         </p>
       </div>
 
-      <div className="mt-8 grid grid-cols-1 gap-12 lg:grid-cols-3">
-        {/* Left 2 Cols: Shipping Information Form */}
+      <div className="mt-6 sm:mt-8 grid grid-cols-1 gap-6 lg:grid-cols-3 lg:gap-12">
+        {/* Left 2 Cols: Shipping Form */}
         <section className="lg:col-span-2">
-          <form onSubmit={handleFormSubmit} className="space-y-6">
+          <form onSubmit={handleFormSubmit} className="space-y-4 sm:space-y-6">
             {validationError && (
-              <div className="flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 p-4 text-xs font-semibold text-rose-700">
+              <div className="flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3 sm:p-4 text-xs font-semibold text-rose-700">
                 <AlertCircle className="h-4 w-4 shrink-0" />
                 <span>{validationError}</span>
               </div>
             )}
 
             {/* Address Details Block */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-2xs space-y-4">
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 shadow-2xs space-y-4">
               <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
                 <MapPin className="h-4 w-4 text-brand-blue" />
-                <h2 className="text-sm font-bold text-brand-charcoal uppercase tracking-wider">
+                <h2 className="text-xs sm:text-sm font-bold text-brand-charcoal uppercase tracking-wider">
                   1. Shipping Information
                 </h2>
               </div>
 
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 sm:gap-4">
                 <div>
                   <label
                     htmlFor="fullName"
@@ -261,7 +258,7 @@ export default function CheckoutPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-3 sm:gap-4">
                 <div>
                   <label
                     htmlFor="city"
@@ -322,30 +319,30 @@ export default function CheckoutPage() {
             </div>
 
             {/* Payment Method Block */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-2xs space-y-4">
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 shadow-2xs space-y-3">
               <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
                 <CreditCard className="h-4 w-4 text-brand-blue" />
-                <h2 className="text-sm font-bold text-brand-charcoal uppercase tracking-wider">
+                <h2 className="text-xs sm:text-sm font-bold text-brand-charcoal uppercase tracking-wider">
                   2. Payment Method
                 </h2>
               </div>
 
-              <div className="flex items-center justify-between rounded-xl border-2 border-brand-blue bg-blue-50/40 p-4">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-blue text-white">
-                    <Truck className="h-5 w-5" />
+              <div className="flex items-start sm:items-center justify-between gap-3 rounded-xl border-2 border-brand-blue bg-blue-50/40 p-3.5 sm:p-4">
+                <div className="flex items-start sm:items-center gap-3">
+                  <div className="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-lg bg-brand-blue text-white mt-0.5 sm:mt-0">
+                    <Truck className="h-4 w-4 sm:h-5 sm:w-5" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold text-brand-charcoal">
+                    <h3 className="text-xs sm:text-sm font-bold text-brand-charcoal">
                       Cash on Delivery (COD)
                     </h3>
-                    <p className="text-xs text-slate-500">
+                    <p className="mt-0.5 text-[11px] sm:text-xs text-slate-500 leading-tight">
                       Pay with cash or UPI scanner upon parcel arrival at your
                       doorstep.
                     </p>
                   </div>
                 </div>
-                <CheckCircle2 className="h-5 w-5 text-brand-blue" />
+                <CheckCircle2 className="h-5 w-5 text-brand-blue shrink-0 mt-0.5 sm:mt-0" />
               </div>
             </div>
 
@@ -353,7 +350,7 @@ export default function CheckoutPage() {
             <button
               type="submit"
               disabled={placeOrderMutation.isPending}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-blue py-3.5 px-6 text-sm font-bold text-white shadow-lg shadow-blue-500/25 transition hover:bg-blue-600 focus:ring-2 focus:ring-brand-blue focus:ring-offset-2 disabled:opacity-60"
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-blue py-3.5 px-4 sm:px-6 text-xs sm:text-sm font-bold text-white shadow-lg shadow-blue-500/25 transition hover:bg-blue-600 focus:ring-2 focus:ring-brand-blue focus:ring-offset-2 disabled:opacity-60"
             >
               {placeOrderMutation.isPending ? (
                 <>
@@ -371,39 +368,47 @@ export default function CheckoutPage() {
         </section>
 
         {/* Right Col: Order Snapshot */}
-        <aside className="h-fit rounded-2xl border border-slate-200 bg-white p-6 shadow-2xs space-y-6">
+        <aside className="h-fit rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 shadow-2xs space-y-5 sm:space-y-6">
           <div className="border-b border-slate-100 pb-3">
-            <h2 className="text-sm font-bold text-brand-charcoal uppercase tracking-wider">
+            <h2 className="text-xs sm:text-sm font-bold text-brand-charcoal uppercase tracking-wider">
               Order Items ({cartData?.totalItems || 0})
             </h2>
           </div>
 
           {/* Items Preview */}
-          <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
-            {items.map((item: any) => (
-              <div
-                key={item.product?._id}
-                className="flex items-center gap-3 text-xs"
-              >
-                <img
-                  src={item.product?.images?.[0] || ""}
-                  alt={item.product?.name}
-                  className="h-12 w-12 rounded-lg object-cover bg-slate-100 shrink-0"
-                />
-                <div className="flex-1 min-w-0">
-                  <h4 className="font-bold text-brand-charcoal truncate">
-                    {item.product?.name}
-                  </h4>
-                  <p className="text-slate-400">Qty: {item.quantity}</p>
+          <div className="space-y-3 max-h-56 sm:max-h-60 overflow-y-auto pr-1">
+            {items.map(
+              (item: {
+                product?: { _id: string; name: string; images?: string[] };
+                quantity: number;
+                price: number;
+              }) => (
+                <div
+                  key={item.product?._id}
+                  className="flex items-center gap-3 text-xs"
+                >
+                  <img
+                    src={item.product?.images?.[0] || ""}
+                    alt={item.product?.name || "Product"}
+                    className="h-11 w-11 sm:h-12 sm:w-12 rounded-lg object-cover bg-slate-100 shrink-0"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-bold text-brand-charcoal truncate text-[11px] sm:text-xs">
+                      {item.product?.name}
+                    </h4>
+                    <p className="text-slate-400 text-[10px] sm:text-[11px]">
+                      Qty: {item.quantity}
+                    </p>
+                  </div>
+                  <span className="font-bold text-brand-charcoal text-xs shrink-0">
+                    ₹{(item.price * item.quantity).toLocaleString("en-IN")}
+                  </span>
                 </div>
-                <span className="font-bold text-brand-charcoal">
-                  ₹{(item.price * item.quantity).toLocaleString("en-IN")}
-                </span>
-              </div>
-            ))}
+              ),
+            )}
           </div>
 
-          <div className="border-t border-slate-100 pt-4 space-y-2 text-xs">
+          <div className="border-t border-slate-100 pt-3.5 space-y-2 text-xs">
             <div className="flex justify-between text-slate-600">
               <span>Items Subtotal</span>
               <span className="font-semibold text-slate-800">
@@ -420,20 +425,20 @@ export default function CheckoutPage() {
                 )}
               </span>
             </div>
-            <div className="flex justify-between border-t border-slate-100 pt-3 text-sm font-extrabold text-brand-charcoal">
+            <div className="flex justify-between border-t border-slate-100 pt-3 text-xs sm:text-sm font-extrabold text-brand-charcoal">
               <span>Grand Total</span>
-              <span className="text-base text-brand-blue">
+              <span className="text-sm sm:text-base text-brand-blue">
                 ₹{total.toLocaleString("en-IN")}
               </span>
             </div>
           </div>
 
-          <div className="rounded-xl bg-slate-50 p-3 space-y-1.5 text-[11px] text-slate-500">
+          <div className="rounded-xl bg-slate-50 p-3 space-y-1 text-[11px] text-slate-500">
             <div className="flex items-center gap-1.5 font-semibold text-slate-700">
-              <ShieldCheck className="h-4 w-4 text-cyan-accent" />
+              <ShieldCheck className="h-4 w-4 text-cyan-accent shrink-0" />
               <span>Zero-Trust Price Guarantee</span>
             </div>
-            <p>
+            <p className="leading-tight text-[10px] sm:text-[11px]">
               Your order prices and inventory allocations are calculated and
               locked directly on the database.
             </p>
