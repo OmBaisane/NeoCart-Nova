@@ -227,12 +227,15 @@ export const getOrderById = async (
   }
 };
 
-// PATCH /api/orders/:id/cancel (Protected - Atomic & Idempotent Customer Cancellation)
+// PATCH /api/orders/:id/cancel (Protected - Atomic & Transaction-Safe Customer Cancellation)
 export const cancelOrder = async (
   req: Request,
   res: Response,
   next: NextFunction,
 ): Promise<void> => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
   try {
     const userId = req.user!._id;
     const isAdmin = req.user!.role === "admin";
@@ -247,6 +250,7 @@ export const cancelOrder = async (
       query.user = userId;
     }
 
+    // Atomically transition status inside session to prevent race conditions & double cancellation
     const order = await Order.findOneAndUpdate(
       query,
       {
@@ -255,10 +259,11 @@ export const cancelOrder = async (
           cancelledAt: new Date(),
         },
       },
-      { new: true },
+      { session, new: true },
     );
 
     if (!order) {
+      await session.abortTransaction();
       res.status(400).json({
         success: false,
         message:
@@ -267,11 +272,16 @@ export const cancelOrder = async (
       return;
     }
 
+    // Restock all items atomically within the exact same transaction session
     for (const item of order.items) {
-      await Product.findByIdAndUpdate(item.product, {
-        $inc: { stock: item.quantity },
-      });
+      await Product.findByIdAndUpdate(
+        item.product,
+        { $inc: { stock: item.quantity } },
+        { session },
+      );
     }
+
+    await session.commitTransaction();
 
     res.status(200).json({
       success: true,
@@ -279,7 +289,10 @@ export const cancelOrder = async (
       order,
     });
   } catch (error) {
+    await session.abortTransaction();
     next(error);
+  } finally {
+    session.endSession();
   }
 };
 
