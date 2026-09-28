@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from "express";
+import mongoose from "mongoose";
 import { Order, IOrderItemSnapshot } from "../models/order.model.js";
 import { Cart } from "../models/cart.model.js";
 import { Product } from "../models/product.model.js";
@@ -7,35 +8,39 @@ import {
   updateOrderStatusSchema,
 } from "../utils/validators.js";
 
-// Helper: Generates unique human-readable tracking number
+// Generates a unique human-readable tracking number
 const generateTrackingNumber = (): string => {
   const timestamp = Date.now().toString(36).toUpperCase();
   const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
   return `NC-NOV-${timestamp}-${randomSuffix}`;
 };
 
-// POST /api/orders (Protected - Checkout Flow with Atomic Stock Reservation)
+// POST /api/orders (Protected - Transaction-Safe Checkout Flow)
 export const createOrder = async (
   req: Request,
   res: Response,
   next: NextFunction,
 ): Promise<void> => {
+  const validationResult = createOrderSchema.safeParse(req.body);
+  if (!validationResult.success) {
+    res.status(400).json({
+      success: false,
+      message: validationResult.error.issues[0].message,
+    });
+    return;
+  }
+
+  const { shippingAddress, paymentMethod } = validationResult.data;
+  const userId = req.user!._id;
+
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
   try {
-    const validationResult = createOrderSchema.safeParse(req.body);
-    if (!validationResult.success) {
-      res.status(400).json({
-        success: false,
-        message: validationResult.error.issues[0].message,
-      });
-      return;
-    }
-
-    const { shippingAddress, paymentMethod } = validationResult.data;
-    const userId = req.user!._id;
-
-    // 1. Fetch user's cart
-    const cart = await Cart.findOne({ user: userId });
+    // 1. Fetch user's cart inside session
+    const cart = await Cart.findOne({ user: userId }).session(session);
     if (!cart || cart.items.length === 0) {
+      await session.abortTransaction();
       res.status(400).json({
         success: false,
         message: "Your cart is empty. Cannot place an order.",
@@ -45,57 +50,53 @@ export const createOrder = async (
 
     const orderItems: IOrderItemSnapshot[] = [];
     let calculatedSubtotal = 0;
-    const reservedProducts: Array<{ productId: string; quantity: number }> = [];
 
-    // 2. Atomic Stock Reservation Step
+    // 2. Validate availability and atomically decrement stock within session
     for (const cartItem of cart.items) {
-      const product = await Product.findById(cartItem.product);
+      const product = await Product.findOne({
+        _id: cartItem.product,
+        isActive: true,
+        isDeleted: false,
+      }).session(session);
 
-      if (!product || !product.isActive) {
-        // Rollback any items already decremented
-        for (const reserved of reservedProducts) {
-          await Product.findByIdAndUpdate(reserved.productId, {
-            $inc: { stock: reserved.quantity },
-          });
-        }
+      if (!product) {
+        await session.abortTransaction();
         res.status(400).json({
           success: false,
-          message: `Product "${cartItem.product}" is no longer available.`,
+          message: `Product is no longer available.`,
         });
         return;
       }
 
-      // Atomic conditional update: ONLY decrements if stock >= requested quantity
+      if (product.stock < cartItem.quantity) {
+        await session.abortTransaction();
+        res.status(400).json({
+          success: false,
+          message: `Insufficient stock for "${product.name}". Available: ${product.stock}`,
+        });
+        return;
+      }
+
       const updatedProduct = await Product.findOneAndUpdate(
         {
           _id: product._id,
           stock: { $gte: cartItem.quantity },
           isActive: true,
+          isDeleted: false,
         },
         { $inc: { stock: -cartItem.quantity } },
-        { new: true },
+        { session, new: true },
       );
 
       if (!updatedProduct) {
-        // Rollback any items already decremented in this transaction
-        for (const reserved of reservedProducts) {
-          await Product.findByIdAndUpdate(reserved.productId, {
-            $inc: { stock: reserved.quantity },
-          });
-        }
+        await session.abortTransaction();
         res.status(400).json({
           success: false,
-          message: `Insufficient stock for "${product.name}".`,
+          message: `Stock reservation failed due to concurrent checkout for "${product.name}".`,
         });
         return;
       }
 
-      reservedProducts.push({
-        productId: product._id.toString(),
-        quantity: cartItem.quantity,
-      });
-
-      // Trusted price snapshot directly from DB
       const effectivePrice =
         product.discountPrice !== undefined && product.discountPrice > 0
           ? product.discountPrice
@@ -112,35 +113,42 @@ export const createOrder = async (
       calculatedSubtotal += effectivePrice * cartItem.quantity;
     }
 
-    // 3. Calculate delivery fee & grand total server-side
     calculatedSubtotal = Math.round(calculatedSubtotal * 100) / 100;
     const shippingFee = calculatedSubtotal >= 1000 ? 0 : 99;
     const discount = 0;
     const total =
       Math.round((calculatedSubtotal + shippingFee - discount) * 100) / 100;
 
-    // 4. Create the Order Document with tracking number
     const trackingNumber = generateTrackingNumber();
 
-    const order = await Order.create({
-      user: userId,
-      items: orderItems,
-      shippingAddress,
-      subtotal: calculatedSubtotal,
-      shippingFee,
-      discount,
-      total,
-      paymentMethod: paymentMethod || "COD",
-      paymentStatus: "pending",
-      orderStatus: "pending",
-      trackingNumber,
-    });
+    // 3. Create order document inside session
+    const [order] = await Order.create(
+      [
+        {
+          user: userId,
+          items: orderItems,
+          shippingAddress,
+          subtotal: calculatedSubtotal,
+          shippingFee,
+          discount,
+          total,
+          paymentMethod: paymentMethod || "COD",
+          paymentStatus: "pending",
+          orderStatus: "pending",
+          trackingNumber,
+        },
+      ],
+      { session },
+    );
 
-    // 5. Clear user's cart
+    // 4. Clear user's cart inside session
     cart.items = [];
     cart.totalItems = 0;
     cart.subtotal = 0;
-    await cart.save();
+    await cart.save({ session });
+
+    // 5. Commit atomic transaction
+    await session.commitTransaction();
 
     res.status(201).json({
       success: true,
@@ -148,7 +156,10 @@ export const createOrder = async (
       order,
     });
   } catch (error) {
+    await session.abortTransaction();
     next(error);
+  } finally {
+    session.endSession();
   }
 };
 
@@ -227,7 +238,6 @@ export const cancelOrder = async (
     const isAdmin = req.user!.role === "admin";
     const orderId = req.params.id;
 
-    // Build ownership query
     const query: Record<string, unknown> = {
       _id: orderId,
       orderStatus: { $in: ["pending", "confirmed"] },
@@ -237,7 +247,6 @@ export const cancelOrder = async (
       query.user = userId;
     }
 
-    // Atomically transition status from pending/confirmed to cancelled
     const order = await Order.findOneAndUpdate(
       query,
       {
@@ -258,7 +267,6 @@ export const cancelOrder = async (
       return;
     }
 
-    // Restock items back to database (executes exactly once)
     for (const item of order.items) {
       await Product.findByIdAndUpdate(item.product, {
         $inc: { stock: item.quantity },
