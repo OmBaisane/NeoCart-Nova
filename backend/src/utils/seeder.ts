@@ -1,47 +1,56 @@
-import mongoose from "mongoose";
 import { connectDB } from "../config/db.js";
-import { ENV } from "../config/env.js";
 import { User } from "../models/user.model.js";
 import { Category } from "../models/category.model.js";
 import { Product } from "../models/product.model.js";
-import { Review } from "../models/review.model.js";
-import { Cart } from "../models/cart.model.js";
-import { Order } from "../models/order.model.js";
+
+const getRequiredSeedEnv = (name: string): string => {
+  const value = process.env[name]?.trim();
+
+  if (!value) {
+    throw new Error(`Missing required seed environment variable: ${name}`);
+  }
+
+  return value;
+};
 
 const seedDatabase = async () => {
   try {
-    const isProduction = process.env.NODE_ENV === "production";
-    const forceFlag = process.argv.includes("--force-production-seed");
-
-    if (isProduction && !forceFlag) {
+    if (process.env.NODE_ENV === "production") {
       console.error(
-        "CRITICAL ERROR: Destructive database seeding is prohibited in production without the explicit '--force-production-seed' flag.",
+        "Database seeding is disabled in production. Run the seed script only in a non-production environment.",
       );
       process.exit(1);
     }
 
+    const adminEmail = getRequiredSeedEnv("SEED_ADMIN_EMAIL");
+    const adminPassword = getRequiredSeedEnv("SEED_ADMIN_PASSWORD");
+    const adminPhone = getRequiredSeedEnv("SEED_ADMIN_PHONE");
+
+    const demoUserEmail = getRequiredSeedEnv("SEED_DEMO_USER_EMAIL");
+    const demoUserPassword = getRequiredSeedEnv("SEED_DEMO_USER_PASSWORD");
+    const demoUserPhone = getRequiredSeedEnv("SEED_DEMO_USER_PHONE");
+
     await connectDB();
-    console.log("Connected to MongoDB. Starting database seed...");
+    console.log("Connected to MongoDB. Starting development database seed...");
 
-    // 2. Admin User create karo
-    const adminUser = await User.create({
+    await User.create({
       name: "NeoCart Admin",
-      email: "admin@neocart.com",
-      password: "AdminPassword123",
+      email: adminEmail,
+      password: adminPassword,
       role: "admin",
-      phone: "+91 9876543210",
+      phone: adminPhone,
     });
 
-    const demoUser = await User.create({
-      name: "Om Baisane",
-      email: "om@example.com",
-      password: "UserPassword123",
+    await User.create({
+      name: "NeoCart Demo User",
+      email: demoUserEmail,
+      password: demoUserPassword,
       role: "user",
-      phone: "+91 9988776655",
+      phone: demoUserPhone,
     });
-    console.log("👤 Admin & Demo user seeded successfully.");
 
-    // 3. Realistic Categories create karo
+    console.log("Admin and demo user seeded successfully.");
+
     const categories = await Category.insertMany([
       {
         name: "Audio Gear",
@@ -64,9 +73,9 @@ const seedDatabase = async () => {
         description: "Minimalist backpacks, EDC organizers, and travel gear.",
       },
     ]);
-    console.log("📁 Categories seeded.");
 
-    // 4. Products with verified stock & images
+    console.log("Categories seeded successfully.");
+
     const products = [
       {
         name: "Nova Pro Wireless ANC Headphones",
@@ -94,7 +103,7 @@ const seedDatabase = async () => {
         price: 7499,
         discountPrice: 5999,
         category: categories[2]._id,
-        stock: 4, // Low stock badge test karne ke liye
+        stock: 4,
         images: [
           "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800&q=80",
           "https://images.unsplash.com/photo-1608231387042-66d1773070a5?w=800&q=80",
@@ -163,7 +172,7 @@ const seedDatabase = async () => {
           "360-degree acoustic omni-directional sound with punchy bass radiators, IPX7 waterproof rating, and 24-hour continuous playtime.",
         price: 5499,
         category: categories[0]._id,
-        stock: 0, // Out of Stock test karne ke liye
+        stock: 0,
         images: [
           "https://images.unsplash.com/photo-1545454675-3531b543be5d?w=800&q=80",
         ],
@@ -175,14 +184,14 @@ const seedDatabase = async () => {
     ];
 
     await Product.insertMany(products);
-    console.log("📦 6 Production-quality products seeded successfully.");
+    console.log("Development products seeded successfully.");
 
-    console.log("\n✅ Database seeding completed perfectly!");
+    console.log("Database seeding completed successfully.");
     process.exit(0);
   } catch (error) {
-    console.error("❌ Error seeding database:", error);
+    console.error("Database seeding failed:", error);
     process.exit(1);
   }
 };
 
-seedDatabase();
+void seedDatabase();
