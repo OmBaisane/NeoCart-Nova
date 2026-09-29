@@ -45,8 +45,12 @@ export default function CartPage() {
   const { user, isLoading: isAuthLoading } = useAuth();
   const queryClient = useQueryClient();
 
-  // 1. Fetch Cart Data
-  const { data: cartData, isLoading: isCartLoading } = useQuery<{
+  // 1. Fetch Cart Data with Zero StaleTime & Instant Mount Sync
+  const {
+    data: cartData,
+    isLoading: isCartLoading,
+    isFetching,
+  } = useQuery<{
     cart: CartResponse;
   }>({
     queryKey: ["cart"],
@@ -55,6 +59,8 @@ export default function CartPage() {
       return res.data;
     },
     enabled: !!user,
+    staleTime: 0,
+    refetchOnMount: "always",
   });
 
   // 2. Update Item Quantity Mutation
@@ -83,7 +89,8 @@ export default function CartPage() {
     },
   });
 
-  if (isAuthLoading || (user && isCartLoading)) {
+  // Initial loading state jab user check ho raha ho ya cart pehli baar fetch ho rahi ho
+  if (isAuthLoading || (user && isCartLoading && !cartData)) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-brand-blue" />
@@ -112,8 +119,8 @@ export default function CartPage() {
   const shippingFee = subtotal >= 1000 || subtotal === 0 ? 0 : 99;
   const grandTotal = subtotal + shippingFee;
 
-  // Empty Cart State
-  if (items.length === 0) {
+  // Empty Cart State (Only when NOT fetching and genuinely 0 items)
+  if (!isFetching && items.length === 0) {
     return (
       <main className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8 text-center">
         <EmptyState

@@ -56,7 +56,6 @@ export const createOrder = async (
       const product = await Product.findOne({
         _id: cartItem.product,
         isActive: true,
-        isDeleted: false,
       }).session(session);
 
       if (!product) {
@@ -82,7 +81,6 @@ export const createOrder = async (
           _id: product._id,
           stock: { $gte: cartItem.quantity },
           isActive: true,
-          isDeleted: false,
         },
         { $inc: { stock: -cartItem.quantity } },
         { session, new: true },

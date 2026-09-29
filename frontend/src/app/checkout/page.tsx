@@ -65,13 +65,20 @@ export default function CheckoutPage() {
     }
   }, [user, isAuthLoading, router]);
 
-  const { data: cartData, isLoading: isCartLoading } = useQuery({
+  // Fetch Cart with Zero StaleTime & Instant Mount Sync
+  const {
+    data: cartData,
+    isLoading: isCartLoading,
+    isFetching,
+  } = useQuery({
     queryKey: ["cart"],
     queryFn: async () => {
       const res = await api.get("/cart");
       return res.data?.cart;
     },
     enabled: !!user,
+    staleTime: 0,
+    refetchOnMount: "always",
   });
 
   const placeOrderMutation = useMutation({
@@ -101,7 +108,8 @@ export default function CheckoutPage() {
     },
   });
 
-  if (isAuthLoading || (user && isCartLoading)) {
+  // Guard: Show spinner while auth is resolving or cart is genuinely fetching first-time
+  if (isAuthLoading || (user && isCartLoading && !cartData)) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-brand-blue" />
@@ -118,7 +126,8 @@ export default function CheckoutPage() {
   const shippingFee = subtotal >= 1000 || subtotal === 0 ? 0 : 99;
   const total = subtotal + shippingFee;
 
-  if (items.length === 0) {
+  // Only show empty state if NOT fetching and genuinely 0 items
+  if (!isFetching && items.length === 0) {
     return (
       <main className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8 text-center">
         <EmptyState
@@ -207,6 +216,7 @@ export default function CheckoutPage() {
                       type="text"
                       required
                       name="fullName"
+                      autoComplete="name"
                       value={form.fullName}
                       onChange={handleInputChange}
                       placeholder="Receiver's name"
@@ -229,6 +239,7 @@ export default function CheckoutPage() {
                       type="tel"
                       required
                       name="phone"
+                      autoComplete="tel"
                       value={form.phone}
                       onChange={handleInputChange}
                       placeholder="+91 9876543210"
@@ -251,6 +262,7 @@ export default function CheckoutPage() {
                   type="text"
                   required
                   name="address"
+                  autoComplete="street-address"
                   value={form.address}
                   onChange={handleInputChange}
                   placeholder="e.g. Flat 402, Nova Heights, MG Road"
@@ -271,6 +283,7 @@ export default function CheckoutPage() {
                     type="text"
                     required
                     name="city"
+                    autoComplete="address-level2"
                     value={form.city}
                     onChange={handleInputChange}
                     placeholder="e.g. Mumbai"
@@ -290,6 +303,7 @@ export default function CheckoutPage() {
                     type="text"
                     required
                     name="state"
+                    autoComplete="address-level1"
                     value={form.state}
                     onChange={handleInputChange}
                     placeholder="e.g. Maharashtra"
@@ -309,6 +323,7 @@ export default function CheckoutPage() {
                     type="text"
                     required
                     name="pincode"
+                    autoComplete="postal-code"
                     value={form.pincode}
                     onChange={handleInputChange}
                     placeholder="e.g. 400001"

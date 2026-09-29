@@ -55,6 +55,7 @@ export default function OrderSuccessPage({
   const {
     data: order,
     isLoading,
+    isFetching,
     isError,
   } = useQuery<OrderDetail>({
     queryKey: ["order", id],
@@ -62,6 +63,8 @@ export default function OrderSuccessPage({
       const res = await api.get(`/orders/${id}`);
       return res.data?.order;
     },
+    staleTime: 0,
+    refetchOnMount: "always",
     enabled: !!user,
   });
 
@@ -73,7 +76,7 @@ export default function OrderSuccessPage({
     }
   };
 
-  if (isLoading) {
+  if (isLoading || (isFetching && !order)) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-brand-blue" />

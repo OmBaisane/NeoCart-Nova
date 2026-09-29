@@ -236,6 +236,8 @@ export default function ProfilePage() {
                   <input
                     type="text"
                     required
+                    name="name"
+                    autoComplete="name"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     className="w-full rounded-lg border border-slate-300 py-2 pl-9 pr-3 text-xs outline-none focus:border-brand-blue"
@@ -252,6 +254,8 @@ export default function ProfilePage() {
                   <input
                     type="email"
                     disabled
+                    name="email"
+                    autoComplete="email"
                     value={user.email}
                     className="w-full rounded-lg border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-xs text-slate-500 cursor-not-allowed"
                   />
@@ -267,6 +271,8 @@ export default function ProfilePage() {
               <div className="relative mt-1">
                 <input
                   type="tel"
+                  name="phone"
+                  autoComplete="tel"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="+91 98765 43210"
@@ -291,6 +297,8 @@ export default function ProfilePage() {
                 </label>
                 <input
                   type="text"
+                  name="street"
+                  autoComplete="street-address"
                   value={street}
                   onChange={(e) => setStreet(e.target.value)}
                   placeholder="e.g. 402 Nova Heights, Link Road"
@@ -305,6 +313,8 @@ export default function ProfilePage() {
                   </label>
                   <input
                     type="text"
+                    name="city"
+                    autoComplete="address-level2"
                     value={city}
                     onChange={(e) => setCity(e.target.value)}
                     placeholder="e.g. Surat"
@@ -318,6 +328,8 @@ export default function ProfilePage() {
                   </label>
                   <input
                     type="text"
+                    name="state"
+                    autoComplete="address-level1"
                     value={state}
                     onChange={(e) => setState(e.target.value)}
                     placeholder="e.g. Gujarat"
@@ -331,6 +343,8 @@ export default function ProfilePage() {
                   </label>
                   <input
                     type="text"
+                    name="pincode"
+                    autoComplete="postal-code"
                     value={pincode}
                     onChange={(e) => setPincode(e.target.value)}
                     placeholder="e.g. 395007"
@@ -359,6 +373,18 @@ export default function ProfilePage() {
             onSubmit={handlePasswordSubmit}
             className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 shadow-2xs space-y-3.5 sm:space-y-4"
           >
+            {/* Hidden field for browser password manager accessibility */}
+            <input
+              type="text"
+              name="username"
+              autoComplete="username"
+              value={user?.email || ""}
+              readOnly
+              className="hidden"
+              aria-hidden="true"
+              tabIndex={-1}
+            />
+
             <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
               <KeyRound className="h-4 w-4 text-brand-blue shrink-0" />
               <h2 className="text-xs sm:text-sm font-bold text-brand-charcoal uppercase tracking-wider">
@@ -388,7 +414,9 @@ export default function ProfilePage() {
                 <input
                   type="password"
                   required
+                  name="currentPassword"
                   value={currentPassword}
+                  autoComplete="current-password"
                   onChange={(e) => setCurrentPassword(e.target.value)}
                   placeholder="••••••••"
                   className="w-full rounded-lg border border-slate-300 py-2 pl-9 pr-3 text-xs outline-none focus:border-brand-blue"
@@ -405,7 +433,9 @@ export default function ProfilePage() {
                 <input
                   type="password"
                   required
+                  name="newPassword"
                   value={newPassword}
+                  autoComplete="new-password"
                   onChange={(e) => setNewPassword(e.target.value)}
                   placeholder="••••••••"
                   className="w-full rounded-lg border border-slate-300 py-2 pl-9 pr-3 text-xs outline-none focus:border-brand-blue"
@@ -422,7 +452,9 @@ export default function ProfilePage() {
                 <input
                   type="password"
                   required
+                  name="confirmPassword"
                   value={confirmPassword}
+                  autoComplete="new-password"
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="••••••••"
                   className="w-full rounded-lg border border-slate-300 py-2 pl-9 pr-3 text-xs outline-none focus:border-brand-blue"

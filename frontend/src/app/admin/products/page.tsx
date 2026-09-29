@@ -130,7 +130,6 @@ export default function AdminProductsPage() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-175 text-left text-xs text-slate-600">
-              {" "}
               <thead className="border-b border-slate-200 bg-slate-50/70 text-[11px] font-bold uppercase tracking-wider text-slate-500">
                 <tr>
                   <th scope="col" className="py-3.5 px-4">
