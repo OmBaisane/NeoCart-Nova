@@ -1,249 +1,236 @@
 "use client";
 
-import React from "react";
-import Link from "next/link";
+import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { TableSkeleton } from "@/components/ui/Skeletons";
+import { EmptyState } from "@/components/ui/EmptyState";
 import {
-  Package,
-  ShoppingBag,
   Users,
-  ArrowUpRight,
-  AlertTriangle,
-  Plus,
-  Loader2,
+  Search,
+  Mail,
+  Phone,
+  MapPin,
+  Shield,
+  UserCheck,
+  Calendar,
 } from "lucide-react";
 
-interface AdminDashboardProductItem {
-  _id: string;
-  stock: number;
+interface UserAddress {
+  street?: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
 }
 
-export default function AdminDashboardPage() {
-  // 1. Fetch live products for inventory analysis
-  const { data: productsData, isLoading: isProductsLoading } = useQuery<{
-    products: AdminDashboardProductItem[];
-    totalProducts: number;
-  }>({
-    queryKey: ["admin-products"],
-    queryFn: async () => {
-      const res = await api.get("/products?limit=100");
-      return res.data;
-    },
-  });
+interface AdminUserItem {
+  _id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  role: "admin" | "user";
+  address?: UserAddress;
+  createdAt: string;
+}
 
-  // 2. Fetch customer directory
-  const { data: usersData, isLoading: isUsersLoading } = useQuery<{
-    count: number;
-  }>({
-    queryKey: ["admin-users"],
+interface AdminUsersResponse {
+  success: boolean;
+  count: number;
+  users: AdminUserItem[];
+}
+
+export default function AdminUsersPage() {
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const { data, isLoading } = useQuery<AdminUsersResponse>({
+    queryKey: ["admin-users-list"],
     queryFn: async () => {
       const res = await api.get("/admin/users");
       return res.data;
     },
+    staleTime: 0,
+    refetchOnMount: "always",
   });
 
-  const products = productsData?.products || [];
-  const totalProducts = productsData?.totalProducts || 0;
-  const totalCustomers = usersData?.count || 0;
+  const users = data?.users || [];
 
-  // Inventory calculations with strict typing
-  const lowStockCount = products.filter(
-    (p) => p.stock > 0 && p.stock <= 5,
-  ).length;
-  const outOfStockCount = products.filter((p) => p.stock <= 0).length;
-
-  const isLoading = isProductsLoading || isUsersLoading;
+  const filteredUsers = users.filter((user) => {
+    const term = searchTerm.toLowerCase();
+    const nameMatch = user.name?.toLowerCase().includes(term);
+    const emailMatch = user.email?.toLowerCase().includes(term);
+    const phoneMatch = user.phone?.toLowerCase().includes(term);
+    const cityMatch = user.address?.city?.toLowerCase().includes(term);
+    return nameMatch || emailMatch || phoneMatch || cityMatch;
+  });
 
   return (
     <main className="space-y-6 sm:space-y-8">
-      {/* Header section */}
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 border-b border-slate-200 pb-4 sm:pb-6">
         <div>
           <h1 className="text-xl font-extrabold tracking-tight text-brand-charcoal sm:text-3xl">
-            Executive Dashboard
+            Customer Directory
           </h1>
           <p className="mt-1 text-xs text-slate-500">
-            Real-time telemetry, warehouse inventory health, and management
-            shortcuts.
+            Audit registered accounts, communication details, saved addresses,
+            and security privileges.
           </p>
         </div>
 
-        <div className="flex items-center gap-3 self-start sm:self-auto">
-          <Link
-            href="/admin/products/new"
-            className="flex items-center gap-1.5 rounded-xl bg-brand-blue px-3.5 py-2 sm:px-4 sm:py-2.5 text-xs font-bold text-white shadow-md shadow-blue-500/20 hover:bg-blue-600 transition"
-          >
-            <Plus className="h-4 w-4" />
-            <span>Create New Product</span>
-          </Link>
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-brand-blue">
+            Total Accounts: {users.length}
+          </span>
         </div>
       </div>
 
-      {isLoading ? (
-        <div className="flex min-h-[40vh] items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-brand-blue" />
+      {/* Filter / Search Bar */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Search by name, email, phone, or city..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full rounded-xl border border-slate-300 bg-white py-2 pl-9 pr-4 text-xs outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue"
+          />
         </div>
+      </div>
+
+      {/* Directory Table */}
+      {isLoading ? (
+        <TableSkeleton rows={6} />
+      ) : filteredUsers.length === 0 ? (
+        <EmptyState
+          icon={Users}
+          title="No Accounts Found"
+          description={
+            searchTerm
+              ? `No user accounts matched "${searchTerm}".`
+              : "No registered accounts currently exist in the database."
+          }
+        />
       ) : (
-        <>
-          {/* KPI Metric Cards Grid */}
-          <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6">
-            {/* Total Active Inventory */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-2xs">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-slate-400">
-                  Total Catalog Items
-                </span>
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-brand-blue">
-                  <Package className="h-5 w-5" />
-                </div>
-              </div>
-              <div className="mt-3 sm:mt-4 flex items-baseline gap-2">
-                <span className="text-2xl sm:text-3xl font-black text-brand-charcoal">
-                  {totalProducts}
-                </span>
-                <span className="text-[10px] sm:text-[11px] font-semibold text-emerald-600">
-                  Live in Store
-                </span>
-              </div>
-            </div>
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xs">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50/75 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                  <th className="py-3.5 px-4 sm:px-6">Customer</th>
+                  <th className="py-3.5 px-4">Role</th>
+                  <th className="py-3.5 px-4">Contact</th>
+                  <th className="py-3.5 px-4">Default Address</th>
+                  <th className="py-3.5 px-4 sm:px-6 text-right">Registered</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+                {filteredUsers.map((account) => {
+                  const hasAddress =
+                    account.address?.street ||
+                    account.address?.city ||
+                    account.address?.pincode;
 
-            {/* Registered Customers */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-2xs">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-slate-400">
-                  Total Customers
-                </span>
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
-                  <Users className="h-5 w-5" />
-                </div>
-              </div>
-              <div className="mt-3 sm:mt-4 flex items-baseline gap-2">
-                <span className="text-2xl sm:text-3xl font-black text-brand-charcoal">
-                  {totalCustomers}
-                </span>
-                <span className="text-[10px] sm:text-[11px] font-semibold text-slate-400">
-                  Accounts
-                </span>
-              </div>
-            </div>
+                  return (
+                    <tr
+                      key={account._id}
+                      className="hover:bg-slate-50/50 transition-colors"
+                    >
+                      {/* Name & Avatar */}
+                      <td className="py-3.5 px-4 sm:px-6">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 font-bold text-slate-600 uppercase text-xs">
+                            {account.name?.charAt(0) || "U"}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-bold text-brand-charcoal truncate">
+                              {account.name}
+                            </p>
+                            <p className="flex items-center gap-1 text-[11px] text-slate-400 truncate">
+                              <Mail className="h-3 w-3 shrink-0" />
+                              <span>{account.email}</span>
+                            </p>
+                          </div>
+                        </div>
+                      </td>
 
-            {/* Low Stock Alerts */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-2xs">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-slate-400">
-                  Low Stock Items
-                </span>
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
-                  <AlertTriangle className="h-5 w-5" />
-                </div>
-              </div>
-              <div className="mt-3 sm:mt-4 flex items-baseline gap-2">
-                <span className="text-2xl sm:text-3xl font-black text-brand-charcoal">
-                  {lowStockCount}
-                </span>
-                <span className="text-[10px] sm:text-[11px] font-semibold text-amber-600">
-                  ≤ 5 units left
-                </span>
-              </div>
-            </div>
+                      {/* Role Badge */}
+                      <td className="py-3.5 px-4">
+                        {account.role === "admin" ? (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-indigo-50 px-2.5 py-0.5 text-[10px] font-bold text-indigo-700 uppercase tracking-wider">
+                            <Shield className="h-3 w-3" />
+                            Admin
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[10px] font-bold text-emerald-700 uppercase tracking-wider">
+                            <UserCheck className="h-3 w-3" />
+                            Customer
+                          </span>
+                        )}
+                      </td>
 
-            {/* Out of Stock Alerts */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-2xs">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-slate-400">
-                  Out of Stock
-                </span>
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-rose-50 text-rose-600">
-                  <AlertTriangle className="h-5 w-5" />
-                </div>
-              </div>
-              <div className="mt-3 sm:mt-4 flex items-baseline gap-2">
-                <span className="text-2xl sm:text-3xl font-black text-brand-charcoal">
-                  {outOfStockCount}
-                </span>
-                <span className="text-[10px] sm:text-[11px] font-semibold text-rose-600">
-                  Action Required
-                </span>
-              </div>
-            </div>
-          </section>
+                      {/* Phone */}
+                      <td className="py-3.5 px-4 text-slate-600">
+                        {account.phone ? (
+                          <div className="flex items-center gap-1.5">
+                            <Phone className="h-3 w-3 text-slate-400 shrink-0" />
+                            <span>{account.phone}</span>
+                          </div>
+                        ) : (
+                          <span className="text-slate-400 italic">
+                            Unlinked
+                          </span>
+                        )}
+                      </td>
 
-          {/* Quick Management Shortcuts */}
-          <section className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 shadow-2xs">
-            <h2 className="text-xs sm:text-sm font-bold text-brand-charcoal uppercase tracking-wider border-b border-slate-100 pb-3">
-              Operational Management Shortcuts
-            </h2>
+                      {/* Address */}
+                      <td className="py-3.5 px-4 text-slate-600 max-w-50">
+                        {hasAddress ? (
+                          <div className="flex items-start gap-1.5 truncate">
+                            <MapPin className="h-3 w-3 text-brand-blue shrink-0 mt-0.5" />
+                            <span
+                              className="truncate text-[11px]"
+                              title={`${account.address?.street || ""}, ${account.address?.city || ""}, ${account.address?.state || ""} ${account.address?.pincode || ""}`}
+                            >
+                              {[
+                                account.address?.city,
+                                account.address?.state,
+                                account.address?.pincode,
+                              ]
+                                .filter(Boolean)
+                                .join(", ")}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-slate-400 italic">
+                            No saved address
+                          </span>
+                        )}
+                      </td>
 
-            <div className="mt-4 sm:mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
-              <Link
-                href="/admin/products"
-                className="group flex flex-col justify-between rounded-xl border border-slate-200 p-3.5 sm:p-4 transition hover:border-brand-blue hover:shadow-xs"
-              >
-                <div>
-                  <div className="flex items-center justify-between">
-                    <Package className="h-5 w-5 text-brand-blue" />
-                    <ArrowUpRight className="h-4 w-4 text-slate-400 group-hover:text-brand-blue transition" />
-                  </div>
-                  <h3 className="mt-2.5 sm:mt-3 text-xs sm:text-sm font-bold text-brand-charcoal">
-                    Product Management
-                  </h3>
-                  <p className="mt-1 text-[11px] sm:text-xs text-slate-500">
-                    Edit pricing, upload product images, adjust warehouse
-                    inventory levels.
-                  </p>
-                </div>
-                <span className="mt-3 sm:mt-4 text-[11px] font-bold text-brand-blue">
-                  Manage Catalog →
-                </span>
-              </Link>
-
-              <Link
-                href="/admin/orders"
-                className="group flex flex-col justify-between rounded-xl border border-slate-200 p-3.5 sm:p-4 transition hover:border-brand-blue hover:shadow-xs"
-              >
-                <div>
-                  <div className="flex items-center justify-between">
-                    <ShoppingBag className="h-5 w-5 text-indigo-600" />
-                    <ArrowUpRight className="h-4 w-4 text-slate-400 group-hover:text-indigo-600 transition" />
-                  </div>
-                  <h3 className="mt-2.5 sm:mt-3 text-xs sm:text-sm font-bold text-brand-charcoal">
-                    Order Processing
-                  </h3>
-                  <p className="mt-1 text-[11px] sm:text-xs text-slate-500">
-                    Update fulfillment status (Confirmed, Shipped, Delivered)
-                    and dispatch tracking codes.
-                  </p>
-                </div>
-                <span className="mt-3 sm:mt-4 text-[11px] font-bold text-indigo-600">
-                  Process Orders →
-                </span>
-              </Link>
-
-              <Link
-                href="/admin/users"
-                className="group flex flex-col justify-between rounded-xl border border-slate-200 p-3.5 sm:p-4 transition hover:border-brand-blue hover:shadow-xs"
-              >
-                <div>
-                  <div className="flex items-center justify-between">
-                    <Users className="h-5 w-5 text-cyan-accent" />
-                    <ArrowUpRight className="h-4 w-4 text-slate-400 group-hover:text-cyan-accent transition" />
-                  </div>
-                  <h3 className="mt-2.5 sm:mt-3 text-xs sm:text-sm font-bold text-brand-charcoal">
-                    Customer Directory
-                  </h3>
-                  <p className="mt-1 text-[11px] sm:text-xs text-slate-500">
-                    Inspect registered user accounts, phone numbers, and address
-                    integrity.
-                  </p>
-                </div>
-                <span className="mt-3 sm:mt-4 text-[11px] font-bold text-cyan-600">
-                  View Directory →
-                </span>
-              </Link>
-            </div>
-          </section>
-        </>
+                      {/* Created At */}
+                      <td className="py-3.5 px-4 sm:px-6 text-right text-[11px] text-slate-400 whitespace-nowrap">
+                        <div className="flex items-center justify-end gap-1">
+                          <Calendar className="h-3 w-3" />
+                          <span>
+                            {new Date(account.createdAt).toLocaleDateString(
+                              "en-IN",
+                              {
+                                day: "2-digit",
+                                month: "short",
+                                year: "numeric",
+                              },
+                            )}
+                          </span>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
       )}
     </main>
   );
