@@ -1,7 +1,13 @@
 import { Request, Response, NextFunction } from "express";
+import mongoose from "mongoose";
 import { Product } from "../models/product.model.js";
 import { Order } from "../models/order.model.js";
 import { User } from "../models/user.model.js";
+import {
+  updateOrderStatusSchema,
+  ALLOWED_STATUS_TRANSITIONS,
+  OrderStatus,
+} from "../utils/validators.js";
 
 export const getDashboardStats = async (
   _req: Request,
@@ -81,5 +87,87 @@ export const getAllUsers = async (
     });
   } catch (error) {
     next(error);
+  }
+};
+
+export const updateOrderStatus = async (
+  req: Request<{ id: string }>,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const { id } = req.params;
+    const validatedData = updateOrderStatusSchema.parse(req.body);
+
+    const order = await Order.findById(id).session(session);
+    if (!order) {
+      await session.abortTransaction();
+      res.status(404).json({ success: false, message: "Order not found" });
+      return;
+    }
+
+    // 1. Terminal state check
+    if (
+      order.orderStatus === "cancelled" ||
+      order.orderStatus === "delivered"
+    ) {
+      await session.abortTransaction();
+      res.status(400).json({
+        success: false,
+        message: `Cannot change status of an already ${order.orderStatus} order`,
+      });
+      return;
+    }
+
+    // 2. State transition validation
+    const currentStatus = order.orderStatus as OrderStatus;
+    const nextStatus = validatedData.orderStatus as OrderStatus;
+    const allowedTransitions = ALLOWED_STATUS_TRANSITIONS[currentStatus] || [];
+
+    if (!allowedTransitions.includes(nextStatus)) {
+      await session.abortTransaction();
+      res.status(400).json({
+        success: false,
+        message: `Invalid transition from "${currentStatus}" to "${nextStatus}". Permitted transitions: ${allowedTransitions.join(", ") || "none"}`,
+      });
+      return;
+    }
+
+    // 3. Inventory restoration if transitioning to cancelled
+    if (nextStatus === "cancelled") {
+      for (const item of order.items) {
+        await Product.findByIdAndUpdate(
+          item.product,
+          { $inc: { stock: item.quantity } },
+          { session },
+        );
+      }
+    }
+
+    // 4. Apply updates
+    order.orderStatus = nextStatus;
+    if (validatedData.paymentStatus) {
+      order.paymentStatus = validatedData.paymentStatus;
+    }
+    if (validatedData.trackingNumber !== undefined) {
+      order.trackingNumber = validatedData.trackingNumber;
+    }
+
+    await order.save({ session });
+    await session.commitTransaction();
+
+    res.status(200).json({
+      success: true,
+      message: `Order status successfully updated to ${nextStatus}`,
+      order,
+    });
+  } catch (error) {
+    await session.abortTransaction();
+    next(error);
+  } finally {
+    await session.endSession();
   }
 };

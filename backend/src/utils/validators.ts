@@ -164,15 +164,28 @@ export const createOrderSchema = z.object({
   paymentMethod: z.literal("COD").default("COD"),
 });
 
+export const ORDER_STATUSES = [
+  "pending",
+  "confirmed",
+  "processing",
+  "shipped",
+  "delivered",
+  "cancelled",
+] as const;
+
+export type OrderStatus = (typeof ORDER_STATUSES)[number];
+
+export const ALLOWED_STATUS_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
+  pending: ["confirmed", "processing", "cancelled"],
+  confirmed: ["processing", "shipped", "cancelled"],
+  processing: ["shipped", "cancelled"],
+  shipped: ["delivered"],
+  delivered: [],
+  cancelled: [],
+};
+
 export const updateOrderStatusSchema = z.object({
-  orderStatus: z.enum([
-    "pending",
-    "confirmed",
-    "processing",
-    "shipped",
-    "delivered",
-    "cancelled",
-  ]),
+  orderStatus: z.enum(ORDER_STATUSES),
   paymentStatus: z.enum(["pending", "paid", "failed", "refunded"]).optional(),
   trackingNumber: z.string().trim().optional(),
 });

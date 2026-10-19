@@ -1,5 +1,9 @@
 import { Router } from "express";
-import { getAllUsers } from "../controllers/admin.controller.js";
+import {
+  getDashboardStats,
+  getAllUsers,
+  updateOrderStatus,
+} from "../controllers/admin.controller.js";
 import { protect, adminOnly } from "../middleware/auth.middleware.js";
 
 const router = Router();
@@ -8,5 +12,6 @@ const router = Router();
 router.use(protect, adminOnly);
 
 router.get("/users", getAllUsers);
+router.patch("/orders/:id/status", updateOrderStatus);
 
 export default router;
