@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "rimraf dist && tsc",
+    "type-check": "tsc --noEmit",
     "start": "node dist/server.js",
     "seed": "tsx src/utils/seeder.ts"
   },
