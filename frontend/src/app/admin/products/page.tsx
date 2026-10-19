@@ -7,7 +7,6 @@ import { api } from "@/lib/api";
 import { TableSkeleton } from "@/components/ui/Skeletons";
 import { EmptyState } from "@/components/ui/EmptyState";
 import {
-  Package,
   Plus,
   Search,
   Edit,
@@ -16,6 +15,9 @@ import {
   CheckCircle2,
   XCircle,
   ExternalLink,
+  ChevronLeft,
+  ChevronRight,
+  Power,
 } from "lucide-react";
 
 interface AdminProductItem {
@@ -31,22 +33,51 @@ interface AdminProductItem {
   category?: {
     _id: string;
     name: string;
+    slug?: string;
   };
   createdAt: string;
+}
+
+interface AdminProductsResponse {
+  success: boolean;
+  count: number;
+  totalProducts: number;
+  totalPages: number;
+  currentPage: number;
+  products: AdminProductItem[];
 }
 
 export default function AdminProductsPage() {
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<
+    "all" | "active" | "inactive" | "low_stock"
+  >("all");
+  const [currentPage, setCurrentPage] = useState(1);
 
-  const { data, isLoading } = useQuery<{
-    products: AdminProductItem[];
-    totalProducts: number;
-  }>({
-    queryKey: ["admin-products-list"],
+  const { data, isLoading } = useQuery<AdminProductsResponse>({
+    queryKey: ["admin-products", currentPage, searchTerm, statusFilter],
     queryFn: async () => {
-      const res = await api.get("/products?limit=100");
+      const res = await api.get("/admin/products", {
+        params: {
+          page: currentPage,
+          limit: 10,
+          search: searchTerm || undefined,
+          status: statusFilter,
+        },
+      });
       return res.data;
+    },
+  });
+
+  const toggleStatusMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return api.patch(`/admin/products/${id}/toggle-status`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-products"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-dashboard-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["products"] });
     },
   });
 
@@ -55,8 +86,8 @@ export default function AdminProductsPage() {
       return api.delete(`/products/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin-products-list"] });
       queryClient.invalidateQueries({ queryKey: ["admin-products"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-dashboard-stats"] });
       queryClient.invalidateQueries({ queryKey: ["products"] });
     },
   });
@@ -68,14 +99,12 @@ export default function AdminProductsPage() {
   };
 
   const products = data?.products || [];
-  const filteredProducts = products.filter(
-    (p) =>
-      p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.category?.name.toLowerCase().includes(searchTerm.toLowerCase()),
-  );
+  const totalPages = data?.totalPages || 1;
+  const totalProducts = data?.totalProducts || 0;
 
   return (
     <main className="space-y-6">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 border-b border-slate-200 pb-4 sm:pb-6">
         <div>
           <h1 className="text-xl sm:text-3xl font-extrabold tracking-tight text-slate-900">
@@ -96,35 +125,71 @@ export default function AdminProductsPage() {
         </Link>
       </div>
 
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs">
+      {/* Search & Filter Bar */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs">
         <div className="relative flex-1 max-w-md">
           <input
             type="text"
             placeholder="Search by title or category..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setCurrentPage(1);
+            }}
             className="w-full rounded-lg border border-slate-300 py-2 pl-9 pr-3 text-xs outline-none focus:border-blue-600"
           />
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
         </div>
 
-        <span className="text-xs font-semibold text-slate-500">
-          Showing {filteredProducts.length} of {products.length} entries
+        {/* Status Filter Buttons */}
+        <div className="flex flex-wrap items-center gap-1.5">
+          {(
+            [
+              { key: "all", label: "All Items" },
+              { key: "active", label: "Active" },
+              { key: "inactive", label: "Inactive" },
+              { key: "low_stock", label: "Low Stock" },
+            ] as const
+          ).map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => {
+                setStatusFilter(tab.key);
+                setCurrentPage(1);
+              }}
+              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                statusFilter === tab.key
+                  ? "bg-slate-900 text-white shadow-xs"
+                  : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        <span className="text-xs font-semibold text-slate-500 shrink-0">
+          Total {totalProducts} entries
         </span>
       </div>
 
+      {/* Products Table Card */}
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xs">
         {isLoading ? (
           <div className="p-4">
             <TableSkeleton rows={6} cols={6} />
           </div>
-        ) : filteredProducts.length === 0 ? (
+        ) : products.length === 0 ? (
           <div className="p-6">
             <EmptyState
               title="No inventory records found"
               description="No catalog products match your search keyword or criteria."
-              actionLabel="Clear Search"
-              onAction={() => setSearchTerm("")}
+              actionLabel="Reset Filters"
+              onAction={() => {
+                setSearchTerm("");
+                setStatusFilter("all");
+                setCurrentPage(1);
+              }}
             />
           </div>
         ) : (
@@ -145,7 +210,7 @@ export default function AdminProductsPage() {
                     Stock Level
                   </th>
                   <th scope="col" className="py-3.5 px-4">
-                    Status
+                    Visibility
                   </th>
                   <th scope="col" className="py-3.5 px-4 text-right">
                     Actions
@@ -153,7 +218,7 @@ export default function AdminProductsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filteredProducts.map((product) => {
+                {products.map((product) => {
                   const isOutOfStock = product.stock <= 0;
                   const isLowStock = product.stock > 0 && product.stock <= 5;
 
@@ -235,15 +300,27 @@ export default function AdminProductsPage() {
                       </td>
 
                       <td className="py-3 px-4">
-                        {product.isActive ? (
-                          <span className="inline-block rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
-                            Active
+                        <button
+                          onClick={() =>
+                            toggleStatusMutation.mutate(product._id)
+                          }
+                          disabled={toggleStatusMutation.isPending}
+                          title={
+                            product.isActive
+                              ? "Click to deactivate product"
+                              : "Click to activate product"
+                          }
+                          className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold transition ${
+                            product.isActive
+                              ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
+                              : "bg-slate-200 text-slate-700 hover:bg-slate-300"
+                          }`}
+                        >
+                          <Power className="h-2.5 w-2.5" />
+                          <span>
+                            {product.isActive ? "Active" : "Inactive"}
                           </span>
-                        ) : (
-                          <span className="inline-block rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-bold text-slate-600">
-                            Hidden
-                          </span>
-                        )}
+                        </button>
                       </td>
 
                       <td className="py-3 px-4 text-right">
@@ -272,6 +349,35 @@ export default function AdminProductsPage() {
                 })}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {/* Server-Side Pagination Bar */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between border-t border-slate-200 px-4 py-3 bg-slate-50/50">
+            <span className="text-xs text-slate-500 font-medium">
+              Page {currentPage} of {totalPages}
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-600 disabled:opacity-50 hover:bg-slate-50 transition"
+              >
+                <ChevronLeft className="h-3.5 w-3.5" />
+                <span>Prev</span>
+              </button>
+              <button
+                onClick={() =>
+                  setCurrentPage((p) => Math.min(totalPages, p + 1))
+                }
+                disabled={currentPage === totalPages}
+                className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-600 disabled:opacity-50 hover:bg-slate-50 transition"
+              >
+                <span>Next</span>
+                <ChevronRight className="h-3.5 w-3.5" />
+              </button>
+            </div>
           </div>
         )}
       </div>

@@ -69,11 +69,20 @@ export const getAllUsers = async (
   try {
     const page = Math.max(1, parseInt(req.query.page as string, 10) || 1);
     const limit = Math.max(1, parseInt(req.query.limit as string, 10) || 20);
+    const search = (req.query.search as string)?.trim();
     const skip = (page - 1) * limit;
 
+    const query: Record<string, any> = { role: "user" };
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
+      ];
+    }
+
     const [totalUsers, users] = await Promise.all([
-      User.countDocuments({ role: "user" }),
-      User.find({ role: "user" })
+      User.countDocuments(query),
+      User.find(query)
         .select("-password")
         .sort({ createdAt: -1 })
         .skip(skip)
@@ -87,6 +96,134 @@ export const getAllUsers = async (
       totalPages: Math.ceil(totalUsers / limit),
       currentPage: page,
       users,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getAdminProducts = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page as string, 10) || 1);
+    const limit = Math.max(1, parseInt(req.query.limit as string, 10) || 20);
+    const search = (req.query.search as string)?.trim();
+    const status = req.query.status as string; // 'all' | 'active' | 'inactive' | 'low_stock'
+    const skip = (page - 1) * limit;
+
+    const filter: Record<string, any> = {};
+
+    if (search) {
+      filter.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { description: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    if (status === "active") {
+      filter.isActive = true;
+    } else if (status === "inactive") {
+      filter.isActive = false;
+    } else if (status === "low_stock") {
+      filter.stock = { $lte: 5 };
+      filter.isActive = true;
+    }
+
+    const [totalProducts, products] = await Promise.all([
+      Product.countDocuments(filter),
+      Product.find(filter)
+        .populate("category", "name slug")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+    ]);
+
+    res.status(200).json({
+      success: true,
+      count: products.length,
+      totalProducts,
+      totalPages: Math.ceil(totalProducts / limit),
+      currentPage: page,
+      products,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const toggleProductStatus = async (
+  req: Request<{ id: string }>,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const product = await Product.findById(id);
+
+    if (!product) {
+      res.status(404).json({ success: false, message: "Product not found" });
+      return;
+    }
+
+    product.isActive = !product.isActive;
+    await product.save();
+
+    res.status(200).json({
+      success: true,
+      message: `Product successfully ${product.isActive ? "activated" : "deactivated"}`,
+      product,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getAdminOrders = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page as string, 10) || 1);
+    const limit = Math.max(1, parseInt(req.query.limit as string, 10) || 20);
+    const status = req.query.status as string;
+    const search = (req.query.search as string)?.trim();
+    const skip = (page - 1) * limit;
+
+    const filter: Record<string, any> = {};
+
+    if (status && status !== "all") {
+      filter.orderStatus = status;
+    }
+
+    if (search) {
+      filter.$or = [
+        { trackingNumber: { $regex: search, $options: "i" } },
+        { "shippingAddress.fullName": { $regex: search, $options: "i" } },
+        { "shippingAddress.city": { $regex: search, $options: "i" } },
+      ];
+    }
+
+    const [totalOrders, orders] = await Promise.all([
+      Order.countDocuments(filter),
+      Order.find(filter)
+        .populate("user", "name email phone")
+        .populate("items.product", "name images price")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+    ]);
+
+    res.status(200).json({
+      success: true,
+      count: orders.length,
+      totalOrders,
+      totalPages: Math.ceil(totalOrders / limit),
+      currentPage: page,
+      orders,
     });
   } catch (error) {
     next(error);

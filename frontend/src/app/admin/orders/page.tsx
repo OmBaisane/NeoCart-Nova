@@ -3,7 +3,15 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { Search, Eye, Loader2, MapPin, X } from "lucide-react";
+import {
+  Search,
+  Eye,
+  Loader2,
+  MapPin,
+  X,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 
 interface OrderItemSnapshot {
   product: string;
@@ -34,6 +42,7 @@ interface AdminOrderRecord {
     _id: string;
     name: string;
     email: string;
+    phone?: string;
   };
   shippingAddress: {
     fullName: string;
@@ -45,26 +54,41 @@ interface AdminOrderRecord {
   };
 }
 
+interface AdminOrdersResponse {
+  success: boolean;
+  count: number;
+  totalOrders: number;
+  totalPages: number;
+  currentPage: number;
+  orders: AdminOrderRecord[];
+}
+
 export default function AdminOrdersPage() {
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [currentPage, setCurrentPage] = useState(1);
   const [selectedOrder, setSelectedOrder] = useState<AdminOrderRecord | null>(
     null,
   );
 
-  // 1. Fetch all orders
-  const { data, isLoading } = useQuery<{
-    orders: AdminOrderRecord[];
-    count: number;
-  }>({
-    queryKey: ["admin-orders-list"],
+  // 1. Fetch orders from dedicated Admin API with server-side pagination & filter
+  const { data, isLoading } = useQuery<AdminOrdersResponse>({
+    queryKey: ["admin-orders-list", currentPage, searchTerm, statusFilter],
     queryFn: async () => {
-      const res = await api.get("/orders");
+      const res = await api.get("/admin/orders", {
+        params: {
+          page: currentPage,
+          limit: 10,
+          search: searchTerm || undefined,
+          status: statusFilter,
+        },
+      });
       return res.data;
     },
   });
 
-  // 2. Update Order Status Mutation
+  // 2. Update Order Status Mutation using dedicated admin endpoint
   const updateStatusMutation = useMutation({
     mutationFn: async ({
       orderId,
@@ -73,23 +97,25 @@ export default function AdminOrdersPage() {
       orderId: string;
       status: string;
     }) => {
-      return api.patch(`/orders/${orderId}/status`, { orderStatus: status });
+      return api.patch(`/admin/orders/${orderId}/status`, {
+        orderStatus: status,
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-orders-list"] });
       queryClient.invalidateQueries({ queryKey: ["admin-products"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-dashboard-stats"] });
+    },
+    onError: (err: any) => {
+      const message =
+        err?.response?.data?.message || "Failed to update order status";
+      alert(message);
     },
   });
 
   const orders = data?.orders || [];
-  const filteredOrders = orders.filter(
-    (o) =>
-      o.trackingNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      o.shippingAddress.fullName
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase()) ||
-      o.shippingAddress.city.toLowerCase().includes(searchTerm.toLowerCase()),
-  );
+  const totalPages = data?.totalPages || 1;
+  const totalOrders = data?.totalOrders || 0;
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -122,20 +148,51 @@ export default function AdminOrdersPage() {
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-3.5 sm:p-4 shadow-2xs">
-        <div className="relative flex-1 max-w-full sm:max-w-md">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-3.5 sm:p-4 shadow-2xs">
+        <div className="relative flex-1 max-w-full md:max-w-md">
           <input
             type="text"
             placeholder="Search by tracking code, customer name, city..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setCurrentPage(1);
+            }}
             className="w-full rounded-lg border border-slate-300 py-2 pl-9 pr-3 text-xs outline-none focus:border-brand-blue"
           />
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
         </div>
 
-        <span className="text-[11px] sm:text-xs font-semibold text-slate-500">
-          Showing {filteredOrders.length} of {orders.length} orders
+        {/* Status Filter Tabs */}
+        <div className="flex flex-wrap items-center gap-1.5">
+          {[
+            { key: "all", label: "All" },
+            { key: "pending", label: "Pending" },
+            { key: "confirmed", label: "Confirmed" },
+            { key: "processing", label: "Processing" },
+            { key: "shipped", label: "Shipped" },
+            { key: "delivered", label: "Delivered" },
+            { key: "cancelled", label: "Cancelled" },
+          ].map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => {
+                setStatusFilter(tab.key);
+                setCurrentPage(1);
+              }}
+              className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition ${
+                statusFilter === tab.key
+                  ? "bg-slate-900 text-white shadow-xs"
+                  : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        <span className="text-[11px] sm:text-xs font-semibold text-slate-500 shrink-0">
+          Total {totalOrders} orders
         </span>
       </div>
 
@@ -145,7 +202,7 @@ export default function AdminOrdersPage() {
           <div className="flex min-h-[40vh] items-center justify-center">
             <Loader2 className="h-8 w-8 animate-spin text-brand-blue" />
           </div>
-        ) : filteredOrders.length === 0 ? (
+        ) : orders.length === 0 ? (
           <div className="p-8 sm:p-12 text-center text-xs text-slate-400">
             No customer orders matched your criteria.
           </div>
@@ -175,7 +232,7 @@ export default function AdminOrdersPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filteredOrders.map((order) => (
+                {orders.map((order) => (
                   <tr
                     key={order._id}
                     className="transition hover:bg-slate-50/60"
@@ -221,14 +278,18 @@ export default function AdminOrdersPage() {
                     <td className="py-3 px-4">
                       <select
                         value={order.orderStatus}
-                        disabled={updateStatusMutation.isPending}
+                        disabled={
+                          updateStatusMutation.isPending ||
+                          order.orderStatus === "delivered" ||
+                          order.orderStatus === "cancelled"
+                        }
                         onChange={(e) =>
                           updateStatusMutation.mutate({
                             orderId: order._id,
                             status: e.target.value,
                           })
                         }
-                        className={`rounded-lg border px-2.5 py-1 text-[11px] font-bold outline-none cursor-pointer ${getStatusColor(
+                        className={`rounded-lg border px-2.5 py-1 text-[11px] font-bold outline-none cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 ${getStatusColor(
                           order.orderStatus,
                         )}`}
                       >
@@ -255,6 +316,35 @@ export default function AdminOrdersPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {/* Server-Side Pagination Bar */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between border-t border-slate-200 px-4 py-3 bg-slate-50/50">
+            <span className="text-xs text-slate-500 font-medium">
+              Page {currentPage} of {totalPages}
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-600 disabled:opacity-50 hover:bg-slate-50 transition"
+              >
+                <ChevronLeft className="h-3.5 w-3.5" />
+                <span>Prev</span>
+              </button>
+              <button
+                onClick={() =>
+                  setCurrentPage((p) => Math.min(totalPages, p + 1))
+                }
+                disabled={currentPage === totalPages}
+                className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-600 disabled:opacity-50 hover:bg-slate-50 transition"
+              >
+                <span>Next</span>
+                <ChevronRight className="h-3.5 w-3.5" />
+              </button>
+            </div>
           </div>
         )}
       </div>
