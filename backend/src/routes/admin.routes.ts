@@ -11,6 +11,7 @@ const router = Router();
 // All admin routes require both session authentication and admin role
 router.use(protect, adminOnly);
 
+router.get("/stats", getDashboardStats);
 router.get("/users", getAllUsers);
 router.patch("/orders/:id/status", updateOrderStatus);
 

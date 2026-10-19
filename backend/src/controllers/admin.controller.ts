@@ -20,12 +20,14 @@ export const getDashboardStats = async (
       totalOrders,
       totalUsers,
       lowStockProducts,
+      outOfStockProducts,
       recentOrders,
     ] = await Promise.all([
       Product.countDocuments({ isActive: true }),
       Order.countDocuments(),
       User.countDocuments({ role: "user" }),
-      Product.countDocuments({ stock: { $lte: 5 }, isActive: true }),
+      Product.countDocuments({ stock: { $gt: 0, $lte: 5 }, isActive: true }),
+      Product.countDocuments({ stock: { $lte: 0 }, isActive: true }),
       Order.find()
         .sort({ createdAt: -1 })
         .limit(5)
@@ -50,6 +52,7 @@ export const getDashboardStats = async (
         totalUsers,
         totalRevenue,
         lowStockProducts,
+        outOfStockProducts,
       },
       recentOrders,
     });
@@ -109,7 +112,6 @@ export const updateOrderStatus = async (
       return;
     }
 
-    // 1. Terminal state check
     if (
       order.orderStatus === "cancelled" ||
       order.orderStatus === "delivered"
@@ -122,7 +124,6 @@ export const updateOrderStatus = async (
       return;
     }
 
-    // 2. State transition validation
     const currentStatus = order.orderStatus as OrderStatus;
     const nextStatus = validatedData.orderStatus as OrderStatus;
     const allowedTransitions = ALLOWED_STATUS_TRANSITIONS[currentStatus] || [];
@@ -136,7 +137,6 @@ export const updateOrderStatus = async (
       return;
     }
 
-    // 3. Inventory restoration if transitioning to cancelled
     if (nextStatus === "cancelled") {
       for (const item of order.items) {
         await Product.findByIdAndUpdate(
@@ -147,7 +147,6 @@ export const updateOrderStatus = async (
       }
     }
 
-    // 4. Apply updates
     order.orderStatus = nextStatus;
     if (validatedData.paymentStatus) {
       order.paymentStatus = validatedData.paymentStatus;

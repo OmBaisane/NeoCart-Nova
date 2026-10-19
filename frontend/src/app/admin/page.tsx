@@ -13,46 +13,33 @@ import {
   Loader2,
 } from "lucide-react";
 
-interface AdminDashboardProductItem {
-  _id: string;
-  stock: number;
+interface DashboardStatsResponse {
+  success: boolean;
+  stats: {
+    totalProducts: number;
+    totalOrders: number;
+    totalUsers: number;
+    totalRevenue: number;
+    lowStockProducts: number;
+    outOfStockProducts: number;
+  };
 }
 
 export default function AdminDashboardPage() {
-  // 1. Fetch live products for inventory analysis
-  const { data: productsData, isLoading: isProductsLoading } = useQuery<{
-    products: AdminDashboardProductItem[];
-    totalProducts: number;
-  }>({
-    queryKey: ["admin-products"],
+  const { data, isLoading } = useQuery<DashboardStatsResponse>({
+    queryKey: ["admin-dashboard-stats"],
     queryFn: async () => {
-      const res = await api.get("/products?limit=100");
+      const res = await api.get("/admin/stats");
       return res.data;
     },
+    staleTime: 30 * 1000,
   });
 
-  // 2. Fetch customer directory
-  const { data: usersData, isLoading: isUsersLoading } = useQuery<{
-    count: number;
-  }>({
-    queryKey: ["admin-users"],
-    queryFn: async () => {
-      const res = await api.get("/admin/users");
-      return res.data;
-    },
-  });
-
-  const products = productsData?.products || [];
-  const totalProducts = productsData?.totalProducts || 0;
-  const totalCustomers = usersData?.count || 0;
-
-  // Inventory calculations with strict typing
-  const lowStockCount = products.filter(
-    (p) => p.stock > 0 && p.stock <= 5,
-  ).length;
-  const outOfStockCount = products.filter((p) => p.stock <= 0).length;
-
-  const isLoading = isProductsLoading || isUsersLoading;
+  const stats = data?.stats;
+  const totalProducts = stats?.totalProducts || 0;
+  const totalCustomers = stats?.totalUsers || 0;
+  const lowStockCount = stats?.lowStockProducts || 0;
+  const outOfStockCount = stats?.outOfStockProducts || 0;
 
   return (
     <main className="space-y-6 sm:space-y-8">
