@@ -1,7 +1,12 @@
+import dotenv from "dotenv";
+dotenv.config();
+
 import { connectDB } from "../config/db.js";
 import { User } from "../models/user.model.js";
 import { Category } from "../models/category.model.js";
 import { Product } from "../models/product.model.js";
+import { Review } from "../models/review.model.js";
+import { Order } from "../models/order.model.js";
 
 const getRequiredSeedEnv = (name: string): string => {
   const value = process.env[name]?.trim();
@@ -17,7 +22,7 @@ const seedDatabase = async () => {
   try {
     if (process.env.NODE_ENV === "production") {
       console.error(
-        "Database seeding is disabled in production. Run the seed script only in a non-production environment.",
+        "❌ FATAL: Database seeding is strictly disabled in production. Run only in development/staging.",
       );
       process.exit(1);
     }
@@ -31,9 +36,20 @@ const seedDatabase = async () => {
     const demoUserPhone = getRequiredSeedEnv("SEED_DEMO_USER_PHONE");
 
     await connectDB();
-    console.log("Connected to MongoDB. Starting development database seed...");
+    console.log(
+      "Connected to MongoDB. Purging existing development seed data...",
+    );
 
-    await User.create({
+    // Clean existing data for clean idempotent seed
+    await Promise.all([
+      User.deleteMany({ email: { $in: [adminEmail, demoUserEmail] } }),
+      Category.deleteMany({}),
+      Product.deleteMany({}),
+      Review.deleteMany({}),
+      Order.deleteMany({}),
+    ]);
+
+    const adminUser = await User.create({
       name: "NeoCart Admin",
       email: adminEmail,
       password: adminPassword,
@@ -41,7 +57,7 @@ const seedDatabase = async () => {
       phone: adminPhone,
     });
 
-    await User.create({
+    const demoUser = await User.create({
       name: "NeoCart Demo User",
       email: demoUserEmail,
       password: demoUserPassword,
@@ -49,7 +65,7 @@ const seedDatabase = async () => {
       phone: demoUserPhone,
     });
 
-    console.log("Admin and demo user seeded successfully.");
+    console.log("Admin and demo users seeded successfully.");
 
     const categories = await Category.insertMany([
       {
@@ -92,8 +108,8 @@ const seedDatabase = async () => {
         ],
         isFeatured: true,
         isActive: true,
-        rating: 4.8,
-        reviewCount: 24,
+        rating: 5,
+        reviewCount: 1,
       },
       {
         name: "AeroGlide Ultra Ergonomic Sneaker",
@@ -110,8 +126,8 @@ const seedDatabase = async () => {
         ],
         isFeatured: true,
         isActive: true,
-        rating: 4.6,
-        reviewCount: 18,
+        rating: 0,
+        reviewCount: 0,
       },
       {
         name: "Chronos Titanium Smartwatch V2",
@@ -128,8 +144,8 @@ const seedDatabase = async () => {
         ],
         isFeatured: true,
         isActive: true,
-        rating: 4.9,
-        reviewCount: 31,
+        rating: 0,
+        reviewCount: 0,
       },
       {
         name: "Stealth EDC Modular Commuter Backpack",
@@ -145,8 +161,8 @@ const seedDatabase = async () => {
         ],
         isFeatured: true,
         isActive: true,
-        rating: 4.7,
-        reviewCount: 15,
+        rating: 0,
+        reviewCount: 0,
       },
       {
         name: "Vortex Mechanical Gaming Keyboard",
@@ -162,8 +178,8 @@ const seedDatabase = async () => {
         ],
         isFeatured: false,
         isActive: true,
-        rating: 4.5,
-        reviewCount: 9,
+        rating: 0,
+        reviewCount: 0,
       },
       {
         name: "SonicBlast Portable Studio Speaker",
@@ -178,13 +194,23 @@ const seedDatabase = async () => {
         ],
         isFeatured: false,
         isActive: true,
-        rating: 4.2,
-        reviewCount: 6,
+        rating: 0,
+        reviewCount: 0,
       },
     ];
 
-    await Product.insertMany(products);
-    console.log("Development products seeded successfully.");
+    const seededProducts = await Product.insertMany(products);
+    console.log("Products seeded successfully.");
+
+    // Seed a genuine verified review for the first product so rating matches the review table
+    await Review.create({
+      product: seededProducts[0]._id,
+      user: demoUser._id,
+      rating: 5,
+      comment:
+        "Exceptional soundstage, build quality, and comfort. Exceeded expectations!",
+    });
+    console.log("Verified sample review seeded successfully.");
 
     console.log("Database seeding completed successfully.");
     process.exit(0);
