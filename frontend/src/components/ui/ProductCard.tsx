@@ -35,11 +35,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const isOutOfStock = product.stock <= 0;
 
   return (
-    <article className="group relative flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:shadow-slate-200/60">
+    <article className="group relative flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:shadow-slate-200/60 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-700 dark:hover:shadow-slate-950/60">
       {/* Product Image Container */}
       <Link
         href={`/products/${product.slug}`}
-        className="relative block aspect-square w-full overflow-hidden bg-slate-100"
+        className="relative block aspect-square w-full overflow-hidden bg-slate-100 dark:bg-slate-800/60"
       >
         <img
           src={
@@ -59,7 +59,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
         {/* Stock Status Pill */}
         {isOutOfStock ? (
-          <span className="absolute top-3 right-3 rounded-full bg-slate-900/80 px-2 py-0.5 text-[10px] font-semibold text-white backdrop-blur-xs">
+          <span className="absolute top-3 right-3 rounded-full bg-slate-900/80 px-2 py-0.5 text-[10px] font-semibold text-white backdrop-blur-xs dark:bg-slate-950/80">
             Out of Stock
           </span>
         ) : product.stock <= 5 ? (
@@ -73,25 +73,25 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       <div className="flex flex-1 flex-col p-4">
         {/* Category Name */}
         {product.category && (
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
             {product.category.name}
           </span>
         )}
 
         {/* Title */}
-        <h3 className="mt-1 line-clamp-1 text-sm font-bold text-brand-charcoal transition-colors group-hover:text-brand-blue">
+        <h3 className="mt-1 line-clamp-1 text-sm font-bold text-brand-charcoal transition-colors group-hover:text-brand-blue dark:text-white dark:group-hover:text-cyan-400">
           <Link href={`/products/${product.slug}`}>{product.name}</Link>
         </h3>
 
         {/* Rating Row */}
-        <div className="mt-2 flex items-center gap-1.5 text-xs text-slate-500">
+        <div className="mt-2 flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
           <div className="flex items-center text-amber-500">
             <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-            <span className="ml-1 font-semibold text-slate-700">
+            <span className="ml-1 font-semibold text-slate-700 dark:text-slate-300">
               {product.rating > 0 ? product.rating.toFixed(1) : "New"}
             </span>
           </div>
-          <span className="text-slate-300">•</span>
+          <span className="text-slate-300 dark:text-slate-700">•</span>
           <span>
             {product.reviewCount}{" "}
             {product.reviewCount === 1 ? "review" : "reviews"}
@@ -99,13 +99,13 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         </div>
 
         {/* Price & Action Row */}
-        <div className="mt-4 flex items-center justify-between pt-2 border-t border-slate-100">
+        <div className="mt-4 flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800">
           <div className="flex flex-col">
-            <span className="text-base font-extrabold text-brand-charcoal">
+            <span className="text-base font-extrabold text-brand-charcoal dark:text-white">
               ₹{currentPrice.toLocaleString("en-IN")}
             </span>
             {hasDiscount && (
-              <span className="text-xs text-slate-400 line-through">
+              <span className="text-xs text-slate-400 line-through dark:text-slate-500">
                 ₹{product.price.toLocaleString("en-IN")}
               </span>
             )}
@@ -113,7 +113,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
           <Link
             href={`/products/${product.slug}`}
-            className="flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-blue"
+            className="flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-blue dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-cyan-600"
           >
             <ShoppingCart className="h-3.5 w-3.5" />
             <span>View</span>

@@ -63,7 +63,7 @@ export default function EditProductPage({
   if (isLoading) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-brand-blue" />
+        <Loader2 className="h-8 w-8 animate-spin text-brand-blue dark:text-cyan-400" />
       </div>
     );
   }
@@ -72,12 +72,12 @@ export default function EditProductPage({
     return (
       <main className="mx-auto max-w-4xl p-8 sm:p-12 text-center">
         <AlertCircle className="mx-auto h-10 w-10 text-rose-500" />
-        <h2 className="mt-3 text-base font-bold text-brand-charcoal">
+        <h2 className="mt-3 text-base font-bold text-brand-charcoal dark:text-white">
           Product Not Found
         </h2>
         <Link
           href="/admin/products"
-          className="mt-4 inline-block text-xs font-semibold text-brand-blue hover:underline"
+          className="mt-4 inline-block text-xs font-semibold text-brand-blue hover:underline dark:text-cyan-400"
         >
           Back to Inventory
         </Link>
@@ -107,19 +107,19 @@ export default function EditProductPage({
 
   return (
     <main className="space-y-4 sm:space-y-6">
-      <div className="flex items-center gap-2.5 sm:gap-3 border-b border-slate-200 pb-4 sm:pb-6">
+      <div className="flex items-center gap-2.5 sm:gap-3 border-b border-slate-200 pb-4 sm:pb-6 dark:border-slate-800">
         <Link
           href="/admin/products"
-          className="rounded-xl border border-slate-200 bg-white p-2 text-slate-600 hover:bg-slate-50 hover:text-brand-blue shrink-0"
+          className="rounded-xl border border-slate-200 bg-white p-2 text-slate-600 hover:bg-slate-50 hover:text-brand-blue shrink-0 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-cyan-400"
           aria-label="Back to inventory"
         >
           <ArrowLeft className="h-4 w-4" />
         </Link>
         <div className="min-w-0">
-          <h1 className="text-lg sm:text-2xl font-extrabold tracking-tight text-brand-charcoal truncate">
+          <h1 className="text-lg sm:text-2xl font-extrabold tracking-tight text-brand-charcoal dark:text-white truncate">
             Edit: {product.name}
           </h1>
-          <p className="mt-0.5 text-[11px] sm:text-xs text-slate-500">
+          <p className="mt-0.5 text-[11px] sm:text-xs text-slate-500 dark:text-slate-400">
             Modify catalog pricing, adjust live stock units, or update media
             assets.
           </p>

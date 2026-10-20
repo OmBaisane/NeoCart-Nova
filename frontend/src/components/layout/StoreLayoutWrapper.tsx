@@ -14,11 +14,15 @@ export const StoreLayoutWrapper = ({
   const isAdminRoute = pathname.startsWith("/admin");
 
   if (isAdminRoute) {
-    return <div className="flex min-h-screen flex-col">{children}</div>;
+    return (
+      <div className="flex min-h-screen flex-col bg-slate-100/70 transition-colors duration-200 dark:bg-slate-950">
+        {children}
+      </div>
+    );
   }
 
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex min-h-screen flex-col bg-white transition-colors duration-200 dark:bg-slate-950">
       <Navbar />
       <div className="flex-1">{children}</div>
       <Footer />

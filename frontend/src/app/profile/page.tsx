@@ -116,7 +116,7 @@ export default function ProfilePage() {
   if (isAuthLoading) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-brand-blue" />
+        <Loader2 className="h-8 w-8 animate-spin text-brand-blue dark:text-cyan-400" />
       </div>
     );
   }
@@ -124,16 +124,16 @@ export default function ProfilePage() {
   if (!user) {
     return (
       <main className="mx-auto max-w-7xl px-4 py-20 text-center">
-        <UserIcon className="mx-auto h-12 w-12 text-slate-300" />
-        <h1 className="mt-4 text-xl font-bold text-brand-charcoal">
+        <UserIcon className="mx-auto h-12 w-12 text-slate-300 dark:text-slate-600" />
+        <h1 className="mt-4 text-xl font-bold text-brand-charcoal dark:text-white">
           Sign In to Manage Your Account
         </h1>
-        <p className="mt-2 text-xs text-slate-500">
+        <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
           Your saved addresses and security settings require an active session.
         </p>
         <Link
           href="/login"
-          className="mt-6 inline-block rounded-lg bg-brand-blue px-6 py-2.5 text-xs font-semibold text-white shadow-xs hover:bg-blue-600"
+          className="mt-6 inline-block rounded-lg bg-brand-blue px-6 py-2.5 text-xs font-semibold text-white shadow-xs hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-500"
         >
           Sign In
         </Link>
@@ -178,22 +178,22 @@ export default function ProfilePage() {
   return (
     <main className="mx-auto max-w-5xl px-3 sm:px-6 lg:px-8 py-6 sm:py-8">
       {/* Header Info */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-4 sm:pb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-4 sm:pb-6 dark:border-slate-800">
         <div>
-          <h1 className="text-xl font-extrabold tracking-tight text-brand-charcoal sm:text-3xl">
+          <h1 className="text-xl font-extrabold tracking-tight text-brand-charcoal sm:text-3xl dark:text-white">
             Account Settings
           </h1>
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
             Manage your personal identity, default delivery address, and
             security credentials.
           </p>
         </div>
 
         <div className="flex items-center gap-2 self-start sm:self-auto">
-          <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-[10px] sm:text-xs font-bold text-brand-blue uppercase tracking-wider">
+          <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-[10px] sm:text-xs font-bold text-brand-blue uppercase tracking-wider dark:bg-blue-950/60 dark:text-cyan-400">
             Role: {user.role}
           </span>
-          <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-[10px] sm:text-xs font-bold text-emerald-700">
+          <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-[10px] sm:text-xs font-bold text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400">
             Active Session
           </span>
         </div>
@@ -204,24 +204,24 @@ export default function ProfilePage() {
         <section className="lg:col-span-2 space-y-4 sm:space-y-6">
           <form
             onSubmit={handleProfileSubmit}
-            className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 shadow-2xs space-y-4 sm:space-y-6"
+            className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 shadow-2xs space-y-4 sm:space-y-6 dark:border-slate-800 dark:bg-slate-900"
           >
-            <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
-              <UserIcon className="h-4 w-4 text-brand-blue shrink-0" />
-              <h2 className="text-xs sm:text-sm font-bold text-brand-charcoal uppercase tracking-wider">
+            <div className="flex items-center gap-2 border-b border-slate-100 pb-3 dark:border-slate-800">
+              <UserIcon className="h-4 w-4 text-brand-blue dark:text-cyan-400 shrink-0" />
+              <h2 className="text-xs sm:text-sm font-bold text-brand-charcoal uppercase tracking-wider dark:text-white">
                 Personal Information & Delivery Details
               </h2>
             </div>
 
             {profileSuccess && (
-              <div className="flex items-center gap-2 rounded-xl bg-emerald-50 p-3 text-xs font-semibold text-emerald-800">
-                <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+              <div className="flex items-center gap-2 rounded-xl bg-emerald-50 p-3 text-xs font-semibold text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
+                <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
                 <span>Profile details updated successfully!</span>
               </div>
             )}
 
             {profileError && (
-              <div className="flex items-center gap-2 rounded-xl bg-rose-50 p-3 text-xs text-rose-700">
+              <div className="flex items-center gap-2 rounded-xl bg-rose-50 p-3 text-xs text-rose-700 dark:bg-rose-950/60 dark:text-rose-300">
                 <AlertCircle className="h-4 w-4 shrink-0" />
                 <span>{profileError}</span>
               </div>
@@ -229,7 +229,7 @@ export default function ProfilePage() {
 
             <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 sm:gap-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-700">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
                   Full Name *
                 </label>
                 <div className="relative mt-1">
@@ -240,14 +240,14 @@ export default function ProfilePage() {
                     autoComplete="name"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 py-2 pl-9 pr-3 text-xs outline-none focus:border-brand-blue"
+                    className="w-full rounded-lg border border-slate-300 py-2 pl-9 pr-3 text-xs outline-none focus:border-brand-blue dark:border-slate-700 dark:bg-slate-800/80 dark:text-white dark:focus:border-cyan-500"
                   />
-                  <UserIcon className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
+                  <UserIcon className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400 dark:text-slate-500" />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
                   Email Address (Locked)
                 </label>
                 <div className="relative mt-1">
@@ -257,15 +257,15 @@ export default function ProfilePage() {
                     name="email"
                     autoComplete="email"
                     value={user.email}
-                    className="w-full rounded-lg border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-xs text-slate-500 cursor-not-allowed"
+                    className="w-full rounded-lg border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-xs text-slate-500 cursor-not-allowed dark:border-slate-800 dark:bg-slate-800/40 dark:text-slate-400"
                   />
-                  <Mail className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
+                  <Mail className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400 dark:text-slate-500" />
                 </div>
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
                 Phone Number
               </label>
               <div className="relative mt-1">
@@ -276,23 +276,23 @@ export default function ProfilePage() {
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="+91 98765 43210"
-                  className="w-full rounded-lg border border-slate-300 py-2 pl-9 pr-3 text-xs outline-none focus:border-brand-blue"
+                  className="w-full rounded-lg border border-slate-300 py-2 pl-9 pr-3 text-xs outline-none focus:border-brand-blue dark:border-slate-700 dark:bg-slate-800/80 dark:text-white dark:focus:border-cyan-500"
                 />
-                <Phone className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
+                <Phone className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400 dark:text-slate-500" />
               </div>
             </div>
 
             {/* Saved Address Block */}
-            <div className="border-t border-slate-100 pt-4 space-y-3.5 sm:space-y-4">
+            <div className="border-t border-slate-100 pt-4 space-y-3.5 sm:space-y-4 dark:border-slate-800">
               <div className="flex items-center gap-2">
-                <MapPin className="h-4 w-4 text-brand-blue shrink-0" />
-                <h3 className="text-xs font-bold uppercase tracking-wider text-brand-charcoal">
+                <MapPin className="h-4 w-4 text-brand-blue dark:text-cyan-400 shrink-0" />
+                <h3 className="text-xs font-bold uppercase tracking-wider text-brand-charcoal dark:text-white">
                   Default Shipping Address
                 </h3>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
                   Street Address
                 </label>
                 <input
@@ -302,13 +302,13 @@ export default function ProfilePage() {
                   value={street}
                   onChange={(e) => setStreet(e.target.value)}
                   placeholder="e.g. 402 Nova Heights, Link Road"
-                  className="mt-1 w-full rounded-lg border border-slate-300 py-2 px-3 text-xs outline-none focus:border-brand-blue"
+                  className="mt-1 w-full rounded-lg border border-slate-300 py-2 px-3 text-xs outline-none focus:border-brand-blue dark:border-slate-700 dark:bg-slate-800/80 dark:text-white dark:focus:border-cyan-500"
                 />
               </div>
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
                     City
                   </label>
                   <input
@@ -318,12 +318,12 @@ export default function ProfilePage() {
                     value={city}
                     onChange={(e) => setCity(e.target.value)}
                     placeholder="e.g. Surat"
-                    className="mt-1 w-full rounded-lg border border-slate-300 py-2 px-3 text-xs outline-none focus:border-brand-blue"
+                    className="mt-1 w-full rounded-lg border border-slate-300 py-2 px-3 text-xs outline-none focus:border-brand-blue dark:border-slate-700 dark:bg-slate-800/80 dark:text-white dark:focus:border-cyan-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
                     State
                   </label>
                   <input
@@ -333,12 +333,12 @@ export default function ProfilePage() {
                     value={state}
                     onChange={(e) => setState(e.target.value)}
                     placeholder="e.g. Gujarat"
-                    className="mt-1 w-full rounded-lg border border-slate-300 py-2 px-3 text-xs outline-none focus:border-brand-blue"
+                    className="mt-1 w-full rounded-lg border border-slate-300 py-2 px-3 text-xs outline-none focus:border-brand-blue dark:border-slate-700 dark:bg-slate-800/80 dark:text-white dark:focus:border-cyan-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
                     Pincode
                   </label>
                   <input
@@ -348,7 +348,7 @@ export default function ProfilePage() {
                     value={pincode}
                     onChange={(e) => setPincode(e.target.value)}
                     placeholder="e.g. 395007"
-                    className="mt-1 w-full rounded-lg border border-slate-300 py-2 px-3 text-xs outline-none focus:border-brand-blue"
+                    className="mt-1 w-full rounded-lg border border-slate-300 py-2 px-3 text-xs outline-none focus:border-brand-blue dark:border-slate-700 dark:bg-slate-800/80 dark:text-white dark:focus:border-cyan-500"
                   />
                 </div>
               </div>
@@ -357,7 +357,7 @@ export default function ProfilePage() {
             <button
               type="submit"
               disabled={updateProfileMutation.isPending}
-              className="flex items-center justify-center gap-2 rounded-xl bg-brand-blue py-2.5 px-6 text-xs font-bold text-white shadow-md shadow-blue-500/20 hover:bg-blue-600 disabled:opacity-60"
+              className="flex items-center justify-center gap-2 rounded-xl bg-brand-blue py-2.5 px-6 text-xs font-bold text-white shadow-md shadow-blue-500/20 hover:bg-blue-600 disabled:opacity-60 dark:bg-blue-600 dark:hover:bg-blue-500"
             >
               {updateProfileMutation.isPending && (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -371,7 +371,7 @@ export default function ProfilePage() {
         <aside className="space-y-4 sm:space-y-6">
           <form
             onSubmit={handlePasswordSubmit}
-            className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 shadow-2xs space-y-3.5 sm:space-y-4"
+            className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 shadow-2xs space-y-3.5 sm:space-y-4 dark:border-slate-800 dark:bg-slate-900"
           >
             {/* Hidden field for browser password manager accessibility */}
             <input
@@ -385,29 +385,29 @@ export default function ProfilePage() {
               tabIndex={-1}
             />
 
-            <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
-              <KeyRound className="h-4 w-4 text-brand-blue shrink-0" />
-              <h2 className="text-xs sm:text-sm font-bold text-brand-charcoal uppercase tracking-wider">
+            <div className="flex items-center gap-2 border-b border-slate-100 pb-3 dark:border-slate-800">
+              <KeyRound className="h-4 w-4 text-brand-blue dark:text-cyan-400 shrink-0" />
+              <h2 className="text-xs sm:text-sm font-bold text-brand-charcoal uppercase tracking-wider dark:text-white">
                 Change Password
               </h2>
             </div>
 
             {passwordSuccess && (
-              <div className="flex items-center gap-2 rounded-xl bg-emerald-50 p-3 text-xs font-semibold text-emerald-800">
-                <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+              <div className="flex items-center gap-2 rounded-xl bg-emerald-50 p-3 text-xs font-semibold text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
+                <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
                 <span>Password updated successfully!</span>
               </div>
             )}
 
             {passwordError && (
-              <div className="flex items-center gap-2 rounded-xl bg-rose-50 p-3 text-xs text-rose-700">
+              <div className="flex items-center gap-2 rounded-xl bg-rose-50 p-3 text-xs text-rose-700 dark:bg-rose-950/60 dark:text-rose-300">
                 <AlertCircle className="h-4 w-4 shrink-0" />
                 <span>{passwordError}</span>
               </div>
             )}
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
                 Current Password *
               </label>
               <div className="relative mt-1">
@@ -419,14 +419,14 @@ export default function ProfilePage() {
                   autoComplete="current-password"
                   onChange={(e) => setCurrentPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full rounded-lg border border-slate-300 py-2 pl-9 pr-3 text-xs outline-none focus:border-brand-blue"
+                  className="w-full rounded-lg border border-slate-300 py-2 pl-9 pr-3 text-xs outline-none focus:border-brand-blue dark:border-slate-700 dark:bg-slate-800/80 dark:text-white dark:focus:border-cyan-500"
                 />
-                <Lock className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
+                <Lock className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400 dark:text-slate-500" />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
                 New Password (Min. 8 chars) *
               </label>
               <div className="relative mt-1">
@@ -438,14 +438,14 @@ export default function ProfilePage() {
                   autoComplete="new-password"
                   onChange={(e) => setNewPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full rounded-lg border border-slate-300 py-2 pl-9 pr-3 text-xs outline-none focus:border-brand-blue"
+                  className="w-full rounded-lg border border-slate-300 py-2 pl-9 pr-3 text-xs outline-none focus:border-brand-blue dark:border-slate-700 dark:bg-slate-800/80 dark:text-white dark:focus:border-cyan-500"
                 />
-                <Lock className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
+                <Lock className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400 dark:text-slate-500" />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
                 Confirm New Password *
               </label>
               <div className="relative mt-1">
@@ -457,16 +457,16 @@ export default function ProfilePage() {
                   autoComplete="new-password"
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full rounded-lg border border-slate-300 py-2 pl-9 pr-3 text-xs outline-none focus:border-brand-blue"
+                  className="w-full rounded-lg border border-slate-300 py-2 pl-9 pr-3 text-xs outline-none focus:border-brand-blue dark:border-slate-700 dark:bg-slate-800/80 dark:text-white dark:focus:border-cyan-500"
                 />
-                <Lock className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
+                <Lock className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400 dark:text-slate-500" />
               </div>
             </div>
 
             <button
               type="submit"
               disabled={changePasswordMutation.isPending}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 py-2.5 px-4 text-xs font-bold text-white hover:bg-brand-blue disabled:opacity-60 transition"
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 py-2.5 px-4 text-xs font-bold text-white hover:bg-brand-blue disabled:opacity-60 transition dark:bg-slate-800 dark:hover:bg-cyan-600"
             >
               {changePasswordMutation.isPending && (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -476,9 +476,9 @@ export default function ProfilePage() {
           </form>
 
           {/* Security Information Box */}
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5 space-y-2 text-xs text-slate-500">
-            <div className="flex items-center gap-2 font-bold text-slate-700">
-              <ShieldCheck className="h-4 w-4 text-brand-blue shrink-0" />
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5 space-y-2 text-xs text-slate-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-400">
+            <div className="flex items-center gap-2 font-bold text-slate-700 dark:text-slate-200">
+              <ShieldCheck className="h-4 w-4 text-brand-blue dark:text-cyan-400 shrink-0" />
               <span>Security Standards</span>
             </div>
             <p className="leading-relaxed text-[10px] sm:text-[11px]">

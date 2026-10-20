@@ -3,14 +3,14 @@ import Link from "next/link";
 
 interface LogoProps {
   variant?: "full" | "icon-only";
-  theme?: "light" | "dark";
+  theme?: "light" | "dark" | "auto";
   className?: string;
   size?: "sm" | "md" | "lg";
 }
 
 export const Logo: React.FC<LogoProps> = ({
   variant = "full",
-  theme = "light",
+  theme = "auto",
   className = "",
   size = "md",
 }) => {
@@ -21,7 +21,12 @@ export const Logo: React.FC<LogoProps> = ({
   };
 
   const currentSize = sizeMap[size];
-  const textColor = theme === "dark" ? "text-white" : "text-brand-charcoal";
+  const textColor =
+    theme === "dark"
+      ? "text-white"
+      : theme === "light"
+        ? "text-brand-charcoal"
+        : "text-brand-charcoal dark:text-white";
 
   return (
     <Link
@@ -65,7 +70,7 @@ export const Logo: React.FC<LogoProps> = ({
       {variant === "full" && (
         <div className="flex flex-col leading-none">
           <span
-            className={`font-bold tracking-tight ${currentSize.text} ${textColor}`}
+            className={`font-bold tracking-tight transition-colors duration-200 ${currentSize.text} ${textColor}`}
           >
             NeoCart
           </span>

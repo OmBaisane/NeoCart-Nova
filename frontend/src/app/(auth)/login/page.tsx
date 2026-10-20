@@ -67,21 +67,21 @@ export default function LoginPage() {
 
   return (
     <section className="flex min-h-[calc(100vh-140px)] items-center justify-center px-3 py-8 sm:px-6 sm:py-12 lg:px-8">
-      <div className="w-full max-w-md space-y-6 sm:space-y-8 rounded-2xl border border-slate-200 bg-white p-5 sm:p-8 shadow-xl shadow-slate-100/80">
+      <div className="w-full max-w-md space-y-6 sm:space-y-8 rounded-2xl border border-slate-200 bg-white p-5 sm:p-8 shadow-xl shadow-slate-100/80 dark:border-slate-800 dark:bg-slate-900 dark:shadow-none">
         <div className="text-center">
           <div className="flex justify-center">
             <Logo size="lg" />
           </div>
-          <h1 className="mt-5 sm:mt-6 text-xl sm:text-2xl font-bold tracking-tight text-brand-charcoal">
+          <h1 className="mt-5 sm:mt-6 text-xl sm:text-2xl font-bold tracking-tight text-brand-charcoal dark:text-white">
             Welcome back
           </h1>
-          <p className="mt-1.5 sm:mt-2 text-xs text-slate-500">
+          <p className="mt-1.5 sm:mt-2 text-xs text-slate-500 dark:text-slate-400">
             Enter your credentials to access your orders and account.
           </p>
         </div>
 
         {error && (
-          <div className="flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700">
+          <div className="flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-300">
             <AlertCircle className="h-4 w-4 shrink-0" />
             <span>{error}</span>
           </div>
@@ -91,7 +91,7 @@ export default function LoginPage() {
           <div>
             <label
               htmlFor="email"
-              className="block text-xs font-semibold text-slate-700 uppercase tracking-wider"
+              className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider"
             >
               Email Address
             </label>
@@ -103,16 +103,16 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="name@example.com"
-                className="w-full rounded-lg border border-slate-300 py-2.5 pl-10 pr-4 text-xs sm:text-sm text-brand-charcoal outline-none transition placeholder:text-slate-400 focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20"
+                className="w-full rounded-lg border border-slate-300 py-2.5 pl-10 pr-4 text-xs sm:text-sm text-brand-charcoal outline-none transition placeholder:text-slate-400 focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20 dark:border-slate-700 dark:bg-slate-800/80 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-cyan-500 dark:focus:ring-cyan-500/20"
               />
-              <Mail className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
+              <Mail className="absolute left-3.5 top-3 h-4 w-4 text-slate-400 dark:text-slate-500" />
             </div>
           </div>
 
           <div>
             <label
               htmlFor="password"
-              className="block text-xs font-semibold text-slate-700 uppercase tracking-wider"
+              className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider"
             >
               Password
             </label>
@@ -125,16 +125,16 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full rounded-lg border border-slate-300 py-2.5 pl-10 pr-4 text-xs sm:text-sm text-brand-charcoal outline-none transition placeholder:text-slate-400 focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20"
+                className="w-full rounded-lg border border-slate-300 py-2.5 pl-10 pr-4 text-xs sm:text-sm text-brand-charcoal outline-none transition placeholder:text-slate-400 focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20 dark:border-slate-700 dark:bg-slate-800/80 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-cyan-500 dark:focus:ring-cyan-500/20"
               />
-              <Lock className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
+              <Lock className="absolute left-3.5 top-3 h-4 w-4 text-slate-400 dark:text-slate-500" />
             </div>
           </div>
 
           <button
             type="submit"
             disabled={isSubmitting}
-            className="flex w-full items-center justify-center gap-2 rounded-lg bg-brand-blue py-2.5 sm:py-3 text-xs sm:text-sm font-semibold text-white shadow-md shadow-blue-500/20 transition hover:bg-blue-600 focus:ring-2 focus:ring-brand-blue focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-brand-blue py-2.5 sm:py-3 text-xs sm:text-sm font-semibold text-white shadow-md shadow-blue-500/20 transition hover:bg-blue-600 focus:ring-2 focus:ring-brand-blue focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-blue-600 dark:hover:bg-blue-500"
           >
             {isSubmitting ? (
               <>
@@ -150,11 +150,11 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <div className="border-t border-slate-100 pt-5 sm:pt-6 text-center text-xs text-slate-500">
+        <div className="border-t border-slate-100 pt-5 sm:pt-6 text-center text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
           Don&apos;t have an account?{" "}
           <Link
             href="/register"
-            className="font-semibold text-brand-blue transition hover:underline"
+            className="font-semibold text-brand-blue transition hover:underline dark:text-cyan-400"
           >
             Create an account
           </Link>

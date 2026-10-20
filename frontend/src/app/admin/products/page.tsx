@@ -105,12 +105,12 @@ export default function AdminProductsPage() {
   return (
     <main className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 border-b border-slate-200 pb-4 sm:pb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 border-b border-slate-200 pb-4 sm:pb-6 dark:border-slate-800">
         <div>
-          <h1 className="text-xl sm:text-3xl font-extrabold tracking-tight text-slate-900">
+          <h1 className="text-xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
             Inventory & Catalog Management
           </h1>
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
             Audit catalog prices, adjust stock levels, and publish product
             entries.
           </p>
@@ -118,7 +118,7 @@ export default function AdminProductsPage() {
 
         <Link
           href="/admin/products/new"
-          className="flex items-center gap-1.5 self-start sm:self-auto rounded-xl bg-blue-600 px-3.5 py-2 sm:px-4 sm:py-2.5 text-xs font-bold text-white shadow-md shadow-blue-500/20 hover:bg-blue-500 transition"
+          className="flex items-center gap-1.5 self-start sm:self-auto rounded-xl bg-blue-600 px-3.5 py-2 sm:px-4 sm:py-2.5 text-xs font-bold text-white shadow-md shadow-blue-500/20 hover:bg-blue-500 transition dark:bg-blue-600 dark:hover:bg-blue-500"
         >
           <Plus className="h-4 w-4" />
           <span>Add New Product</span>
@@ -126,7 +126,7 @@ export default function AdminProductsPage() {
       </div>
 
       {/* Search & Filter Bar */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs dark:border-slate-800 dark:bg-slate-900">
         <div className="relative flex-1 max-w-md">
           <input
             type="text"
@@ -136,9 +136,9 @@ export default function AdminProductsPage() {
               setSearchTerm(e.target.value);
               setCurrentPage(1);
             }}
-            className="w-full rounded-lg border border-slate-300 py-2 pl-9 pr-3 text-xs outline-none focus:border-blue-600"
+            className="w-full rounded-lg border border-slate-300 py-2 pl-9 pr-3 text-xs outline-none focus:border-blue-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder-slate-400 dark:focus:border-cyan-500"
           />
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400 dark:text-slate-500" />
         </div>
 
         {/* Status Filter Buttons */}
@@ -159,8 +159,8 @@ export default function AdminProductsPage() {
               }}
               className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
                 statusFilter === tab.key
-                  ? "bg-slate-900 text-white shadow-xs"
-                  : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                  ? "bg-slate-900 text-white shadow-xs dark:bg-blue-600 dark:text-white"
+                  : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-white"
               }`}
             >
               {tab.label}
@@ -168,13 +168,13 @@ export default function AdminProductsPage() {
           ))}
         </div>
 
-        <span className="text-xs font-semibold text-slate-500 shrink-0">
+        <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 shrink-0">
           Total {totalProducts} entries
         </span>
       </div>
 
       {/* Products Table Card */}
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xs">
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xs dark:border-slate-800 dark:bg-slate-900">
         {isLoading ? (
           <div className="p-4">
             <TableSkeleton rows={6} cols={6} />
@@ -194,11 +194,11 @@ export default function AdminProductsPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-175 text-left text-xs text-slate-600">
-              <thead className="border-b border-slate-200 bg-slate-50/70 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+            <table className="w-full min-w-175 text-left text-xs text-slate-600 dark:text-slate-300">
+              <thead className="border-b border-slate-200 bg-slate-50/70 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:border-slate-800 dark:bg-slate-800/90 dark:text-slate-200">
                 <tr>
                   <th scope="col" className="py-3.5 px-4">
-                    Product
+                    Product Title
                   </th>
                   <th scope="col" className="py-3.5 px-4">
                     Category
@@ -217,7 +217,7 @@ export default function AdminProductsPage() {
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                 {products.map((product) => {
                   const isOutOfStock = product.stock <= 0;
                   const isLowStock = product.stock > 0 && product.stock <= 5;
@@ -225,7 +225,7 @@ export default function AdminProductsPage() {
                   return (
                     <tr
                       key={product._id}
-                      className="transition hover:bg-slate-50/60"
+                      className="transition hover:bg-slate-50/60 dark:hover:bg-slate-800/50"
                     >
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-3">
@@ -235,22 +235,22 @@ export default function AdminProductsPage() {
                               "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&q=80"
                             }
                             alt={product.name}
-                            className="h-10 w-10 shrink-0 rounded-lg object-cover bg-slate-100"
+                            className="h-10 w-10 shrink-0 rounded-lg object-cover bg-slate-100 dark:bg-slate-800"
                           />
                           <div className="min-w-0 max-w-xs">
-                            <h4 className="font-bold text-slate-900 truncate">
+                            <h4 className="font-bold text-slate-900 dark:text-white truncate text-xs sm:text-sm">
                               {product.name}
                             </h4>
                             <div className="flex items-center gap-1.5 mt-0.5">
                               {product.isFeatured && (
-                                <span className="rounded bg-amber-50 px-1.5 py-0.2 text-[9px] font-bold text-amber-700">
+                                <span className="rounded bg-amber-50 px-1.5 py-0.2 text-[9px] font-bold text-amber-700 dark:bg-amber-950/60 dark:text-amber-400">
                                   Featured
                                 </span>
                               )}
                               <Link
                                 href={`/products/${product.slug}`}
                                 target="_blank"
-                                className="text-[10px] text-blue-600 hover:underline flex items-center gap-0.5"
+                                className="text-[10px] text-blue-600 hover:underline flex items-center gap-0.5 dark:text-cyan-400"
                               >
                                 <span>View in Store</span>
                                 <ExternalLink className="h-2.5 w-2.5" />
@@ -260,20 +260,20 @@ export default function AdminProductsPage() {
                         </div>
                       </td>
 
-                      <td className="py-3 px-4 font-medium text-slate-700">
+                      <td className="py-3 px-4 font-medium text-slate-700 dark:text-slate-300">
                         {product.category?.name || "Unassigned"}
                       </td>
 
                       <td className="py-3 px-4">
                         <div className="flex flex-col">
-                          <span className="font-bold text-slate-900">
+                          <span className="font-bold text-slate-900 dark:text-white text-xs sm:text-sm">
                             ₹
                             {(
                               product.discountPrice || product.price
                             ).toLocaleString("en-IN")}
                           </span>
                           {product.discountPrice && (
-                            <span className="text-[10px] text-slate-400 line-through">
+                            <span className="text-[10px] text-slate-400 line-through dark:text-slate-500">
                               ₹{product.price.toLocaleString("en-IN")}
                             </span>
                           )}
@@ -282,17 +282,17 @@ export default function AdminProductsPage() {
 
                       <td className="py-3 px-4">
                         {isOutOfStock ? (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-bold text-rose-700">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-bold text-rose-700 dark:bg-rose-950/60 dark:text-rose-400">
                             <XCircle className="h-3 w-3" />0 units (Out of
                             Stock)
                           </span>
                         ) : isLowStock ? (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-700">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-700 dark:bg-amber-950/60 dark:text-amber-400">
                             <AlertTriangle className="h-3 w-3" />
                             {product.stock} units (Low Stock)
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400">
                             <CheckCircle2 className="h-3 w-3" />
                             {product.stock} units
                           </span>
@@ -312,8 +312,8 @@ export default function AdminProductsPage() {
                           }
                           className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold transition ${
                             product.isActive
-                              ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
-                              : "bg-slate-200 text-slate-700 hover:bg-slate-300"
+                              ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200 dark:bg-emerald-950/70 dark:text-emerald-400 dark:hover:bg-emerald-900/80"
+                              : "bg-slate-200 text-slate-700 hover:bg-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
                           }`}
                         >
                           <Power className="h-2.5 w-2.5" />
@@ -327,7 +327,7 @@ export default function AdminProductsPage() {
                         <div className="flex items-center justify-end gap-2">
                           <Link
                             href={`/admin/products/${product._id}/edit`}
-                            className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 hover:text-blue-600 transition"
+                            className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 hover:text-blue-600 transition dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-cyan-400"
                             title="Edit Product"
                           >
                             <Edit className="h-4 w-4" />
@@ -337,7 +337,7 @@ export default function AdminProductsPage() {
                               handleDelete(product._id, product.name)
                             }
                             disabled={deleteMutation.isPending}
-                            className="rounded-lg p-1.5 text-slate-500 hover:bg-rose-50 hover:text-rose-600 transition"
+                            className="rounded-lg p-1.5 text-slate-500 hover:bg-rose-50 hover:text-rose-600 transition dark:text-slate-400 dark:hover:bg-rose-950/40 dark:hover:text-rose-400"
                             title="Delete Product"
                           >
                             <Trash2 className="h-4 w-4" />
@@ -354,15 +354,15 @@ export default function AdminProductsPage() {
 
         {/* Server-Side Pagination Bar */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between border-t border-slate-200 px-4 py-3 bg-slate-50/50">
-            <span className="text-xs text-slate-500 font-medium">
+          <div className="flex items-center justify-between border-t border-slate-200 px-4 py-3 bg-slate-50/50 dark:border-slate-800 dark:bg-slate-850">
+            <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
               Page {currentPage} of {totalPages}
             </span>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
-                className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-600 disabled:opacity-50 hover:bg-slate-50 transition"
+                className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-600 disabled:opacity-50 hover:bg-slate-50 transition dark:border-slate-800 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
               >
                 <ChevronLeft className="h-3.5 w-3.5" />
                 <span>Prev</span>
@@ -372,7 +372,7 @@ export default function AdminProductsPage() {
                   setCurrentPage((p) => Math.min(totalPages, p + 1))
                 }
                 disabled={currentPage === totalPages}
-                className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-600 disabled:opacity-50 hover:bg-slate-50 transition"
+                className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-600 disabled:opacity-50 hover:bg-slate-50 transition dark:border-slate-800 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
               >
                 <span>Next</span>
                 <ChevronRight className="h-3.5 w-3.5" />

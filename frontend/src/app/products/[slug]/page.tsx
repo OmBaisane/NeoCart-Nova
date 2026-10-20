@@ -243,7 +243,7 @@ export default function ProductDetailsPage({
   if (isProductLoading) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-brand-blue" />
+        <Loader2 className="h-8 w-8 animate-spin text-brand-blue dark:text-cyan-400" />
       </div>
     );
   }
@@ -252,10 +252,10 @@ export default function ProductDetailsPage({
     return (
       <div className="mx-auto max-w-7xl px-4 py-20 text-center">
         <AlertCircle className="mx-auto h-12 w-12 text-rose-500" />
-        <h1 className="mt-4 text-2xl font-bold text-brand-charcoal">
+        <h1 className="mt-4 text-2xl font-bold text-brand-charcoal dark:text-white">
           Product Not Found
         </h1>
-        <p className="mt-2 text-xs text-slate-500">
+        <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
           The requested product could not be located or is no longer active.
         </p>
         <Link
@@ -285,17 +285,23 @@ export default function ProductDetailsPage({
       {/* Breadcrumb Navigation */}
       <nav
         aria-label="Breadcrumb"
-        className="flex items-center gap-1.5 sm:gap-2 text-[11px] sm:text-xs font-medium text-slate-500 mb-5 sm:mb-8 overflow-x-auto whitespace-nowrap pb-1"
+        className="flex items-center gap-1.5 sm:gap-2 text-[11px] sm:text-xs font-medium text-slate-500 mb-5 sm:mb-8 overflow-x-auto whitespace-nowrap pb-1 dark:text-slate-400"
       >
-        <Link href="/" className="hover:text-brand-blue shrink-0">
+        <Link
+          href="/"
+          className="hover:text-brand-blue dark:hover:text-cyan-400 shrink-0"
+        >
           Home
         </Link>
-        <ChevronRight className="h-3 w-3 text-slate-400 shrink-0" />
-        <Link href="/products" className="hover:text-brand-blue shrink-0">
+        <ChevronRight className="h-3 w-3 text-slate-400 dark:text-slate-600 shrink-0" />
+        <Link
+          href="/products"
+          className="hover:text-brand-blue dark:hover:text-cyan-400 shrink-0"
+        >
           Products
         </Link>
-        <ChevronRight className="h-3 w-3 text-slate-400 shrink-0" />
-        <span className="text-brand-charcoal truncate max-w-48 sm:max-w-xs">
+        <ChevronRight className="h-3 w-3 text-slate-400 dark:text-slate-600 shrink-0" />
+        <span className="text-brand-charcoal dark:text-white truncate max-w-48 sm:max-w-xs">
           {product.name}
         </span>
       </nav>
@@ -304,7 +310,7 @@ export default function ProductDetailsPage({
       <section className="grid grid-cols-1 gap-6 sm:gap-8 lg:grid-cols-2 lg:gap-12">
         {/* Left: Product Images */}
         <div className="space-y-3 sm:space-y-4">
-          <div className="relative aspect-square w-full overflow-hidden rounded-2xl border border-slate-200 bg-white">
+          <div className="relative aspect-square w-full overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
             <img
               src={activeImage}
               alt={product.name}
@@ -326,8 +332,8 @@ export default function ProductDetailsPage({
                   onClick={() => setSelectedImage(img)}
                   className={`relative aspect-square h-16 w-16 sm:h-20 sm:w-20 shrink-0 overflow-hidden rounded-xl border-2 transition ${
                     activeImage === img
-                      ? "border-brand-blue ring-2 ring-brand-blue/20"
-                      : "border-slate-200 hover:border-slate-400"
+                      ? "border-brand-blue ring-2 ring-brand-blue/20 dark:border-cyan-400 dark:ring-cyan-400/20"
+                      : "border-slate-200 hover:border-slate-400 dark:border-slate-800 dark:hover:border-slate-700"
                   }`}
                 >
                   <img
@@ -345,11 +351,11 @@ export default function ProductDetailsPage({
         <div className="flex flex-col space-y-4 sm:space-y-6">
           <div>
             {product.category && (
-              <span className="text-[11px] sm:text-xs font-bold tracking-widest text-brand-blue uppercase">
+              <span className="text-[11px] sm:text-xs font-bold tracking-widest text-brand-blue dark:text-cyan-400 uppercase">
                 {product.category.name}
               </span>
             )}
-            <h1 className="mt-1 sm:mt-2 text-xl sm:text-3xl font-extrabold tracking-tight text-brand-charcoal">
+            <h1 className="mt-1 sm:mt-2 text-xl sm:text-3xl font-extrabold tracking-tight text-brand-charcoal dark:text-white">
               {product.name}
             </h1>
 
@@ -357,14 +363,14 @@ export default function ProductDetailsPage({
             <div className="mt-2.5 flex items-center gap-2">
               <div className="flex items-center text-amber-500">
                 <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
-                <span className="ml-1 text-xs sm:text-sm font-bold text-slate-800">
+                <span className="ml-1 text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200">
                   {product.rating > 0 ? product.rating.toFixed(1) : "New"}
                 </span>
               </div>
-              <span className="text-slate-300">•</span>
+              <span className="text-slate-300 dark:text-slate-700">•</span>
               <a
                 href="#reviews"
-                className="text-xs font-medium text-slate-500 hover:text-brand-blue hover:underline"
+                className="text-xs font-medium text-slate-500 hover:text-brand-blue hover:underline dark:text-slate-400 dark:hover:text-cyan-400"
               >
                 {product.reviewCount} customer{" "}
                 {product.reviewCount === 1 ? "review" : "reviews"}
@@ -373,47 +379,47 @@ export default function ProductDetailsPage({
           </div>
 
           {/* Pricing Row */}
-          <div className="flex items-baseline gap-2.5 sm:gap-3 border-y border-slate-100 py-3 sm:py-4">
-            <span className="text-2xl sm:text-3xl font-black text-brand-charcoal">
+          <div className="flex items-baseline gap-2.5 sm:gap-3 border-y border-slate-100 dark:border-slate-800 py-3 sm:py-4">
+            <span className="text-2xl sm:text-3xl font-black text-brand-charcoal dark:text-white">
               ₹{currentPrice.toLocaleString("en-IN")}
             </span>
             {hasDiscount && (
-              <span className="text-sm sm:text-base text-slate-400 line-through">
+              <span className="text-sm sm:text-base text-slate-400 line-through dark:text-slate-500">
                 ₹{product.price.toLocaleString("en-IN")}
               </span>
             )}
-            <span className="rounded-md bg-emerald-50 px-2 py-0.5 text-[10px] sm:text-xs font-semibold text-emerald-700">
+            <span className="rounded-md bg-emerald-50 px-2 py-0.5 text-[10px] sm:text-xs font-semibold text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400">
               Tax Included
             </span>
           </div>
 
           {/* Description */}
           <div>
-            <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+            <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider dark:text-slate-300">
               Description
             </h3>
-            <p className="mt-1.5 sm:mt-2 text-xs leading-relaxed text-slate-600 sm:text-sm">
+            <p className="mt-1.5 sm:mt-2 text-xs leading-relaxed text-slate-600 sm:text-sm dark:text-slate-400">
               {product.description}
             </p>
           </div>
 
           {/* Stock Guard Status */}
           <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-slate-700">
+            <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
               Availability:
             </span>
             {isOutOfStock ? (
-              <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-bold text-rose-700">
+              <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-bold text-rose-700 dark:bg-rose-950/60 dark:text-rose-400">
                 <XCircle className="h-3.5 w-3.5" />
                 Out of Stock
               </span>
             ) : product.stock <= 5 ? (
-              <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-bold text-amber-700">
+              <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-bold text-amber-700 dark:bg-amber-950/60 dark:text-amber-400">
                 <AlertCircle className="h-3.5 w-3.5" />
                 Only {product.stock} units left
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-bold text-emerald-700">
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-bold text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400">
                 <CheckCircle className="h-3.5 w-3.5" />
                 In Stock ({product.stock} available)
               </span>
@@ -424,16 +430,16 @@ export default function ProductDetailsPage({
           {!isOutOfStock && (
             <div className="space-y-3 pt-1">
               <div className="flex items-center gap-3 sm:gap-4">
-                <div className="flex items-center rounded-lg border border-slate-300 bg-white">
+                <div className="flex items-center rounded-lg border border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-800">
                   <button
                     onClick={() => setQuantity(Math.max(1, quantity - 1))}
                     disabled={quantity <= 1}
-                    className="p-2 text-slate-600 hover:bg-slate-50 disabled:opacity-40"
+                    className="p-2 text-slate-600 hover:bg-slate-50 disabled:opacity-40 dark:text-slate-300 dark:hover:bg-slate-700"
                     aria-label="Decrease quantity"
                   >
                     <Minus className="h-4 w-4" />
                   </button>
-                  <span className="w-10 sm:w-12 text-center text-xs sm:text-sm font-bold text-brand-charcoal">
+                  <span className="w-10 sm:w-12 text-center text-xs sm:text-sm font-bold text-brand-charcoal dark:text-white">
                     {quantity}
                   </span>
                   <button
@@ -441,7 +447,7 @@ export default function ProductDetailsPage({
                       setQuantity(Math.min(product.stock, quantity + 1))
                     }
                     disabled={quantity >= product.stock}
-                    className="p-2 text-slate-600 hover:bg-slate-50 disabled:opacity-40"
+                    className="p-2 text-slate-600 hover:bg-slate-50 disabled:opacity-40 dark:text-slate-300 dark:hover:bg-slate-700"
                     aria-label="Increase quantity"
                   >
                     <Plus className="h-4 w-4" />
@@ -451,7 +457,7 @@ export default function ProductDetailsPage({
                 <button
                   onClick={handleAddToCart}
                   disabled={addToCartMutation.isPending}
-                  className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-brand-blue py-2.5 sm:py-3 px-4 sm:px-6 text-xs sm:text-sm font-bold text-white shadow-md shadow-blue-500/20 transition hover:bg-blue-600 focus:ring-2 focus:ring-brand-blue focus:ring-offset-2 disabled:opacity-60"
+                  className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-brand-blue py-2.5 sm:py-3 px-4 sm:px-6 text-xs sm:text-sm font-bold text-white shadow-md shadow-blue-500/20 transition hover:bg-blue-600 focus:ring-2 focus:ring-brand-blue focus:ring-offset-2 disabled:opacity-60 dark:bg-blue-600 dark:hover:bg-blue-500"
                 >
                   {addToCartMutation.isPending ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -467,12 +473,12 @@ export default function ProductDetailsPage({
               </div>
 
               {cartSuccess && (
-                <div className="flex items-center gap-2 rounded-lg bg-emerald-50 p-2.5 sm:p-3 text-xs font-semibold text-emerald-800">
-                  <CheckCircle className="h-4 w-4 shrink-0 text-emerald-600" />
+                <div className="flex items-center gap-2 rounded-lg bg-emerald-50 p-2.5 sm:p-3 text-xs font-semibold text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
+                  <CheckCircle className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
                   <span>Item added to cart!</span>
                   <Link
                     href="/cart"
-                    className="ml-auto underline font-bold hover:text-emerald-950"
+                    className="ml-auto underline font-bold hover:text-emerald-950 dark:hover:text-emerald-200"
                   >
                     View Cart
                   </Link>
@@ -480,7 +486,7 @@ export default function ProductDetailsPage({
               )}
 
               {cartError && (
-                <div className="flex items-center gap-2 rounded-lg bg-rose-50 p-2.5 sm:p-3 text-xs text-rose-700">
+                <div className="flex items-center gap-2 rounded-lg bg-rose-50 p-2.5 sm:p-3 text-xs text-rose-700 dark:bg-rose-950/60 dark:text-rose-300">
                   <AlertCircle className="h-4 w-4 shrink-0" />
                   <span>{cartError}</span>
                 </div>
@@ -489,31 +495,31 @@ export default function ProductDetailsPage({
           )}
 
           {/* Guarantee Badges */}
-          <div className="grid grid-cols-3 gap-2 sm:gap-3 border-t border-slate-200 pt-4 sm:pt-6">
-            <div className="flex flex-col items-center text-center p-2.5 sm:p-3 rounded-xl bg-slate-50">
-              <Truck className="h-4 w-4 sm:h-5 sm:w-5 text-brand-blue mb-1" />
-              <span className="text-[10px] sm:text-[11px] font-bold text-brand-charcoal">
+          <div className="grid grid-cols-3 gap-2 sm:gap-3 border-t border-slate-200 dark:border-slate-800 pt-4 sm:pt-6">
+            <div className="flex flex-col items-center text-center p-2.5 sm:p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800">
+              <Truck className="h-4 w-4 sm:h-5 sm:w-5 text-brand-blue dark:text-cyan-400 mb-1" />
+              <span className="text-[10px] sm:text-[11px] font-bold text-brand-charcoal dark:text-white">
                 COD Available
               </span>
-              <span className="text-[9px] sm:text-[10px] text-slate-400">
+              <span className="text-[9px] sm:text-[10px] text-slate-400 dark:text-slate-500">
                 Doorstep pay
               </span>
             </div>
-            <div className="flex flex-col items-center text-center p-2.5 sm:p-3 rounded-xl bg-slate-50">
-              <ShieldCheck className="h-4 w-4 sm:h-5 sm:w-5 text-cyan-accent mb-1" />
-              <span className="text-[10px] sm:text-[11px] font-bold text-brand-charcoal">
+            <div className="flex flex-col items-center text-center p-2.5 sm:p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800">
+              <ShieldCheck className="h-4 w-4 sm:h-5 sm:w-5 text-cyan-accent dark:text-cyan-400 mb-1" />
+              <span className="text-[10px] sm:text-[11px] font-bold text-brand-charcoal dark:text-white">
                 Verified Quality
               </span>
-              <span className="text-[9px] sm:text-[10px] text-slate-400">
+              <span className="text-[9px] sm:text-[10px] text-slate-400 dark:text-slate-500">
                 Authentic
               </span>
             </div>
-            <div className="flex flex-col items-center text-center p-2.5 sm:p-3 rounded-xl bg-slate-50">
-              <RotateCcw className="h-4 w-4 sm:h-5 sm:w-5 text-indigo-600 mb-1" />
-              <span className="text-[10px] sm:text-[11px] font-bold text-brand-charcoal">
+            <div className="flex flex-col items-center text-center p-2.5 sm:p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800">
+              <RotateCcw className="h-4 w-4 sm:h-5 sm:w-5 text-indigo-600 dark:text-indigo-400 mb-1" />
+              <span className="text-[10px] sm:text-[11px] font-bold text-brand-charcoal dark:text-white">
                 Live Stock
               </span>
-              <span className="text-[9px] sm:text-[10px] text-slate-400">
+              <span className="text-[9px] sm:text-[10px] text-slate-400 dark:text-slate-500">
                 Zero oversell
               </span>
             </div>
@@ -524,30 +530,30 @@ export default function ProductDetailsPage({
       {/* Reviews & Feedback Section */}
       <section
         id="reviews"
-        className="mt-12 sm:mt-16 border-t border-slate-200 pt-8 sm:pt-12"
+        className="mt-12 sm:mt-16 border-t border-slate-200 dark:border-slate-800 pt-8 sm:pt-12"
       >
-        <div className="flex items-center justify-between border-b border-slate-100 pb-3 sm:pb-4">
+        <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3 sm:pb-4">
           <div className="flex items-center gap-2">
-            <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5 text-brand-blue shrink-0" />
-            <h2 className="text-base sm:text-xl font-bold tracking-tight text-brand-charcoal">
+            <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5 text-brand-blue dark:text-cyan-400 shrink-0" />
+            <h2 className="text-base sm:text-xl font-bold tracking-tight text-brand-charcoal dark:text-white">
               Customer Reviews ({reviewsData?.count || 0})
             </h2>
           </div>
         </div>
 
         {actionError && (
-          <div className="mt-3 rounded-lg bg-rose-50 p-2.5 text-xs text-rose-700">
+          <div className="mt-3 rounded-lg bg-rose-50 p-2.5 text-xs text-rose-700 dark:bg-rose-950/60 dark:text-rose-300">
             {actionError}
           </div>
         )}
 
         <div className="mt-6 sm:mt-8 grid grid-cols-1 gap-6 sm:gap-8 lg:grid-cols-3 lg:gap-12">
           {/* Write Review Box */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 shadow-xs h-fit">
-            <h3 className="text-xs sm:text-sm font-bold text-brand-charcoal">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 shadow-xs h-fit dark:border-slate-800 dark:bg-slate-900">
+            <h3 className="text-xs sm:text-sm font-bold text-brand-charcoal dark:text-white">
               Write a Review
             </h3>
-            <p className="mt-0.5 sm:mt-1 text-[11px] sm:text-xs text-slate-500">
+            <p className="mt-0.5 sm:mt-1 text-[11px] sm:text-xs text-slate-500 dark:text-slate-400">
               Share your genuine feedback with verified buyers.
             </p>
 
@@ -557,13 +563,13 @@ export default function ProductDetailsPage({
                 className="mt-3 sm:mt-4 space-y-3.5 sm:space-y-4"
               >
                 {reviewError && (
-                  <div className="rounded-lg bg-rose-50 p-2 text-xs text-rose-700">
+                  <div className="rounded-lg bg-rose-50 p-2 text-xs text-rose-700 dark:bg-rose-950/60 dark:text-rose-300">
                     {reviewError}
                   </div>
                 )}
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                     Rating (1 to 5 Stars)
                   </label>
                   <div className="flex gap-1">
@@ -578,7 +584,7 @@ export default function ProductDetailsPage({
                           className={`h-4 w-4 sm:h-5 sm:w-5 ${
                             star <= reviewRating
                               ? "fill-amber-400 text-amber-400"
-                              : "text-slate-300"
+                              : "text-slate-300 dark:text-slate-600"
                           }`}
                         />
                       </button>
@@ -587,7 +593,7 @@ export default function ProductDetailsPage({
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                     Comment
                   </label>
                   <textarea
@@ -596,14 +602,14 @@ export default function ProductDetailsPage({
                     value={reviewComment}
                     onChange={(e) => setReviewComment(e.target.value)}
                     placeholder="Describe product build quality, delivery speed..."
-                    className="w-full rounded-lg border border-slate-300 p-2.5 text-xs outline-none focus:border-brand-blue"
+                    className="w-full rounded-lg border border-slate-300 p-2.5 text-xs outline-none focus:border-brand-blue dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder-slate-500 dark:focus:border-cyan-500"
                   />
                 </div>
 
                 <button
                   type="submit"
                   disabled={submitReviewMutation.isPending}
-                  className="w-full rounded-lg bg-brand-blue py-2 sm:py-2.5 text-xs font-bold text-white shadow-xs hover:bg-blue-600 disabled:opacity-60"
+                  className="w-full rounded-lg bg-brand-blue py-2 sm:py-2.5 text-xs font-bold text-white shadow-xs hover:bg-blue-600 disabled:opacity-60 dark:bg-blue-600 dark:hover:bg-blue-500"
                 >
                   {submitReviewMutation.isPending
                     ? "Submitting..."
@@ -611,13 +617,13 @@ export default function ProductDetailsPage({
                 </button>
               </form>
             ) : (
-              <div className="mt-3 sm:mt-4 rounded-xl border border-slate-100 bg-slate-50 p-3 sm:p-4 text-center">
-                <p className="text-xs text-slate-600">
+              <div className="mt-3 sm:mt-4 rounded-xl border border-slate-100 bg-slate-50 p-3 sm:p-4 text-center dark:border-slate-800 dark:bg-slate-800/60">
+                <p className="text-xs text-slate-600 dark:text-slate-300">
                   Please log in to leave an authentic review for this product.
                 </p>
                 <Link
                   href="/login"
-                  className="mt-2.5 sm:mt-3 inline-block rounded-lg bg-brand-blue px-3.5 py-1.5 text-xs font-semibold text-white"
+                  className="mt-2.5 sm:mt-3 inline-block rounded-lg bg-brand-blue px-3.5 py-1.5 text-xs font-semibold text-white dark:bg-blue-600 dark:hover:bg-blue-500"
                 >
                   Sign In
                 </Link>
@@ -629,7 +635,7 @@ export default function ProductDetailsPage({
           <div className="lg:col-span-2 space-y-3 sm:space-y-4">
             {isReviewsLoading ? (
               <div className="flex justify-center py-8 sm:py-12">
-                <Loader2 className="h-6 w-6 animate-spin text-brand-blue" />
+                <Loader2 className="h-6 w-6 animate-spin text-brand-blue dark:text-cyan-400" />
               </div>
             ) : reviewsData && reviewsData.reviews.length > 0 ? (
               reviewsData.reviews.map((rev) => {
@@ -647,7 +653,7 @@ export default function ProductDetailsPage({
                 return (
                   <article
                     key={rev._id}
-                    className="rounded-xl border border-slate-200 bg-white p-3.5 sm:p-5 shadow-2xs"
+                    className="rounded-xl border border-slate-200 bg-white p-3.5 sm:p-5 shadow-2xs dark:border-slate-800 dark:bg-slate-900"
                   >
                     {isEditing ? (
                       <form
@@ -666,7 +672,7 @@ export default function ProductDetailsPage({
                                 className={`h-4 w-4 ${
                                   star <= editRating
                                     ? "fill-amber-400 text-amber-400"
-                                    : "text-slate-300"
+                                    : "text-slate-300 dark:text-slate-600"
                                 }`}
                               />
                             </button>
@@ -677,13 +683,13 @@ export default function ProductDetailsPage({
                           required
                           value={editComment}
                           onChange={(e) => setEditComment(e.target.value)}
-                          className="w-full rounded-lg border border-slate-300 p-2 text-xs outline-none focus:border-brand-blue"
+                          className="w-full rounded-lg border border-slate-300 p-2 text-xs outline-none focus:border-brand-blue dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
                         />
                         <div className="flex gap-2">
                           <button
                             type="submit"
                             disabled={updateReviewMutation.isPending}
-                            className="rounded-md bg-brand-blue px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-600 disabled:opacity-50"
+                            className="rounded-md bg-brand-blue px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-600 disabled:opacity-50 dark:bg-blue-600 dark:hover:bg-blue-500"
                           >
                             {updateReviewMutation.isPending
                               ? "Saving..."
@@ -692,7 +698,7 @@ export default function ProductDetailsPage({
                           <button
                             type="button"
                             onClick={() => setEditingReviewId(null)}
-                            className="rounded-md border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+                            className="rounded-md border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
                           >
                             Cancel
                           </button>
@@ -702,14 +708,14 @@ export default function ProductDetailsPage({
                       <>
                         <div className="flex flex-wrap items-center justify-between gap-2">
                           <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
-                            <div className="flex h-7 w-7 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-full bg-slate-900 text-xs font-bold text-white uppercase">
+                            <div className="flex h-7 w-7 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-full bg-slate-900 text-xs font-bold text-white uppercase dark:bg-slate-800">
                               {rev.user?.name ? rev.user.name.charAt(0) : "U"}
                             </div>
                             <div className="min-w-0">
-                              <h4 className="text-xs font-bold text-brand-charcoal truncate">
+                              <h4 className="text-xs font-bold text-brand-charcoal dark:text-white truncate">
                                 {rev.user?.name || "Customer"}
                               </h4>
-                              <span className="text-[10px] text-slate-400">
+                              <span className="text-[10px] text-slate-400 dark:text-slate-500">
                                 {new Date(rev.createdAt).toLocaleDateString()}
                               </span>
                             </div>
@@ -723,18 +729,18 @@ export default function ProductDetailsPage({
                                   className={`h-3 w-3 sm:h-3.5 sm:w-3.5 ${
                                     i < rev.rating
                                       ? "fill-amber-400 text-amber-400"
-                                      : "text-slate-200"
+                                      : "text-slate-200 dark:text-slate-700"
                                   }`}
                                 />
                               ))}
                             </div>
 
-                            <div className="flex items-center gap-1 border-l border-slate-100 pl-1.5 sm:pl-2">
+                            <div className="flex items-center gap-1 border-l border-slate-100 pl-1.5 sm:pl-2 dark:border-slate-800">
                               {isAuthor && (
                                 <button
                                   type="button"
                                   onClick={() => handleStartEdit(rev)}
-                                  className="p-1 text-slate-400 hover:text-brand-blue"
+                                  className="p-1 text-slate-400 hover:text-brand-blue dark:hover:text-cyan-400"
                                   title="Edit your review"
                                 >
                                   <Edit2 className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
@@ -744,7 +750,7 @@ export default function ProductDetailsPage({
                                 <button
                                   type="button"
                                   onClick={() => handleDeleteReview(rev._id)}
-                                  className="p-1 text-slate-400 hover:text-rose-600"
+                                  className="p-1 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400"
                                   title="Delete review"
                                 >
                                   <Trash2 className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
@@ -754,7 +760,7 @@ export default function ProductDetailsPage({
                           </div>
                         </div>
 
-                        <p className="mt-2.5 sm:mt-3 text-xs leading-relaxed text-slate-600">
+                        <p className="mt-2.5 sm:mt-3 text-xs leading-relaxed text-slate-600 dark:text-slate-300">
                           {rev.comment}
                         </p>
                       </>
@@ -763,7 +769,7 @@ export default function ProductDetailsPage({
                 );
               })
             ) : (
-              <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-8 sm:p-12 text-center text-xs text-slate-400">
+              <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-8 sm:p-12 text-center text-xs text-slate-400 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-500">
                 No customer reviews yet. Be the first to review this product!
               </div>
             )}

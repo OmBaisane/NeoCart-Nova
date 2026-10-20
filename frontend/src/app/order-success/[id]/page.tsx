@@ -79,7 +79,7 @@ export default function OrderSuccessPage({
   if (isLoading || (isFetching && !order)) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-brand-blue" />
+        <Loader2 className="h-8 w-8 animate-spin text-brand-blue dark:text-cyan-400" />
       </div>
     );
   }
@@ -88,15 +88,15 @@ export default function OrderSuccessPage({
     return (
       <main className="mx-auto max-w-7xl px-4 py-20 text-center">
         <AlertCircle className="mx-auto h-12 w-12 text-rose-500" />
-        <h1 className="mt-4 text-xl font-bold text-brand-charcoal">
+        <h1 className="mt-4 text-xl font-bold text-brand-charcoal dark:text-white">
           Order Summary Unavailable
         </h1>
-        <p className="mt-2 text-xs text-slate-500">
+        <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
           Could not retrieve order details. Please check your order history.
         </p>
         <Link
           href="/orders"
-          className="mt-6 inline-block rounded-lg bg-brand-blue px-6 py-2.5 text-xs font-semibold text-white"
+          className="mt-6 inline-block rounded-lg bg-brand-blue px-6 py-2.5 text-xs font-semibold text-white dark:bg-blue-600 dark:hover:bg-blue-500"
         >
           View My Orders
         </Link>
@@ -107,35 +107,37 @@ export default function OrderSuccessPage({
   return (
     <main className="mx-auto max-w-4xl px-3 sm:px-6 lg:px-8 py-6 sm:py-12">
       {/* Success Celebration Card */}
-      <section className="rounded-3xl border border-slate-200 bg-white p-5 text-center shadow-xs sm:p-12">
-        <div className="mx-auto flex h-14 w-14 sm:h-16 sm:w-16 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+      <section className="rounded-3xl border border-slate-200 bg-white p-5 text-center shadow-xs sm:p-12 dark:border-slate-800 dark:bg-slate-900">
+        <div className="mx-auto flex h-14 w-14 sm:h-16 sm:w-16 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400">
           <CheckCircle2 className="h-8 w-8 sm:h-10 sm:w-10" />
         </div>
 
-        <span className="mt-3 sm:mt-4 inline-block rounded-full bg-blue-50 px-3 py-1 text-[11px] sm:text-xs font-bold text-brand-blue uppercase tracking-wider">
+        <span className="mt-3 sm:mt-4 inline-block rounded-full bg-blue-50 px-3 py-1 text-[11px] sm:text-xs font-bold text-brand-blue uppercase tracking-wider dark:bg-blue-950/60 dark:text-cyan-400">
           Order Confirmed
         </span>
 
-        <h1 className="mt-2.5 sm:mt-3 text-xl font-black tracking-tight text-brand-charcoal sm:text-4xl">
+        <h1 className="mt-2.5 sm:mt-3 text-xl font-black tracking-tight text-brand-charcoal sm:text-4xl dark:text-white">
           Thank you for your order!
         </h1>
-        <p className="mt-1.5 sm:mt-2 text-xs text-slate-500 sm:text-sm">
+        <p className="mt-1.5 sm:mt-2 text-xs text-slate-500 sm:text-sm dark:text-slate-400">
           We have received your order and our dispatch team has locked your
           items for packaging.
         </p>
 
         {/* Tracking Pill */}
-        <div className="mx-auto mt-5 sm:mt-6 flex flex-wrap max-w-md items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 py-2.5 px-3.5 sm:px-4 text-xs">
+        <div className="mx-auto mt-5 sm:mt-6 flex flex-wrap max-w-md items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 py-2.5 px-3.5 sm:px-4 text-xs dark:border-slate-800 dark:bg-slate-800/60">
           <div className="flex items-center gap-2 truncate">
-            <Package className="h-4 w-4 shrink-0 text-brand-blue" />
-            <span className="font-semibold text-slate-600">Tracking:</span>
-            <span className="font-mono font-bold text-brand-charcoal text-[11px] sm:text-xs">
+            <Package className="h-4 w-4 shrink-0 text-brand-blue dark:text-cyan-400" />
+            <span className="font-semibold text-slate-600 dark:text-slate-400">
+              Tracking:
+            </span>
+            <span className="font-mono font-bold text-brand-charcoal text-[11px] sm:text-xs dark:text-white">
               {order.trackingNumber}
             </span>
           </div>
           <button
             onClick={copyTracking}
-            className="flex items-center gap-1 font-semibold text-brand-blue hover:underline shrink-0"
+            className="flex items-center gap-1 font-semibold text-brand-blue hover:underline shrink-0 dark:text-cyan-400"
           >
             <Copy className="h-3.5 w-3.5" />
             <span>{copied ? "Copied!" : "Copy"}</span>
@@ -143,8 +145,8 @@ export default function OrderSuccessPage({
         </div>
 
         {/* COD Reminder */}
-        <div className="mx-auto mt-3.5 sm:mt-4 max-w-md rounded-xl bg-amber-50/80 p-3 text-left text-xs text-amber-800 flex items-start sm:items-center gap-2">
-          <Truck className="h-4 w-4 sm:h-5 sm:w-5 shrink-0 text-amber-600 mt-0.5 sm:mt-0" />
+        <div className="mx-auto mt-3.5 sm:mt-4 max-w-md rounded-xl bg-amber-50/80 dark:bg-amber-950/40 p-3 text-left text-xs text-amber-800 dark:text-amber-300 border border-amber-200/50 dark:border-amber-900/50 flex items-start sm:items-center gap-2">
+          <Truck className="h-4 w-4 sm:h-5 sm:w-5 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5 sm:mt-0" />
           <span className="text-[11px] sm:text-xs leading-tight">
             Payment Method: <strong>Cash on Delivery (COD)</strong>. Please keep
             ₹{order.total.toLocaleString("en-IN")} ready upon arrival.
@@ -155,14 +157,14 @@ export default function OrderSuccessPage({
         <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row justify-center gap-3">
           <Link
             href="/orders"
-            className="flex items-center justify-center gap-2 rounded-xl bg-brand-blue px-6 py-2.5 sm:py-3 text-xs font-bold text-white shadow-md shadow-blue-500/20 hover:bg-blue-600"
+            className="flex items-center justify-center gap-2 rounded-xl bg-brand-blue px-6 py-2.5 sm:py-3 text-xs font-bold text-white shadow-md shadow-blue-500/20 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-500"
           >
             <span>Track in My Orders</span>
             <ArrowRight className="h-4 w-4" />
           </Link>
           <Link
             href="/products"
-            className="flex items-center justify-center rounded-xl border border-slate-300 bg-white px-6 py-2.5 sm:py-3 text-xs font-bold text-slate-700 hover:bg-slate-50"
+            className="flex items-center justify-center rounded-xl border border-slate-300 bg-white px-6 py-2.5 sm:py-3 text-xs font-bold text-slate-700 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
           >
             Continue Shopping
           </Link>
@@ -172,15 +174,15 @@ export default function OrderSuccessPage({
       {/* Order Details & Summary Grid */}
       <section className="mt-6 sm:mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
         {/* Shipping Address */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 shadow-2xs">
-          <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
-            <MapPin className="h-4 w-4 text-brand-blue shrink-0" />
-            <h3 className="text-xs font-bold uppercase tracking-wider text-brand-charcoal">
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 shadow-2xs dark:border-slate-800 dark:bg-slate-900">
+          <div className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
+            <MapPin className="h-4 w-4 text-brand-blue dark:text-cyan-400 shrink-0" />
+            <h3 className="text-xs font-bold uppercase tracking-wider text-brand-charcoal dark:text-white">
               Delivery Address
             </h3>
           </div>
-          <div className="mt-3 text-xs leading-relaxed text-slate-600 space-y-1">
-            <p className="font-bold text-brand-charcoal">
+          <div className="mt-3 text-xs leading-relaxed text-slate-600 dark:text-slate-300 space-y-1">
+            <p className="font-bold text-brand-charcoal dark:text-white">
               {order.shippingAddress.fullName}
             </p>
             <p>{order.shippingAddress.address}</p>
@@ -188,36 +190,36 @@ export default function OrderSuccessPage({
               {order.shippingAddress.city}, {order.shippingAddress.state} —{" "}
               {order.shippingAddress.pincode}
             </p>
-            <p className="text-slate-400">
+            <p className="text-slate-400 dark:text-slate-500">
               Phone: {order.shippingAddress.phone}
             </p>
           </div>
         </div>
 
         {/* Invoice Summary */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 shadow-2xs">
-          <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
-            <Clock className="h-4 w-4 text-brand-blue shrink-0" />
-            <h3 className="text-xs font-bold uppercase tracking-wider text-brand-charcoal">
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 shadow-2xs dark:border-slate-800 dark:bg-slate-900">
+          <div className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
+            <Clock className="h-4 w-4 text-brand-blue dark:text-cyan-400 shrink-0" />
+            <h3 className="text-xs font-bold uppercase tracking-wider text-brand-charcoal dark:text-white">
               Order Receipt
             </h3>
           </div>
           <div className="mt-3 space-y-2 text-xs">
-            <div className="flex justify-between text-slate-600">
+            <div className="flex justify-between text-slate-600 dark:text-slate-400">
               <span>Items Subtotal</span>
-              <span className="font-semibold text-slate-800">
+              <span className="font-semibold text-slate-800 dark:text-slate-200">
                 ₹{order.subtotal.toLocaleString("en-IN")}
               </span>
             </div>
-            <div className="flex justify-between text-slate-600">
+            <div className="flex justify-between text-slate-600 dark:text-slate-400">
               <span>Delivery Fee</span>
-              <span className="font-semibold text-slate-800">
+              <span className="font-semibold text-slate-800 dark:text-slate-200">
                 {order.shippingFee === 0 ? "FREE" : `₹${order.shippingFee}`}
               </span>
             </div>
-            <div className="flex justify-between border-t border-slate-100 pt-2 text-xs sm:text-sm font-extrabold text-brand-charcoal">
+            <div className="flex justify-between border-t border-slate-100 dark:border-slate-800 pt-2 text-xs sm:text-sm font-extrabold text-brand-charcoal dark:text-white">
               <span>Total Payable</span>
-              <span className="text-brand-blue">
+              <span className="text-brand-blue dark:text-cyan-400">
                 ₹{order.total.toLocaleString("en-IN")}
               </span>
             </div>
@@ -226,11 +228,11 @@ export default function OrderSuccessPage({
       </section>
 
       {/* Ordered Items List */}
-      <section className="mt-4 sm:mt-6 rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 shadow-2xs">
-        <h3 className="text-xs font-bold uppercase tracking-wider text-brand-charcoal border-b border-slate-100 pb-3">
+      <section className="mt-4 sm:mt-6 rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 shadow-2xs dark:border-slate-800 dark:bg-slate-900">
+        <h3 className="text-xs font-bold uppercase tracking-wider text-brand-charcoal dark:text-white border-b border-slate-100 dark:border-slate-800 pb-3">
           Purchased Items ({order.items.length})
         </h3>
-        <div className="mt-3 sm:mt-4 divide-y divide-slate-100">
+        <div className="mt-3 sm:mt-4 divide-y divide-slate-100 dark:divide-slate-800">
           {order.items.map((item, idx) => (
             <div
               key={idx}
@@ -240,18 +242,18 @@ export default function OrderSuccessPage({
                 <img
                   src={item.image || ""}
                   alt={item.name}
-                  className="h-11 w-11 sm:h-12 sm:w-12 rounded-lg object-cover bg-slate-100 shrink-0"
+                  className="h-11 w-11 sm:h-12 sm:w-12 rounded-lg object-cover bg-slate-100 dark:bg-slate-800 shrink-0"
                 />
                 <div className="min-w-0">
-                  <h4 className="font-bold text-brand-charcoal truncate text-[11px] sm:text-xs">
+                  <h4 className="font-bold text-brand-charcoal truncate text-[11px] sm:text-xs dark:text-white">
                     {item.name}
                   </h4>
-                  <p className="text-slate-400 text-[10px] sm:text-[11px]">
+                  <p className="text-slate-400 text-[10px] sm:text-[11px] dark:text-slate-500">
                     Qty: {item.quantity} × ₹{item.price.toLocaleString("en-IN")}
                   </p>
                 </div>
               </div>
-              <span className="font-extrabold text-brand-charcoal text-xs shrink-0">
+              <span className="font-extrabold text-brand-charcoal text-xs shrink-0 dark:text-white">
                 ₹{(item.price * item.quantity).toLocaleString("en-IN")}
               </span>
             </div>

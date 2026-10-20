@@ -112,7 +112,7 @@ export default function CheckoutPage() {
   if (isAuthLoading || (user && isCartLoading && !cartData)) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-brand-blue" />
+        <Loader2 className="h-8 w-8 animate-spin text-brand-blue dark:text-cyan-400" />
       </div>
     );
   }
@@ -172,11 +172,11 @@ export default function CheckoutPage() {
 
   return (
     <main className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8 py-6 sm:py-8">
-      <div className="border-b border-slate-200 pb-4">
-        <h1 className="text-xl font-extrabold tracking-tight text-brand-charcoal sm:text-3xl">
+      <div className="border-b border-slate-200 pb-4 dark:border-slate-800">
+        <h1 className="text-xl font-extrabold tracking-tight text-brand-charcoal sm:text-3xl dark:text-white">
           Secure Checkout
         </h1>
-        <p className="mt-1 text-xs text-slate-500">
+        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
           Provide your verified delivery address and confirm your Cash on
           Delivery order.
         </p>
@@ -187,17 +187,17 @@ export default function CheckoutPage() {
         <section className="lg:col-span-2">
           <form onSubmit={handleFormSubmit} className="space-y-4 sm:space-y-6">
             {validationError && (
-              <div className="flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3 sm:p-4 text-xs font-semibold text-rose-700">
+              <div className="flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3 sm:p-4 text-xs font-semibold text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-300">
                 <AlertCircle className="h-4 w-4 shrink-0" />
                 <span>{validationError}</span>
               </div>
             )}
 
             {/* Address Details Block */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 shadow-2xs space-y-4">
-              <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
-                <MapPin className="h-4 w-4 text-brand-blue" />
-                <h2 className="text-xs sm:text-sm font-bold text-brand-charcoal uppercase tracking-wider">
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 shadow-2xs space-y-4 dark:border-slate-800 dark:bg-slate-900">
+              <div className="flex items-center gap-2 border-b border-slate-100 pb-3 dark:border-slate-800">
+                <MapPin className="h-4 w-4 text-brand-blue dark:text-cyan-400" />
+                <h2 className="text-xs sm:text-sm font-bold text-brand-charcoal uppercase tracking-wider dark:text-white">
                   1. Shipping Information
                 </h2>
               </div>
@@ -206,7 +206,7 @@ export default function CheckoutPage() {
                 <div>
                   <label
                     htmlFor="fullName"
-                    className="block text-xs font-semibold text-slate-700"
+                    className="block text-xs font-semibold text-slate-700 dark:text-slate-300"
                   >
                     Full Name *
                   </label>
@@ -220,16 +220,16 @@ export default function CheckoutPage() {
                       value={form.fullName}
                       onChange={handleInputChange}
                       placeholder="Receiver's name"
-                      className="w-full rounded-lg border border-slate-300 py-2 pl-9 pr-3 text-xs outline-none focus:border-brand-blue"
+                      className="w-full rounded-lg border border-slate-300 py-2 pl-9 pr-3 text-xs outline-none focus:border-brand-blue dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder-slate-500 dark:focus:border-cyan-500"
                     />
-                    <UserIcon className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
+                    <UserIcon className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400 dark:text-slate-500" />
                   </div>
                 </div>
 
                 <div>
                   <label
                     htmlFor="phone"
-                    className="block text-xs font-semibold text-slate-700"
+                    className="block text-xs font-semibold text-slate-700 dark:text-slate-300"
                   >
                     Mobile Phone Number *
                   </label>
@@ -243,9 +243,9 @@ export default function CheckoutPage() {
                       value={form.phone}
                       onChange={handleInputChange}
                       placeholder="+91 9876543210"
-                      className="w-full rounded-lg border border-slate-300 py-2 pl-9 pr-3 text-xs outline-none focus:border-brand-blue"
+                      className="w-full rounded-lg border border-slate-300 py-2 pl-9 pr-3 text-xs outline-none focus:border-brand-blue dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder-slate-500 dark:focus:border-cyan-500"
                     />
-                    <Phone className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
+                    <Phone className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400 dark:text-slate-500" />
                   </div>
                 </div>
               </div>
@@ -253,7 +253,7 @@ export default function CheckoutPage() {
               <div>
                 <label
                   htmlFor="address"
-                  className="block text-xs font-semibold text-slate-700"
+                  className="block text-xs font-semibold text-slate-700 dark:text-slate-300"
                 >
                   Flat, House No., Building, Street Address *
                 </label>
@@ -266,7 +266,7 @@ export default function CheckoutPage() {
                   value={form.address}
                   onChange={handleInputChange}
                   placeholder="e.g. Flat 402, Nova Heights, MG Road"
-                  className="mt-1 w-full rounded-lg border border-slate-300 py-2 px-3 text-xs outline-none focus:border-brand-blue"
+                  className="mt-1 w-full rounded-lg border border-slate-300 py-2 px-3 text-xs outline-none focus:border-brand-blue dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder-slate-500 dark:focus:border-cyan-500"
                 />
               </div>
 
@@ -274,7 +274,7 @@ export default function CheckoutPage() {
                 <div>
                   <label
                     htmlFor="city"
-                    className="block text-xs font-semibold text-slate-700"
+                    className="block text-xs font-semibold text-slate-700 dark:text-slate-300"
                   >
                     City *
                   </label>
@@ -287,14 +287,14 @@ export default function CheckoutPage() {
                     value={form.city}
                     onChange={handleInputChange}
                     placeholder="e.g. Mumbai"
-                    className="mt-1 w-full rounded-lg border border-slate-300 py-2 px-3 text-xs outline-none focus:border-brand-blue"
+                    className="mt-1 w-full rounded-lg border border-slate-300 py-2 px-3 text-xs outline-none focus:border-brand-blue dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder-slate-500 dark:focus:border-cyan-500"
                   />
                 </div>
 
                 <div>
                   <label
                     htmlFor="state"
-                    className="block text-xs font-semibold text-slate-700"
+                    className="block text-xs font-semibold text-slate-700 dark:text-slate-300"
                   >
                     State *
                   </label>
@@ -307,14 +307,14 @@ export default function CheckoutPage() {
                     value={form.state}
                     onChange={handleInputChange}
                     placeholder="e.g. Maharashtra"
-                    className="mt-1 w-full rounded-lg border border-slate-300 py-2 px-3 text-xs outline-none focus:border-brand-blue"
+                    className="mt-1 w-full rounded-lg border border-slate-300 py-2 px-3 text-xs outline-none focus:border-brand-blue dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder-slate-500 dark:focus:border-cyan-500"
                   />
                 </div>
 
                 <div>
                   <label
                     htmlFor="pincode"
-                    className="block text-xs font-semibold text-slate-700"
+                    className="block text-xs font-semibold text-slate-700 dark:text-slate-300"
                   >
                     Pincode / Postal Code *
                   </label>
@@ -327,37 +327,37 @@ export default function CheckoutPage() {
                     value={form.pincode}
                     onChange={handleInputChange}
                     placeholder="e.g. 400001"
-                    className="mt-1 w-full rounded-lg border border-slate-300 py-2 px-3 text-xs outline-none focus:border-brand-blue"
+                    className="mt-1 w-full rounded-lg border border-slate-300 py-2 px-3 text-xs outline-none focus:border-brand-blue dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder-slate-500 dark:focus:border-cyan-500"
                   />
                 </div>
               </div>
             </div>
 
             {/* Payment Method Block */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 shadow-2xs space-y-3">
-              <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
-                <CreditCard className="h-4 w-4 text-brand-blue" />
-                <h2 className="text-xs sm:text-sm font-bold text-brand-charcoal uppercase tracking-wider">
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 shadow-2xs space-y-3 dark:border-slate-800 dark:bg-slate-900">
+              <div className="flex items-center gap-2 border-b border-slate-100 pb-3 dark:border-slate-800">
+                <CreditCard className="h-4 w-4 text-brand-blue dark:text-cyan-400" />
+                <h2 className="text-xs sm:text-sm font-bold text-brand-charcoal uppercase tracking-wider dark:text-white">
                   2. Payment Method
                 </h2>
               </div>
 
-              <div className="flex items-start sm:items-center justify-between gap-3 rounded-xl border-2 border-brand-blue bg-blue-50/40 p-3.5 sm:p-4">
+              <div className="flex items-start sm:items-center justify-between gap-3 rounded-xl border-2 border-brand-blue bg-blue-50/40 p-3.5 sm:p-4 dark:border-cyan-500 dark:bg-cyan-950/20">
                 <div className="flex items-start sm:items-center gap-3">
-                  <div className="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-lg bg-brand-blue text-white mt-0.5 sm:mt-0">
+                  <div className="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-lg bg-brand-blue text-white mt-0.5 sm:mt-0 dark:bg-cyan-600">
                     <Truck className="h-4 w-4 sm:h-5 sm:w-5" />
                   </div>
                   <div>
-                    <h3 className="text-xs sm:text-sm font-bold text-brand-charcoal">
+                    <h3 className="text-xs sm:text-sm font-bold text-brand-charcoal dark:text-white">
                       Cash on Delivery (COD)
                     </h3>
-                    <p className="mt-0.5 text-[11px] sm:text-xs text-slate-500 leading-tight">
+                    <p className="mt-0.5 text-[11px] sm:text-xs text-slate-500 leading-tight dark:text-slate-400">
                       Pay with cash or UPI scanner upon parcel arrival at your
                       doorstep.
                     </p>
                   </div>
                 </div>
-                <CheckCircle2 className="h-5 w-5 text-brand-blue shrink-0 mt-0.5 sm:mt-0" />
+                <CheckCircle2 className="h-5 w-5 text-brand-blue dark:text-cyan-400 shrink-0 mt-0.5 sm:mt-0" />
               </div>
             </div>
 
@@ -365,7 +365,7 @@ export default function CheckoutPage() {
             <button
               type="submit"
               disabled={placeOrderMutation.isPending}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-blue py-3.5 px-4 sm:px-6 text-xs sm:text-sm font-bold text-white shadow-lg shadow-blue-500/25 transition hover:bg-blue-600 focus:ring-2 focus:ring-brand-blue focus:ring-offset-2 disabled:opacity-60"
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-blue py-3.5 px-4 sm:px-6 text-xs sm:text-sm font-bold text-white shadow-lg shadow-blue-500/25 transition hover:bg-blue-600 focus:ring-2 focus:ring-brand-blue focus:ring-offset-2 disabled:opacity-60 dark:bg-blue-600 dark:hover:bg-blue-500"
             >
               {placeOrderMutation.isPending ? (
                 <>
@@ -383,9 +383,9 @@ export default function CheckoutPage() {
         </section>
 
         {/* Right Col: Order Snapshot */}
-        <aside className="h-fit rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 shadow-2xs space-y-5 sm:space-y-6">
-          <div className="border-b border-slate-100 pb-3">
-            <h2 className="text-xs sm:text-sm font-bold text-brand-charcoal uppercase tracking-wider">
+        <aside className="h-fit rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 shadow-2xs space-y-5 sm:space-y-6 dark:border-slate-800 dark:bg-slate-900">
+          <div className="border-b border-slate-100 pb-3 dark:border-slate-800">
+            <h2 className="text-xs sm:text-sm font-bold text-brand-charcoal uppercase tracking-wider dark:text-white">
               Order Items ({cartData?.totalItems || 0})
             </h2>
           </div>
@@ -405,17 +405,17 @@ export default function CheckoutPage() {
                   <img
                     src={item.product?.images?.[0] || ""}
                     alt={item.product?.name || "Product"}
-                    className="h-11 w-11 sm:h-12 sm:w-12 rounded-lg object-cover bg-slate-100 shrink-0"
+                    className="h-11 w-11 sm:h-12 sm:w-12 rounded-lg object-cover bg-slate-100 dark:bg-slate-800 shrink-0"
                   />
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-bold text-brand-charcoal truncate text-[11px] sm:text-xs">
+                    <h4 className="font-bold text-brand-charcoal truncate text-[11px] sm:text-xs dark:text-white">
                       {item.product?.name}
                     </h4>
-                    <p className="text-slate-400 text-[10px] sm:text-[11px]">
+                    <p className="text-slate-400 text-[10px] sm:text-[11px] dark:text-slate-500">
                       Qty: {item.quantity}
                     </p>
                   </div>
-                  <span className="font-bold text-brand-charcoal text-xs shrink-0">
+                  <span className="font-bold text-brand-charcoal text-xs shrink-0 dark:text-white">
                     ₹{(item.price * item.quantity).toLocaleString("en-IN")}
                   </span>
                 </div>
@@ -423,34 +423,36 @@ export default function CheckoutPage() {
             )}
           </div>
 
-          <div className="border-t border-slate-100 pt-3.5 space-y-2 text-xs">
-            <div className="flex justify-between text-slate-600">
+          <div className="border-t border-slate-100 dark:border-slate-800 pt-3.5 space-y-2 text-xs">
+            <div className="flex justify-between text-slate-600 dark:text-slate-400">
               <span>Items Subtotal</span>
-              <span className="font-semibold text-slate-800">
+              <span className="font-semibold text-slate-800 dark:text-slate-200">
                 ₹{subtotal.toLocaleString("en-IN")}
               </span>
             </div>
-            <div className="flex justify-between text-slate-600">
+            <div className="flex justify-between text-slate-600 dark:text-slate-400">
               <span>Delivery Fee</span>
-              <span className="font-semibold text-slate-800">
+              <span className="font-semibold text-slate-800 dark:text-slate-200">
                 {shippingFee === 0 ? (
-                  <span className="text-emerald-600 font-bold">FREE</span>
+                  <span className="text-emerald-600 dark:text-emerald-400 font-bold">
+                    FREE
+                  </span>
                 ) : (
                   `₹${shippingFee}`
                 )}
               </span>
             </div>
-            <div className="flex justify-between border-t border-slate-100 pt-3 text-xs sm:text-sm font-extrabold text-brand-charcoal">
+            <div className="flex justify-between border-t border-slate-100 dark:border-slate-800 pt-3 text-xs sm:text-sm font-extrabold text-brand-charcoal dark:text-white">
               <span>Grand Total</span>
-              <span className="text-sm sm:text-base text-brand-blue">
+              <span className="text-sm sm:text-base text-brand-blue dark:text-cyan-400">
                 ₹{total.toLocaleString("en-IN")}
               </span>
             </div>
           </div>
 
-          <div className="rounded-xl bg-slate-50 p-3 space-y-1 text-[11px] text-slate-500">
-            <div className="flex items-center gap-1.5 font-semibold text-slate-700">
-              <ShieldCheck className="h-4 w-4 text-cyan-accent shrink-0" />
+          <div className="rounded-xl bg-slate-50 dark:bg-slate-800/60 p-3 space-y-1 text-[11px] text-slate-500 dark:text-slate-400 border border-slate-100 dark:border-slate-800">
+            <div className="flex items-center gap-1.5 font-semibold text-slate-700 dark:text-slate-200">
+              <ShieldCheck className="h-4 w-4 text-cyan-accent dark:text-cyan-400 shrink-0" />
               <span>Zero-Trust Price Guarantee</span>
             </div>
             <p className="leading-tight text-[10px] sm:text-[11px]">

@@ -3,12 +3,12 @@ import { Logo } from "./Logo";
 
 export const Footer = () => {
   return (
-    <footer className="border-t border-slate-200 bg-brand-dark text-slate-400">
+    <footer className="border-t border-slate-200 bg-brand-dark text-slate-400 transition-colors duration-200 dark:border-slate-800 dark:bg-slate-950">
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 gap-8 md:grid-cols-4">
           {/* Brand Info */}
           <div className="space-y-4">
-            <Logo size="md" />
+            <Logo size="md" theme="dark" />
             <p className="text-xs leading-relaxed text-slate-400">
               NeoCart Nova delivers next-generation commerce with high-velocity
               inventory tracking and verified checkout guarantees.
@@ -24,7 +24,7 @@ export const Footer = () => {
               <li>
                 <Link
                   href="/products?sort=newest"
-                  className="transition hover:text-cyan-accent"
+                  className="transition hover:text-cyan-400"
                 >
                   New Arrivals
                 </Link>
@@ -32,7 +32,7 @@ export const Footer = () => {
               <li>
                 <Link
                   href="/products?featured=true"
-                  className="transition hover:text-cyan-accent"
+                  className="transition hover:text-cyan-400"
                 >
                   Featured Collections
                 </Link>
@@ -40,7 +40,7 @@ export const Footer = () => {
               <li>
                 <Link
                   href="/products"
-                  className="transition hover:text-cyan-accent"
+                  className="transition hover:text-cyan-400"
                 >
                   All Products
                 </Link>
@@ -55,10 +55,7 @@ export const Footer = () => {
             </h3>
             <ul className="mt-4 space-y-2 text-xs">
               <li>
-                <Link
-                  href="/orders"
-                  className="transition hover:text-cyan-accent"
-                >
+                <Link href="/orders" className="transition hover:text-cyan-400">
                   Order Tracking
                 </Link>
               </li>
@@ -84,7 +81,7 @@ export const Footer = () => {
               Server-validated stock verification and secure encrypted sessions.
               Zero unauthorized client price tampering.
             </p>
-            <div className="mt-4 inline-block rounded-md border border-slate-800 bg-slate-900 px-3 py-1.5 text-[11px] text-cyan-accent">
+            <div className="mt-4 inline-block rounded-md border border-slate-800 bg-slate-900 px-3 py-1.5 text-[11px] font-semibold text-cyan-400">
               HttpOnly Authenticated
             </div>
           </div>

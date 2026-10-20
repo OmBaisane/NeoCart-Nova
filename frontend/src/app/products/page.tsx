@@ -122,11 +122,11 @@ function ProductsCatalogContent() {
 
   return (
     <main className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8 py-6 sm:py-8">
-      <div className="border-b border-slate-200 pb-4">
-        <h1 className="text-xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
+      <div className="border-b border-slate-200 pb-4 dark:border-slate-800">
+        <h1 className="text-xl font-extrabold tracking-tight text-slate-900 sm:text-3xl dark:text-white">
           Verified Catalog
         </h1>
-        <p className="mt-1 text-xs text-slate-500">
+        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
           Search authenticated inventory with real-time stock allocation.
         </p>
       </div>
@@ -142,9 +142,9 @@ function ProductsCatalogContent() {
             placeholder="Search title, brand, features..."
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
-            className="w-full rounded-xl border border-slate-300 py-2.5 pl-10 pr-4 text-xs text-slate-800 outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
+            className="w-full rounded-xl border border-slate-300 py-2.5 pl-10 pr-4 text-xs text-slate-800 outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 dark:placeholder-slate-500 dark:focus:border-cyan-500"
           />
-          <Search className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
+          <Search className="absolute left-3.5 top-3 h-4 w-4 text-slate-400 dark:text-slate-500" />
         </form>
 
         <div className="flex items-center justify-between sm:justify-end gap-2.5">
@@ -152,9 +152,9 @@ function ProductsCatalogContent() {
           <button
             type="button"
             onClick={() => setMobileFiltersOpen((prev) => !prev)}
-            className="flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white py-2 px-3 text-xs font-semibold text-slate-700 lg:hidden hover:bg-slate-50"
+            className="flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white py-2 px-3 text-xs font-semibold text-slate-700 lg:hidden hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
           >
-            <SlidersHorizontal className="h-3.5 w-3.5 text-blue-600" />
+            <SlidersHorizontal className="h-3.5 w-3.5 text-blue-600 dark:text-cyan-400" />
             <span>Filters</span>
             <ChevronDown
               className={`h-3.5 w-3.5 transition-transform ${
@@ -164,7 +164,7 @@ function ProductsCatalogContent() {
           </button>
 
           <div className="flex items-center gap-2">
-            <label className="hidden sm:inline text-xs font-semibold text-slate-600">
+            <label className="hidden sm:inline text-xs font-semibold text-slate-600 dark:text-slate-300">
               Sort:
             </label>
             <select
@@ -173,7 +173,7 @@ function ProductsCatalogContent() {
                 setSortBy(e.target.value);
                 updateFilters({ sort: e.target.value, page: 1 });
               }}
-              className="rounded-xl border border-slate-300 bg-white py-2 px-3 text-xs font-medium text-slate-700 outline-none focus:border-blue-600"
+              className="rounded-xl border border-slate-300 bg-white py-2 px-3 text-xs font-medium text-slate-700 outline-none focus:border-blue-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:focus:border-cyan-500"
             >
               <option value="newest">Newest Arrivals</option>
               <option value="price-asc">Price: Low to High</option>
@@ -191,10 +191,10 @@ function ProductsCatalogContent() {
             mobileFiltersOpen ? "block" : "hidden"
           } lg:block space-y-4 sm:space-y-6`}
         >
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-2xs">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-700">
-                <SlidersHorizontal className="h-3.5 w-3.5 text-blue-600" />
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-2xs dark:border-slate-800 dark:bg-slate-900">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3 dark:border-slate-800">
+              <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-200">
+                <SlidersHorizontal className="h-3.5 w-3.5 text-blue-600 dark:text-cyan-400" />
                 Categories
               </span>
               {selectedCategory && (
@@ -203,7 +203,7 @@ function ProductsCatalogContent() {
                     setSelectedCategory("");
                     updateFilters({ category: null, page: 1 });
                   }}
-                  className="text-[11px] font-semibold text-blue-600 hover:underline"
+                  className="text-[11px] font-semibold text-blue-600 hover:underline dark:text-cyan-400"
                 >
                   Clear
                 </button>
@@ -219,8 +219,8 @@ function ProductsCatalogContent() {
                 }}
                 className={`flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-xs font-medium transition ${
                   !selectedCategory
-                    ? "bg-blue-50 text-blue-600 font-bold"
-                    : "text-slate-600 hover:bg-slate-50"
+                    ? "bg-blue-50 text-blue-600 font-bold dark:bg-blue-950/60 dark:text-cyan-400"
+                    : "text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
                 }`}
               >
                 <span>All Collections</span>
@@ -236,8 +236,8 @@ function ProductsCatalogContent() {
                   }}
                   className={`flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-xs font-medium transition ${
                     selectedCategory === cat.slug
-                      ? "bg-blue-50 text-blue-600 font-bold"
-                      : "text-slate-600 hover:bg-slate-50"
+                      ? "bg-blue-50 text-blue-600 font-bold dark:bg-blue-950/60 dark:text-cyan-400"
+                      : "text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
                   }`}
                 >
                   <span>{cat.name}</span>
@@ -246,8 +246,8 @@ function ProductsCatalogContent() {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-2xs">
-            <span className="block border-b border-slate-100 pb-3 text-xs font-bold uppercase tracking-wider text-slate-700">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-2xs dark:border-slate-800 dark:bg-slate-900">
+            <span className="block border-b border-slate-100 pb-3 text-xs font-bold uppercase tracking-wider text-slate-700 dark:border-slate-800 dark:text-slate-200">
               Price Range (₹)
             </span>
             <div className="mt-3 grid grid-cols-2 gap-2">
@@ -256,14 +256,14 @@ function ProductsCatalogContent() {
                 placeholder="Min"
                 value={minPrice}
                 onChange={(e) => setMinPrice(e.target.value)}
-                className="w-full rounded-lg border border-slate-300 py-1.5 px-2.5 text-xs outline-none focus:border-blue-600"
+                className="w-full rounded-lg border border-slate-300 py-1.5 px-2.5 text-xs outline-none focus:border-blue-600 dark:border-slate-800 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-cyan-500"
               />
               <input
                 type="number"
                 placeholder="Max"
                 value={maxPrice}
                 onChange={(e) => setMaxPrice(e.target.value)}
-                className="w-full rounded-lg border border-slate-300 py-1.5 px-2.5 text-xs outline-none focus:border-blue-600"
+                className="w-full rounded-lg border border-slate-300 py-1.5 px-2.5 text-xs outline-none focus:border-blue-600 dark:border-slate-800 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-cyan-500"
               />
             </div>
             <button
@@ -271,7 +271,7 @@ function ProductsCatalogContent() {
                 updateFilters({ minPrice, maxPrice, page: 1 });
                 setMobileFiltersOpen(false);
               }}
-              className="mt-3 w-full rounded-lg bg-slate-900 py-2 text-xs font-bold text-white transition hover:bg-blue-600"
+              className="mt-3 w-full rounded-lg bg-slate-900 py-2 text-xs font-bold text-white transition hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-500"
             >
               Apply Filter
             </button>
@@ -279,19 +279,26 @@ function ProductsCatalogContent() {
 
           <button
             onClick={handleReset}
-            className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-slate-300 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition"
+            className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-slate-300 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
           >
-            <RotateCcw className="h-3.5 w-3.5 text-slate-400" />
+            <RotateCcw className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
             <span>Reset All Filters</span>
           </button>
         </aside>
 
         {/* Catalog Items */}
         <section className="lg:col-span-3">
-          <div className="mb-4 flex items-center justify-between text-xs text-slate-500">
+          <div className="mb-4 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
             <span>
-              Showing <strong>{products.length}</strong> of{" "}
-              <strong>{totalProducts}</strong> products
+              Showing{" "}
+              <strong className="text-slate-800 dark:text-slate-200">
+                {products.length}
+              </strong>{" "}
+              of{" "}
+              <strong className="text-slate-800 dark:text-slate-200">
+                {totalProducts}
+              </strong>{" "}
+              products
             </span>
           </div>
 
@@ -317,18 +324,18 @@ function ProductsCatalogContent() {
               <button
                 disabled={page <= 1}
                 onClick={() => updateFilters({ page: page - 1 })}
-                className="flex items-center gap-1 rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-40"
+                className="flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-40 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
               >
                 <ChevronLeft className="h-4 w-4" />
                 <span>Prev</span>
               </button>
-              <span className="text-xs font-semibold text-slate-700">
+              <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                 Page {page} of {totalPages}
               </span>
               <button
                 disabled={page >= totalPages}
                 onClick={() => updateFilters({ page: page + 1 })}
-                className="flex items-center gap-1 rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-40"
+                className="flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-40 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
               >
                 <span>Next</span>
                 <ChevronRight className="h-4 w-4" />

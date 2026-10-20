@@ -3,28 +3,37 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/context/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 import { Logo } from "@/components/layout/Logo";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import {
   Search,
   ShoppingCart,
   User as UserIcon,
   LogOut,
-  Shield,
+  ShieldCheck,
+  Package,
   Menu,
   X,
-  Package,
+  ChevronDown,
 } from "lucide-react";
 
-export const Navbar = () => {
-  const { user, logout } = useAuth();
-  const router = useRouter();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
+interface CategoryItem {
+  _id: string;
+  name: string;
+  slug: string;
+}
 
+export const Navbar = () => {
+  const router = useRouter();
+  const { user, logout } = useAuth();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+
+  // Cart total items count
   const { data: cartData } = useQuery({
     queryKey: ["cart"],
     queryFn: async () => {
@@ -32,11 +41,21 @@ export const Navbar = () => {
       return res.data?.cart;
     },
     enabled: !!user,
+    staleTime: 0,
   });
 
-  const cartCount = cartData?.totalItems || 0;
+  const cartItemCount = cartData?.totalItems || 0;
 
-  const handleSearch = (e: React.FormEvent) => {
+  // Fetch navigation categories
+  const { data: categories } = useQuery<CategoryItem[]>({
+    queryKey: ["categories"],
+    queryFn: async () => {
+      const res = await api.get("/categories");
+      return res.data?.categories || [];
+    },
+  });
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
       router.push(`/products?search=${encodeURIComponent(searchQuery.trim())}`);
@@ -45,243 +64,204 @@ export const Navbar = () => {
   };
 
   const handleLogout = async () => {
+    setUserDropdownOpen(false);
+    setMobileMenuOpen(false);
     await logout();
-    setProfileDropdownOpen(false);
     router.push("/");
   };
 
   return (
-    <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/95 backdrop-blur-md">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-2 px-3 sm:gap-4 sm:px-6 lg:px-8">
-        <div className="flex items-center gap-3 sm:gap-6 shrink-0">
-          <Logo />
-          <nav
-            aria-label="Main Navigation"
-            className="hidden md:flex items-center gap-6 text-xs font-semibold text-slate-600"
-          >
-            <Link href="/products" className="transition hover:text-brand-blue">
-              Catalog
-            </Link>
+    <header className="sticky top-0 z-40 w-full border-b border-slate-200 bg-white/95 backdrop-blur-md transition-colors duration-200 dark:border-slate-800 dark:bg-slate-950/90">
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+        {/* Brand Logo & Left Nav */}
+        <div className="flex items-center gap-6">
+          <Logo size="md" />
+
+          {/* Desktop Categories Links */}
+          <nav className="hidden items-center gap-1.5 lg:flex">
             <Link
-              href="/products?sort=newest"
-              className="transition hover:text-brand-blue"
+              href="/products"
+              className="rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
             >
-              New Arrivals
+              All Products
             </Link>
+            {categories?.slice(0, 4).map((cat) => (
+              <Link
+                key={cat._id}
+                href={`/products?category=${cat.slug}`}
+                className="rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+              >
+                {cat.name}
+              </Link>
+            ))}
           </nav>
         </div>
 
+        {/* Global Search Bar (Desktop) */}
         <form
-          onSubmit={handleSearch}
-          className="hidden sm:flex flex-1 max-w-md relative mx-2"
-          role="search"
+          onSubmit={handleSearchSubmit}
+          className="relative hidden max-w-xs flex-1 md:block lg:max-w-sm"
         >
           <input
-            type="search"
-            aria-label="Search product catalog"
-            placeholder="Search products, brands, essentials..."
+            type="text"
+            placeholder="Search verified products..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full rounded-full border border-slate-200 bg-slate-50 py-2 pl-9 pr-4 text-xs text-slate-800 outline-none transition focus:border-brand-blue focus:bg-white"
+            className="w-full rounded-xl border border-slate-300 bg-slate-50 py-2 pl-9 pr-4 text-xs text-slate-900 outline-none transition focus:border-brand-blue focus:bg-white dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 dark:placeholder-slate-500 dark:focus:border-cyan-500 dark:focus:bg-slate-900"
           />
-          <Search
-            className="absolute left-3 top-2.5 h-4 w-4 text-slate-400"
-            aria-hidden="true"
-          />
+          <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400 dark:text-slate-500" />
         </form>
 
-        <div className="flex items-center gap-2 sm:gap-3">
+        {/* Actions & Utilities */}
+        <div className="flex items-center gap-2.5 sm:gap-3">
+          {/* Theme Switcher Toggle */}
+          <ThemeToggle />
+
+          {/* Cart Icon CTA */}
           <Link
             href="/cart"
-            aria-label={`Shopping bag containing ${cartCount} items`}
-            className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 text-slate-700 transition hover:bg-slate-50 hover:text-brand-blue"
+            className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 text-slate-700 transition hover:bg-slate-100 hover:text-slate-900 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
+            aria-label="Shopping Cart"
           >
-            <ShoppingCart className="h-4 w-4" aria-hidden="true" />
-            {cartCount > 0 && (
-              <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-brand-blue px-1 font-mono text-[10px] font-bold text-white shadow-xs">
-                {cartCount}
+            <ShoppingCart className="h-4 w-4" />
+            {cartItemCount > 0 && (
+              <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-brand-blue px-1 text-[10px] font-extrabold text-white">
+                {cartItemCount}
               </span>
             )}
           </Link>
 
+          {/* User Account Dropdown / Auth Link */}
           {user ? (
             <div className="relative">
               <button
                 type="button"
-                aria-label="User account menu"
-                aria-haspopup="menu"
-                aria-expanded={profileDropdownOpen}
-                aria-controls="profile-menu-dropdown"
-                onClick={() => setProfileDropdownOpen((prev) => !prev)}
-                className="flex items-center gap-1.5 rounded-full border border-slate-200 p-1 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 sm:gap-2 sm:px-3 sm:py-1.5"
+                onClick={() => setUserDropdownOpen((prev) => !prev)}
+                className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 py-1.5 pl-2 pr-2.5 text-xs font-semibold text-slate-800 transition hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
               >
-                <div
-                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-blue text-[11px] font-bold text-white uppercase"
-                  aria-hidden="true"
-                >
-                  {user.name ? user.name.charAt(0) : "U"}
+                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-blue text-[11px] font-bold text-white uppercase dark:bg-cyan-600">
+                  {user.name.charAt(0)}
                 </div>
-                <span className="hidden sm:inline max-w-28 truncate">
+                <span className="hidden max-w-24 truncate sm:inline">
                   {user.name}
                 </span>
+                <ChevronDown className="h-3 w-3 text-slate-400 dark:text-slate-500" />
               </button>
 
-              {profileDropdownOpen && (
-                <>
-                  <div
-                    className="fixed inset-0 z-40"
-                    aria-hidden="true"
-                    onClick={() => setProfileDropdownOpen(false)}
-                  />
-                  <div
-                    id="profile-menu-dropdown"
-                    role="menu"
-                    className="absolute right-0 top-full z-50 mt-2 w-48 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-xl"
-                  >
-                    <div className="border-b border-slate-100 px-3 py-2">
-                      <p className="text-xs font-bold text-slate-900 truncate">
-                        {user.name}
-                      </p>
-                      <p className="text-[10px] text-slate-400 truncate">
-                        {user.email}
-                      </p>
-                    </div>
-
-                    <Link
-                      href="/profile"
-                      role="menuitem"
-                      onClick={() => setProfileDropdownOpen(false)}
-                      className="flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-medium text-slate-700 transition hover:bg-slate-50 hover:text-brand-blue"
-                    >
-                      <UserIcon className="h-3.5 w-3.5" aria-hidden="true" />
-                      <span>My Profile</span>
-                    </Link>
-
-                    <Link
-                      href="/orders"
-                      role="menuitem"
-                      onClick={() => setProfileDropdownOpen(false)}
-                      className="flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-medium text-slate-700 transition hover:bg-slate-50 hover:text-brand-blue"
-                    >
-                      <Package className="h-3.5 w-3.5" aria-hidden="true" />
-                      <span>My Orders</span>
-                    </Link>
-
-                    {user.role === "admin" && (
-                      <Link
-                        href="/admin"
-                        role="menuitem"
-                        onClick={() => setProfileDropdownOpen(false)}
-                        className="flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-medium text-brand-blue transition hover:bg-blue-50"
-                      >
-                        <Shield className="h-3.5 w-3.5" aria-hidden="true" />
-                        <span>Admin Portal</span>
-                      </Link>
-                    )}
-
-                    <div
-                      className="my-1 border-t border-slate-100"
-                      role="separator"
-                    />
-
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={handleLogout}
-                      className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-xs font-medium text-rose-600 transition hover:bg-rose-50"
-                    >
-                      <LogOut className="h-3.5 w-3.5" aria-hidden="true" />
-                      <span>Sign Out</span>
-                    </button>
+              {userDropdownOpen && (
+                <div
+                  className="absolute right-0 mt-2 w-48 rounded-2xl border border-slate-200 bg-white py-2 shadow-xl dark:border-slate-800 dark:bg-slate-900"
+                  onMouseLeave={() => setUserDropdownOpen(false)}
+                >
+                  <div className="border-b border-slate-100 px-4 py-2 dark:border-slate-800">
+                    <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                      {user.name}
+                    </p>
+                    <p className="text-[10px] text-slate-400 dark:text-slate-500 truncate">
+                      {user.email}
+                    </p>
                   </div>
-                </>
+
+                  {user.role === "admin" && (
+                    <Link
+                      href="/admin"
+                      onClick={() => setUserDropdownOpen(false)}
+                      className="flex items-center gap-2 px-4 py-2 text-xs font-semibold text-brand-blue transition hover:bg-blue-50 dark:text-cyan-400 dark:hover:bg-slate-800"
+                    >
+                      <ShieldCheck className="h-3.5 w-3.5" />
+                      <span>Admin Control</span>
+                    </Link>
+                  )}
+
+                  <Link
+                    href="/orders"
+                    onClick={() => setUserDropdownOpen(false)}
+                    className="flex items-center gap-2 px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800"
+                  >
+                    <Package className="h-3.5 w-3.5 text-slate-400" />
+                    <span>My Orders</span>
+                  </Link>
+
+                  <Link
+                    href="/profile"
+                    onClick={() => setUserDropdownOpen(false)}
+                    className="flex items-center gap-2 px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800"
+                  >
+                    <UserIcon className="h-3.5 w-3.5 text-slate-400" />
+                    <span>Profile Settings</span>
+                  </Link>
+
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="flex w-full items-center gap-2 px-4 py-2 text-left text-xs font-semibold text-rose-600 transition hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/40"
+                  >
+                    <LogOut className="h-3.5 w-3.5" />
+                    <span>Sign Out</span>
+                  </button>
+                </div>
               )}
             </div>
           ) : (
-            <div className="flex items-center gap-1.5 sm:gap-2">
-              <Link
-                href="/login"
-                className="hidden xs:inline-block rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-700 transition hover:bg-slate-50 sm:px-3.5"
-              >
-                Sign In
-              </Link>
-              <Link
-                href="/register"
-                className="rounded-xl bg-brand-blue px-2.5 py-1.5 text-xs font-bold text-white shadow-xs transition hover:bg-blue-600 sm:px-3.5"
-              >
-                Sign Up
-              </Link>
-            </div>
+            <Link
+              href="/login"
+              className="flex items-center gap-1.5 rounded-xl bg-slate-900 px-3.5 py-2 text-xs font-bold text-white transition hover:bg-blue-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-blue-600"
+            >
+              <UserIcon className="h-3.5 w-3.5" />
+              <span>Sign In</span>
+            </Link>
           )}
 
+          {/* Mobile Menu Trigger */}
           <button
             type="button"
-            aria-label="Toggle mobile menu"
-            aria-expanded={mobileMenuOpen}
-            aria-controls="mobile-nav-menu"
             onClick={() => setMobileMenuOpen((prev) => !prev)}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 text-slate-600 md:hidden hover:bg-slate-50"
+            className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 text-slate-700 md:hidden dark:border-slate-800 dark:text-slate-300"
+            aria-label="Open Mobile Menu"
           >
             {mobileMenuOpen ? (
-              <X className="h-4 w-4" aria-hidden="true" />
+              <X className="h-5 w-5" />
             ) : (
-              <Menu className="h-4 w-4" aria-hidden="true" />
+              <Menu className="h-5 w-5" />
             )}
           </button>
         </div>
       </div>
 
+      {/* Mobile Drawer Navigation */}
       {mobileMenuOpen && (
-        <nav
-          id="mobile-nav-menu"
-          aria-label="Mobile Navigation"
-          className="border-t border-slate-200 bg-white px-4 py-4 md:hidden space-y-4 shadow-lg"
-        >
-          <form
-            onSubmit={handleSearch}
-            className="relative sm:hidden"
-            role="search"
-          >
+        <div className="border-t border-slate-200 bg-white px-4 py-4 md:hidden dark:border-slate-800 dark:bg-slate-950">
+          <form onSubmit={handleSearchSubmit} className="relative mb-4">
             <input
-              type="search"
-              aria-label="Search product catalog"
+              type="text"
               placeholder="Search catalog..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-xs outline-none focus:border-brand-blue"
+              className="w-full rounded-xl border border-slate-300 bg-slate-50 py-2 pl-9 pr-4 text-xs text-slate-900 outline-none dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
             />
-            <Search
-              className="absolute left-3 top-2.5 h-4 w-4 text-slate-400"
-              aria-hidden="true"
-            />
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
           </form>
 
-          <div className="space-y-1">
+          <nav className="flex flex-col space-y-1">
             <Link
               href="/products"
               onClick={() => setMobileMenuOpen(false)}
-              className="block rounded-lg px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+              className="rounded-lg px-3 py-2 text-xs font-semibold text-slate-800 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
             >
               All Products
             </Link>
-            <Link
-              href="/products?sort=newest"
-              onClick={() => setMobileMenuOpen(false)}
-              className="block rounded-lg px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-            >
-              New Arrivals
-            </Link>
-            {!user && (
+            {categories?.map((cat) => (
               <Link
-                href="/login"
+                key={cat._id}
+                href={`/products?category=${cat.slug}`}
                 onClick={() => setMobileMenuOpen(false)}
-                className="block rounded-lg px-3 py-2 text-xs font-semibold text-brand-blue hover:bg-blue-50"
+                className="rounded-lg px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
               >
-                Sign In to Account
+                {cat.name}
               </Link>
-            )}
-          </div>
-        </nav>
+            ))}
+          </nav>
+        </div>
       )}
     </header>
   );

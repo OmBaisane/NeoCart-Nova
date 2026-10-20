@@ -1,23 +1,23 @@
 export function ProductCardSkeleton() {
   return (
-    <div className="flex flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-3 shadow-2xs animate-pulse">
+    <div className="flex flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-3 shadow-2xs animate-pulse dark:border-slate-800 dark:bg-slate-900">
       {/* Thumbnail */}
-      <div className="aspect-square w-full rounded-xl bg-slate-200" />
+      <div className="aspect-square w-full rounded-xl bg-slate-200 dark:bg-slate-800" />
 
       {/* Content */}
       <div className="mt-3 sm:mt-4 flex flex-1 flex-col justify-between space-y-3">
         <div className="space-y-2">
-          <div className="h-3 w-1/3 rounded-full bg-slate-200" />
-          <div className="h-4 w-5/6 rounded-full bg-slate-200" />
-          <div className="h-4 w-2/3 rounded-full bg-slate-200" />
+          <div className="h-3 w-1/3 rounded-full bg-slate-200 dark:bg-slate-800" />
+          <div className="h-4 w-5/6 rounded-full bg-slate-200 dark:bg-slate-800" />
+          <div className="h-4 w-2/3 rounded-full bg-slate-200 dark:bg-slate-800" />
         </div>
 
         <div className="pt-2">
           <div className="flex items-baseline gap-2">
-            <div className="h-5 w-20 rounded-md bg-slate-200" />
-            <div className="h-3.5 w-12 rounded-md bg-slate-100" />
+            <div className="h-5 w-20 rounded-md bg-slate-200 dark:bg-slate-800" />
+            <div className="h-3.5 w-12 rounded-md bg-slate-100 dark:bg-slate-800/60" />
           </div>
-          <div className="mt-3 h-8 w-full rounded-xl bg-slate-200" />
+          <div className="mt-3 h-8 w-full rounded-xl bg-slate-200 dark:bg-slate-800" />
         </div>
       </div>
     </div>
@@ -43,7 +43,7 @@ export function TableSkeleton({
 }) {
   return (
     <div className="w-full overflow-x-auto">
-      <div className="min-w-160 divide-y divide-slate-100 animate-pulse">
+      <div className="min-w-160 divide-y divide-slate-100 dark:divide-slate-800 animate-pulse">
         {Array.from({ length: rows }).map((_, r) => (
           <div
             key={r}
@@ -52,7 +52,7 @@ export function TableSkeleton({
             {Array.from({ length: cols }).map((_, c) => (
               <div
                 key={c}
-                className={`h-4 rounded-md bg-slate-200 ${
+                className={`h-4 rounded-md bg-slate-200 dark:bg-slate-800 ${
                   c === 0 ? "w-1/4" : c === cols - 1 ? "w-16" : "w-1/6"
                 }`}
               />

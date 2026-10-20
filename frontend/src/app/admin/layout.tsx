@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { Logo } from "@/components/layout/Logo";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import {
   LayoutDashboard,
   Package,
@@ -92,16 +93,16 @@ export default function AdminLayout({
   };
 
   return (
-    <div className="flex min-h-screen bg-slate-100/70">
+    <div className="flex min-h-screen bg-slate-100/70 transition-colors duration-200 dark:bg-slate-950">
       {/* Desktop Sidebar */}
       <aside
         aria-label="Admin Desktop Navigation"
-        className="hidden w-64 shrink-0 flex-col justify-between border-r border-slate-200 bg-white md:flex"
+        className="hidden w-64 shrink-0 flex-col justify-between border-r border-slate-200 bg-white transition-colors duration-200 dark:border-slate-800 dark:bg-slate-900 md:flex"
       >
         <div className="space-y-6 p-4">
-          <div className="flex items-center gap-3 border-b border-slate-100 px-2 pb-4">
+          <div className="flex items-center gap-3 border-b border-slate-100 px-2 pb-4 dark:border-slate-800">
             <Logo size="sm" />
-            <span className="rounded-md bg-blue-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-brand-blue">
+            <span className="rounded-md bg-blue-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-brand-blue dark:bg-blue-950/60 dark:text-cyan-400">
               Admin
             </span>
           </div>
@@ -115,8 +116,8 @@ export default function AdminLayout({
                   href={link.href}
                   className={`flex items-center justify-between rounded-xl px-3 py-2.5 text-xs font-bold transition ${
                     link.active
-                      ? "bg-blue-50 text-brand-blue"
-                      : "text-slate-600 hover:bg-slate-50 hover:text-brand-charcoal"
+                      ? "bg-blue-50 text-brand-blue dark:bg-blue-950/50 dark:text-cyan-400"
+                      : "text-slate-600 hover:bg-slate-50 hover:text-brand-charcoal dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"
                   }`}
                 >
                   <div className="flex items-center gap-2.5">
@@ -132,19 +133,22 @@ export default function AdminLayout({
           </nav>
         </div>
 
-        <div className="space-y-2 border-t border-slate-100 p-4">
+        <div className="space-y-2 border-t border-slate-100 p-4 dark:border-slate-800">
           <Link
             href="/"
-            className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50"
+            className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800"
           >
-            <Store className="h-4 w-4 text-slate-500" aria-hidden="true" />
+            <Store
+              className="h-4 w-4 text-slate-500 dark:text-slate-400"
+              aria-hidden="true"
+            />
             <span>Storefront View</span>
           </Link>
 
           <button
             type="button"
             onClick={handleLogout}
-            className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs font-bold text-rose-600 transition hover:bg-rose-50"
+            className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs font-bold text-rose-600 transition hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/40"
           >
             <LogOut className="h-4 w-4" aria-hidden="true" />
             <span>Sign Out</span>
@@ -168,20 +172,20 @@ export default function AdminLayout({
 
           <div
             id="admin-mobile-drawer"
-            className="relative flex w-4/5 max-w-xs flex-1 flex-col justify-between bg-white p-4 sm:p-5 shadow-2xl"
+            className="relative flex w-4/5 max-w-xs flex-1 flex-col justify-between bg-white p-4 sm:p-5 shadow-2xl dark:bg-slate-900"
           >
             <div className="space-y-6">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-4 dark:border-slate-800">
                 <div className="flex items-center gap-2">
                   <Logo size="sm" />
-                  <span className="rounded-md bg-blue-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-brand-blue">
+                  <span className="rounded-md bg-blue-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-brand-blue dark:bg-blue-950/60 dark:text-cyan-400">
                     Admin
                   </span>
                 </div>
                 <button
                   type="button"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100"
+                  className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
                   aria-label="Close navigation drawer"
                 >
                   <X className="h-5 w-5" aria-hidden="true" />
@@ -198,8 +202,8 @@ export default function AdminLayout({
                       onClick={() => setMobileMenuOpen(false)}
                       className={`flex items-center justify-between rounded-xl px-3 py-2.5 text-xs font-bold transition ${
                         link.active
-                          ? "bg-blue-50 text-brand-blue"
-                          : "text-slate-600 hover:bg-slate-50 hover:text-brand-charcoal"
+                          ? "bg-blue-50 text-brand-blue dark:bg-blue-950/50 dark:text-cyan-400"
+                          : "text-slate-600 hover:bg-slate-50 hover:text-brand-charcoal dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"
                       }`}
                     >
                       <div className="flex items-center gap-2.5">
@@ -218,20 +222,23 @@ export default function AdminLayout({
               </nav>
             </div>
 
-            <div className="space-y-2 border-t border-slate-100 pt-4">
+            <div className="space-y-2 border-t border-slate-100 pt-4 dark:border-slate-800">
               <Link
                 href="/"
                 onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2.5 text-xs font-bold text-slate-700 transition hover:bg-slate-50"
+                className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2.5 text-xs font-bold text-slate-700 transition hover:bg-slate-50 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800"
               >
-                <Store className="h-4 w-4 text-slate-500" aria-hidden="true" />
+                <Store
+                  className="h-4 w-4 text-slate-500 dark:text-slate-400"
+                  aria-hidden="true"
+                />
                 <span>Storefront View</span>
               </Link>
 
               <button
                 type="button"
                 onClick={handleLogout}
-                className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-xs font-bold text-rose-600 transition hover:bg-rose-50"
+                className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-xs font-bold text-rose-600 transition hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/40"
               >
                 <LogOut className="h-4 w-4" aria-hidden="true" />
                 <span>Sign Out</span>
@@ -243,12 +250,13 @@ export default function AdminLayout({
 
       {/* Main Administrative Container */}
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-slate-200 bg-white/95 px-3 backdrop-blur-md sm:px-6 lg:px-8">
+        {/* Admin Top Header Bar */}
+        <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-slate-200 bg-white/95 px-3 backdrop-blur-md transition-colors duration-200 dark:border-slate-800 dark:bg-slate-900/90 sm:px-6 lg:px-8">
           <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
             <button
               type="button"
               onClick={() => setMobileMenuOpen(true)}
-              className="rounded-lg p-1.5 text-slate-600 hover:bg-slate-100 md:hidden shrink-0"
+              className="rounded-lg p-1.5 text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 md:hidden shrink-0"
               aria-label="Open administrative navigation drawer"
               aria-expanded={mobileMenuOpen}
               aria-controls="admin-mobile-drawer"
@@ -258,19 +266,23 @@ export default function AdminLayout({
 
             <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
               <ShieldCheck
-                className="h-4 w-4 text-brand-blue shrink-0"
+                className="h-4 w-4 text-brand-blue dark:text-cyan-400 shrink-0"
                 aria-hidden="true"
               />
-              <span className="text-xs font-bold tracking-tight text-slate-800 truncate">
+              <span className="text-xs font-bold tracking-tight text-slate-800 dark:text-white truncate">
                 Admin Control Center
               </span>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
-            <div className="flex items-center gap-1.5 sm:gap-2 rounded-full border border-slate-200 bg-slate-50 py-1 px-2 sm:px-3 text-xs font-semibold text-slate-800">
+          <div className="flex items-center gap-2.5 shrink-0">
+            {/* Global Theme Toggle */}
+            <ThemeToggle />
+
+            {/* Admin Profile Pill */}
+            <div className="flex items-center gap-1.5 sm:gap-2 rounded-full border border-slate-200 bg-slate-50 py-1 px-2 sm:px-3 text-xs font-semibold text-slate-800 shadow-2xs dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
               <div
-                className="flex h-5 w-5 items-center justify-center rounded-full bg-brand-blue text-[10px] font-bold text-white uppercase shrink-0"
+                className="flex h-5 w-5 items-center justify-center rounded-full bg-brand-blue text-[10px] font-bold text-white uppercase shrink-0 dark:bg-cyan-600"
                 aria-hidden="true"
               >
                 {user.name.charAt(0)}
