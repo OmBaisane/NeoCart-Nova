@@ -1,19 +1,19 @@
 "use client";
 
-import React, { useState, useEffect, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useState, useMemo, Suspense } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { ProductCard, ProductItem } from "@/components/ui/ProductCard";
 import { ProductGridSkeleton } from "@/components/ui/Skeletons";
 import { EmptyState } from "@/components/ui/EmptyState";
 import {
-  Search,
   SlidersHorizontal,
   ChevronLeft,
   ChevronRight,
-  RotateCcw,
-  ChevronDown,
+  X,
+  Layers,
+  Check,
 } from "lucide-react";
 
 interface CategoryItem {
@@ -22,342 +22,451 @@ interface CategoryItem {
   slug: string;
 }
 
-function ProductsCatalogContent() {
+interface FacetsResponse {
+  success: boolean;
+  categoryCounts: Array<{ _id: string; count: number }>;
+  stats: {
+    minPrice: number;
+    maxPrice: number;
+    totalInStock: number;
+  };
+}
+
+interface ProductsResponse {
+  success: boolean;
+  count: number;
+  totalProducts: number;
+  totalPages: number;
+  currentPage: number;
+  products: ProductItem[];
+}
+
+function ProductsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const initialSearch = searchParams.get("search") || "";
-  const initialCategory = searchParams.get("category") || "";
-  const initialSort = searchParams.get("sort") || "newest";
-  const initialMinPrice = searchParams.get("minPrice") || "";
-  const initialMaxPrice = searchParams.get("maxPrice") || "";
-  const initialPage = parseInt(searchParams.get("page") || "1", 10);
+  // URL Query State Extraction
+  const currentCategory = searchParams.get("category") || "all";
+  const currentSearch = searchParams.get("search") || "";
+  const currentSort = searchParams.get("sort") || "newest";
+  const currentInStock = searchParams.get("inStock") === "true";
+  const currentPage = parseInt(searchParams.get("page") || "1", 10);
 
-  const [keyword, setKeyword] = useState(initialSearch);
-  const [selectedCategory, setSelectedCategory] = useState(initialCategory);
-  const [sortBy, setSortBy] = useState(initialSort);
-  const [minPrice, setMinPrice] = useState(initialMinPrice);
-  const [maxPrice, setMaxPrice] = useState(initialMaxPrice);
-  const [page, setPage] = useState(initialPage);
-  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
 
-  useEffect(() => {
-    setKeyword(searchParams.get("search") || "");
-    setSelectedCategory(searchParams.get("category") || "");
-    setSortBy(searchParams.get("sort") || "newest");
-    setMinPrice(searchParams.get("minPrice") || "");
-    setMaxPrice(searchParams.get("maxPrice") || "");
-    setPage(parseInt(searchParams.get("page") || "1", 10));
-  }, [searchParams]);
+  // Helper to update search params cleanly
+  const updateFilters = (updates: Record<string, string | null>) => {
+    const params = new URLSearchParams(searchParams.toString());
 
-  const updateFilters = (overrides: Record<string, string | number | null>) => {
-    const current = new URLSearchParams(searchParams.toString());
-
-    const updated = {
-      search: keyword,
-      category: selectedCategory,
-      sort: sortBy,
-      minPrice,
-      maxPrice,
-      page,
-      ...overrides,
-    };
-
-    Object.entries(updated).forEach(([key, val]) => {
-      if (val === null || val === "" || val === undefined) {
-        current.delete(key);
+    Object.entries(updates).forEach(([key, value]) => {
+      if (value === null || value === "" || value === "all") {
+        params.delete(key);
       } else {
-        current.set(key, String(val));
+        params.set(key, value);
       }
     });
 
-    router.push(`/products?${current.toString()}`);
+    if (!("page" in updates)) {
+      params.delete("page");
+    }
+
+    router.push(`/products?${params.toString()}`);
   };
 
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    updateFilters({ search: keyword, page: 1 });
-  };
-
-  const handleReset = () => {
-    setKeyword("");
-    setSelectedCategory("");
-    setSortBy("newest");
-    setMinPrice("");
-    setMaxPrice("");
-    setPage(1);
-    setMobileFiltersOpen(false);
-    router.push("/products");
-  };
-
-  const { data: categoriesData } = useQuery<CategoryItem[]>({
+  // 1. Fetch Categories
+  const { data: categoriesData } = useQuery<{
+    success: boolean;
+    categories: CategoryItem[];
+  }>({
     queryKey: ["categories"],
     queryFn: async () => {
       const res = await api.get("/categories");
-      return res.data?.categories || [];
-    },
-  });
-
-  const { data: productsData, isLoading } = useQuery({
-    queryKey: [
-      "products-catalog",
-      searchParams.get("search"),
-      searchParams.get("category"),
-      searchParams.get("sort"),
-      searchParams.get("minPrice"),
-      searchParams.get("maxPrice"),
-      searchParams.get("page"),
-    ],
-    queryFn: async () => {
-      const query = new URLSearchParams(searchParams.toString());
-      query.set("limit", "12");
-      const res = await api.get(`/products?${query.toString()}`);
       return res.data;
     },
   });
 
-  const products: ProductItem[] = productsData?.products || [];
-  const totalPages = productsData?.totalPages || 1;
-  const totalProducts = productsData?.totalProducts || 0;
+  // 2. Fetch Dynamic Catalog Facets (Counts & Stock stats)
+  const { data: facetsData } = useQuery<FacetsResponse>({
+    queryKey: ["catalog-facets"],
+    queryFn: async () => {
+      const res = await api.get("/products/facets");
+      return res.data;
+    },
+    staleTime: 1000 * 60 * 2,
+  });
+
+  // Map category ID to live count
+  const categoryCountMap = useMemo(() => {
+    const map = new Map<string, number>();
+    facetsData?.categoryCounts?.forEach((item) => {
+      map.set(item._id, item.count);
+    });
+    return map;
+  }, [facetsData]);
+
+  // 3. Fetch Filtered Products Catalog
+  const { data, isLoading } = useQuery<ProductsResponse>({
+    queryKey: [
+      "products",
+      currentPage,
+      currentCategory,
+      currentSearch,
+      currentSort,
+      currentInStock,
+    ],
+    queryFn: async () => {
+      const res = await api.get("/products", {
+        params: {
+          page: currentPage,
+          limit: 12,
+          category: currentCategory !== "all" ? currentCategory : undefined,
+          search: currentSearch || undefined,
+          sort: currentSort,
+          inStock: currentInStock ? "true" : undefined,
+        },
+      });
+      return res.data;
+    },
+  });
+
+  const products = data?.products || [];
+  const totalPages = data?.totalPages || 1;
+  const totalProducts = data?.totalProducts || 0;
+  const categories = categoriesData?.categories || [];
 
   return (
     <main className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8 py-6 sm:py-8">
-      <div className="border-b border-slate-200 pb-4 dark:border-slate-800">
-        <h1 className="text-xl font-extrabold tracking-tight text-slate-900 sm:text-3xl dark:text-white">
-          Verified Catalog
-        </h1>
-        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-          Search authenticated inventory with real-time stock allocation.
-        </p>
-      </div>
+      {/* Header Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-4 dark:border-slate-800">
+        <div>
+          <h1 className="text-xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+            Product Catalog
+          </h1>
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+            {currentSearch ? (
+              <span>
+                Search results for &quot;
+                <span className="font-bold text-slate-800 dark:text-white">
+                  {currentSearch}
+                </span>
+                &quot; ({totalProducts} found)
+              </span>
+            ) : (
+              <span>Explore verified gear with real-time stock sync.</span>
+            )}
+          </p>
+        </div>
 
-      {/* Search & Sort & Filter Toggle Bar */}
-      <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <form
-          onSubmit={handleSearchSubmit}
-          className="relative flex-1 max-w-full sm:max-w-md"
-        >
-          <input
-            type="text"
-            placeholder="Search title, brand, features..."
-            value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
-            className="w-full rounded-xl border border-slate-300 py-2.5 pl-10 pr-4 text-xs text-slate-800 outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 dark:placeholder-slate-500 dark:focus:border-cyan-500"
-          />
-          <Search className="absolute left-3.5 top-3 h-4 w-4 text-slate-400 dark:text-slate-500" />
-        </form>
-
-        <div className="flex items-center justify-between sm:justify-end gap-2.5">
-          {/* Mobile Filter Toggle Button */}
+        {/* Top Controls: Mobile Filter Button & Sort Selector */}
+        <div className="flex items-center gap-2.5 self-start sm:self-auto">
           <button
             type="button"
-            onClick={() => setMobileFiltersOpen((prev) => !prev)}
-            className="flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white py-2 px-3 text-xs font-semibold text-slate-700 lg:hidden hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
+            onClick={() => setMobileFilterOpen(true)}
+            className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-2xs hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 md:hidden"
           >
-            <SlidersHorizontal className="h-3.5 w-3.5 text-blue-600 dark:text-cyan-400" />
+            <SlidersHorizontal className="h-4 w-4" />
             <span>Filters</span>
-            <ChevronDown
-              className={`h-3.5 w-3.5 transition-transform ${
-                mobileFiltersOpen ? "rotate-180" : ""
-              }`}
-            />
           </button>
 
-          <div className="flex items-center gap-2">
-            <label className="hidden sm:inline text-xs font-semibold text-slate-600 dark:text-slate-300">
-              Sort:
-            </label>
-            <select
-              value={sortBy}
-              onChange={(e) => {
-                setSortBy(e.target.value);
-                updateFilters({ sort: e.target.value, page: 1 });
-              }}
-              className="rounded-xl border border-slate-300 bg-white py-2 px-3 text-xs font-medium text-slate-700 outline-none focus:border-blue-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:focus:border-cyan-500"
-            >
-              <option value="newest">Newest Arrivals</option>
-              <option value="price-asc">Price: Low to High</option>
-              <option value="price-desc">Price: High to Low</option>
-              <option value="rating">Top Rated</option>
-            </select>
-          </div>
+          <select
+            value={currentSort}
+            onChange={(e) => updateFilters({ sort: e.target.value })}
+            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 outline-none hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200"
+          >
+            <option value="newest" className="dark:bg-slate-900">
+              Newest Arrivals
+            </option>
+            <option value="price-asc" className="dark:bg-slate-900">
+              Price: Low to High
+            </option>
+            <option value="price-desc" className="dark:bg-slate-900">
+              Price: High to Low
+            </option>
+            <option value="name-asc" className="dark:bg-slate-900">
+              Alphabetical (A-Z)
+            </option>
+          </select>
         </div>
       </div>
 
-      <div className="mt-6 sm:mt-8 grid grid-cols-1 gap-6 lg:grid-cols-4 lg:gap-8">
-        {/* Filters Sidebar: Collapsible on mobile, permanent on desktop */}
-        <aside
-          className={`${
-            mobileFiltersOpen ? "block" : "hidden"
-          } lg:block space-y-4 sm:space-y-6`}
-        >
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-2xs dark:border-slate-800 dark:bg-slate-900">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3 dark:border-slate-800">
-              <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-200">
-                <SlidersHorizontal className="h-3.5 w-3.5 text-blue-600 dark:text-cyan-400" />
-                Categories
+      {/* Main Catalog Layout */}
+      <div className="mt-6 sm:mt-8 grid grid-cols-1 gap-8 md:grid-cols-4">
+        {/* Desktop Sidebar Facets */}
+        <aside className="hidden md:block space-y-6">
+          {/* Active Search Badge */}
+          {currentSearch && (
+            <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs dark:border-slate-800 dark:bg-slate-900">
+              <span className="truncate text-slate-600 dark:text-slate-300">
+                Search: <strong>{currentSearch}</strong>
               </span>
-              {selectedCategory && (
+              <button
+                type="button"
+                onClick={() => updateFilters({ search: null })}
+                className="rounded-md p-1 hover:bg-slate-200 dark:hover:bg-slate-800"
+                aria-label="Clear Search"
+              >
+                <X className="h-3.5 w-3.5 text-slate-500" />
+              </button>
+            </div>
+          )}
+
+          {/* In-Stock Only Toggle Switch */}
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs dark:border-slate-800 dark:bg-slate-900">
+            <label className="flex items-center justify-between cursor-pointer">
+              <div>
+                <span className="text-xs font-bold text-slate-900 dark:text-white block">
+                  In Stock Only
+                </span>
+                <span className="text-[10px] text-slate-400 dark:text-slate-500">
+                  Hide sold out items
+                </span>
+              </div>
+              <input
+                type="checkbox"
+                checked={currentInStock}
+                onChange={(e) =>
+                  updateFilters({ inStock: e.target.checked ? "true" : null })
+                }
+                className="h-4 w-4 rounded text-blue-600 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800"
+              />
+            </label>
+          </div>
+
+          {/* Categories Facet Card */}
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs space-y-3 dark:border-slate-800 dark:bg-slate-900">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2.5 dark:border-slate-800">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                <Layers className="h-3.5 w-3.5" />
+                <span>Categories</span>
+              </span>
+              {currentCategory !== "all" && (
                 <button
-                  onClick={() => {
-                    setSelectedCategory("");
-                    updateFilters({ category: null, page: 1 });
-                  }}
-                  className="text-[11px] font-semibold text-blue-600 hover:underline dark:text-cyan-400"
+                  type="button"
+                  onClick={() => updateFilters({ category: "all" })}
+                  className="text-[10px] font-semibold text-blue-600 hover:underline dark:text-cyan-400"
                 >
-                  Clear
+                  Reset
                 </button>
               )}
             </div>
 
-            <div className="mt-3 space-y-1 max-h-52 overflow-y-auto pr-1">
+            <div className="space-y-1">
               <button
-                onClick={() => {
-                  setSelectedCategory("");
-                  updateFilters({ category: null, page: 1 });
-                  setMobileFiltersOpen(false);
-                }}
-                className={`flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-xs font-medium transition ${
-                  !selectedCategory
-                    ? "bg-blue-50 text-blue-600 font-bold dark:bg-blue-950/60 dark:text-cyan-400"
-                    : "text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+                type="button"
+                onClick={() => updateFilters({ category: "all" })}
+                className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-xs font-semibold transition ${
+                  currentCategory === "all"
+                    ? "bg-slate-900 text-white shadow-xs dark:bg-blue-600"
+                    : "text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800"
                 }`}
               >
-                <span>All Collections</span>
+                <span>All Categories</span>
+                <span className="text-[10px] opacity-75">{totalProducts}</span>
               </button>
 
-              {categoriesData?.map((cat) => (
-                <button
-                  key={cat._id}
-                  onClick={() => {
-                    setSelectedCategory(cat.slug);
-                    updateFilters({ category: cat.slug, page: 1 });
-                    setMobileFiltersOpen(false);
-                  }}
-                  className={`flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-xs font-medium transition ${
-                    selectedCategory === cat.slug
-                      ? "bg-blue-50 text-blue-600 font-bold dark:bg-blue-950/60 dark:text-cyan-400"
-                      : "text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
-                  }`}
-                >
-                  <span>{cat.name}</span>
-                </button>
-              ))}
+              {categories.map((cat) => {
+                const count = categoryCountMap.get(cat._id) || 0;
+                const isSelected = currentCategory === cat.slug;
+
+                return (
+                  <button
+                    key={cat._id}
+                    type="button"
+                    onClick={() => updateFilters({ category: cat.slug })}
+                    className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-xs font-semibold transition ${
+                      isSelected
+                        ? "bg-slate-900 text-white shadow-xs dark:bg-blue-600"
+                        : "text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800"
+                    }`}
+                  >
+                    <span className="truncate">{cat.name}</span>
+                    <span className="text-[10px] opacity-75">({count})</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
-
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-2xs dark:border-slate-800 dark:bg-slate-900">
-            <span className="block border-b border-slate-100 pb-3 text-xs font-bold uppercase tracking-wider text-slate-700 dark:border-slate-800 dark:text-slate-200">
-              Price Range (₹)
-            </span>
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              <input
-                type="number"
-                placeholder="Min"
-                value={minPrice}
-                onChange={(e) => setMinPrice(e.target.value)}
-                className="w-full rounded-lg border border-slate-300 py-1.5 px-2.5 text-xs outline-none focus:border-blue-600 dark:border-slate-800 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-cyan-500"
-              />
-              <input
-                type="number"
-                placeholder="Max"
-                value={maxPrice}
-                onChange={(e) => setMaxPrice(e.target.value)}
-                className="w-full rounded-lg border border-slate-300 py-1.5 px-2.5 text-xs outline-none focus:border-blue-600 dark:border-slate-800 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-cyan-500"
-              />
-            </div>
-            <button
-              onClick={() => {
-                updateFilters({ minPrice, maxPrice, page: 1 });
-                setMobileFiltersOpen(false);
-              }}
-              className="mt-3 w-full rounded-lg bg-slate-900 py-2 text-xs font-bold text-white transition hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-500"
-            >
-              Apply Filter
-            </button>
-          </div>
-
-          <button
-            onClick={handleReset}
-            className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-slate-300 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
-          >
-            <RotateCcw className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
-            <span>Reset All Filters</span>
-          </button>
         </aside>
 
-        {/* Catalog Items */}
-        <section className="lg:col-span-3">
-          <div className="mb-4 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-            <span>
-              Showing{" "}
-              <strong className="text-slate-800 dark:text-slate-200">
-                {products.length}
-              </strong>{" "}
-              of{" "}
-              <strong className="text-slate-800 dark:text-slate-200">
-                {totalProducts}
-              </strong>{" "}
-              products
-            </span>
-          </div>
-
-          {isLoading ? (
-            <ProductGridSkeleton count={6} />
-          ) : products.length === 0 ? (
-            <EmptyState
-              title="No products matched your criteria"
-              description="Try adjusting your keyword, resetting the category filters, or relaxing price bounds."
-              actionLabel="Reset All Filters"
-              onAction={handleReset}
+        {/* Mobile Filter Drawer Overlay */}
+        {mobileFilterOpen && (
+          <div className="fixed inset-0 z-50 flex md:hidden">
+            <div
+              className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs"
+              onClick={() => setMobileFilterOpen(false)}
             />
-          ) : (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 sm:gap-6">
-              {products.map((product) => (
-                <ProductCard key={product._id} product={product} />
-              ))}
-            </div>
-          )}
+            <div className="relative ml-auto flex w-full max-w-xs flex-col justify-between bg-white p-5 shadow-2xl dark:bg-slate-900">
+              <div className="space-y-6">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-4 dark:border-slate-800">
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                    Catalog Filters
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => setMobileFilterOpen(false)}
+                    className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
 
-          {!isLoading && totalPages > 1 && (
-            <div className="mt-8 sm:mt-10 flex items-center justify-center gap-2">
+                {/* Mobile In Stock Switch */}
+                <label className="flex items-center justify-between cursor-pointer rounded-xl border border-slate-200 p-3 dark:border-slate-800">
+                  <span className="text-xs font-bold text-slate-800 dark:text-white">
+                    In Stock Only
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={currentInStock}
+                    onChange={(e) =>
+                      updateFilters({
+                        inStock: e.target.checked ? "true" : null,
+                      })
+                    }
+                    className="h-4 w-4 rounded text-blue-600 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800"
+                  />
+                </label>
+
+                {/* Mobile Category List */}
+                <div className="space-y-1">
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">
+                    Categories
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      updateFilters({ category: "all" });
+                      setMobileFilterOpen(false);
+                    }}
+                    className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-xs font-semibold ${
+                      currentCategory === "all"
+                        ? "bg-slate-900 text-white dark:bg-blue-600"
+                        : "text-slate-600 dark:text-slate-300"
+                    }`}
+                  >
+                    <span>All</span>
+                    {currentCategory === "all" && (
+                      <Check className="h-3.5 w-3.5" />
+                    )}
+                  </button>
+
+                  {categories.map((cat) => (
+                    <button
+                      key={cat._id}
+                      type="button"
+                      onClick={() => {
+                        updateFilters({ category: cat.slug });
+                        setMobileFilterOpen(false);
+                      }}
+                      className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-xs font-semibold ${
+                        currentCategory === cat.slug
+                          ? "bg-slate-900 text-white dark:bg-blue-600"
+                          : "text-slate-600 dark:text-slate-300"
+                      }`}
+                    >
+                      <span>{cat.name}</span>
+                      {currentCategory === cat.slug && (
+                        <Check className="h-3.5 w-3.5" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <button
-                disabled={page <= 1}
-                onClick={() => updateFilters({ page: page - 1 })}
-                className="flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-40 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
+                type="button"
+                onClick={() => setMobileFilterOpen(false)}
+                className="w-full rounded-xl bg-blue-600 py-3 text-xs font-bold text-white shadow-md hover:bg-blue-500"
               >
-                <ChevronLeft className="h-4 w-4" />
-                <span>Prev</span>
-              </button>
-              <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                Page {page} of {totalPages}
-              </span>
-              <button
-                disabled={page >= totalPages}
-                onClick={() => updateFilters({ page: page + 1 })}
-                className="flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-40 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
-              >
-                <span>Next</span>
-                <ChevronRight className="h-4 w-4" />
+                Apply Filters
               </button>
             </div>
+          </div>
+        )}
+
+        {/* Product Grid & Pagination Column */}
+        <div className="md:col-span-3 space-y-6">
+          {isLoading ? (
+            <ProductGridSkeleton count={8} />
+          ) : products.length === 0 ? (
+            <div className="rounded-2xl border border-slate-200 bg-white p-8 sm:p-12 text-center shadow-2xs dark:border-slate-800 dark:bg-slate-900">
+              <EmptyState
+                title="No matching products found"
+                description="Try clearing your filters or search keywords to browse our full catalog."
+                actionLabel="Reset All Filters"
+                onAction={() => {
+                  router.push("/products");
+                }}
+              />
+            </div>
+          ) : (
+            <>
+              {/* Responsive Product Grid */}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 sm:gap-6">
+                {products.map((product) => (
+                  <ProductCard key={product._id} product={product} />
+                ))}
+              </div>
+
+              {/* Server-Side Pagination Bar */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between border-t border-slate-200 pt-6 dark:border-slate-800">
+                  <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                    Page {currentPage} of {totalPages} ({totalProducts} items)
+                  </span>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={currentPage <= 1}
+                      onClick={() =>
+                        updateFilters({
+                          page: Math.max(1, currentPage - 1).toString(),
+                        })
+                      }
+                      className="flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-2xs hover:bg-slate-50 disabled:opacity-40 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 transition"
+                    >
+                      <ChevronLeft className="h-3.5 w-3.5" />
+                      <span>Prev</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={currentPage >= totalPages}
+                      onClick={() =>
+                        updateFilters({
+                          page: Math.min(
+                            totalPages,
+                            currentPage + 1,
+                          ).toString(),
+                        })
+                      }
+                      className="flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-2xs hover:bg-slate-50 disabled:opacity-40 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 transition"
+                    >
+                      <span>Next</span>
+                      <ChevronRight className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
-        </section>
+        </div>
       </div>
     </main>
   );
 }
 
-export default function ProductsCatalogPage() {
+export default function ProductsPage() {
   return (
     <Suspense
       fallback={
-        <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+        <main className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8 py-6 sm:py-8">
           <ProductGridSkeleton count={8} />
-        </div>
+        </main>
       }
     >
-      <ProductsCatalogContent />
+      <ProductsContent />
     </Suspense>
   );
 }

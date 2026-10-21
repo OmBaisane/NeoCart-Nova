@@ -26,6 +26,10 @@ export const getProducts = async (
 
     const query: Record<string, unknown> = { isActive: true };
 
+    if (req.query.inStock === "true") {
+      query.stock = { $gt: 0 };
+    }
+
     // 1. Text Search (Name or Description)
     if (search && typeof search === "string" && search.trim() !== "") {
       const sanitized = search
@@ -304,6 +308,83 @@ export const deleteProduct = async (
     res.status(200).json({
       success: true,
       message: "Product deactivated successfully (soft-deleted)",
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Suggestions Controller
+export const getProductSuggestions = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const query = (req.query.q as string)?.trim();
+
+    if (!query || query.length < 2) {
+      res.status(200).json({ success: true, suggestions: [] });
+      return;
+    }
+
+    const regex = new RegExp(query, "i");
+
+    const suggestions = await Product.find({
+      isActive: true,
+      $or: [{ name: regex }, { tags: regex }],
+    })
+      .select("_id name slug price discountPrice images stock category")
+      .populate("category", "name slug")
+      .limit(6)
+      .lean();
+
+    res.status(200).json({
+      success: true,
+      count: suggestions.length,
+      suggestions,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Facets Controller
+export const getCatalogFacets = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    // 1. Group active products by category to calculate counts
+    const categoryCounts = await Product.aggregate([
+      { $match: { isActive: true } },
+      { $group: { _id: "$category", count: { $sum: 1 } } },
+    ]);
+
+    // 2. Calculate min & max price across active inventory
+    const priceStats = await Product.aggregate([
+      { $match: { isActive: true } },
+      {
+        $group: {
+          _id: null,
+          minPrice: { $min: "$price" },
+          maxPrice: { $max: "$price" },
+          totalInStock: {
+            $sum: { $cond: [{ $gt: ["$stock", 0] }, 1, 0] },
+          },
+        },
+      },
+    ]);
+
+    res.status(200).json({
+      success: true,
+      categoryCounts,
+      stats: priceStats[0] || {
+        minPrice: 0,
+        maxPrice: 100000,
+        totalInStock: 0,
+      },
     });
   } catch (error) {
     next(error);

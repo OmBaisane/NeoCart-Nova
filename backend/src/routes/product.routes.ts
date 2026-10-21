@@ -5,6 +5,8 @@ import {
   createProduct,
   updateProduct,
   deleteProduct,
+  getProductSuggestions,
+  getCatalogFacets,
 } from "../controllers/product.controller.js";
 import reviewRouter from "./review.routes.js";
 import { protect, adminOnly } from "../middleware/auth.middleware.js";
@@ -13,6 +15,12 @@ const router = Router();
 
 // Re-route into review router for reviews on a product
 router.use("/:productId/reviews", reviewRouter);
+
+// Facets Controller (Must be declared before parameterized routes)
+router.get("/facets", getCatalogFacets);
+
+// Suggestions Controller (Must be declared before parameterized routes)
+router.get("/suggestions", getProductSuggestions);
 
 // Public storefront routes
 router.get("/", getProducts);
