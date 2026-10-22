@@ -15,7 +15,24 @@ const generateTrackingNumber = (): string => {
   return `NC-NOV-${timestamp}-${randomSuffix}`;
 };
 
-// POST /api/orders (Protected - Transaction-Safe Checkout Flow)
+// Check if current MongoDB deployment supports multi-document transactions
+const isReplicaSet = (): boolean => {
+  const client = mongoose.connection.getClient();
+  return !!(
+    client?.options?.replicaSet ||
+    (mongoose.connection.db &&
+      mongoose.connection.readyState === 1 &&
+      Boolean(
+        (
+          mongoose.connection as unknown as {
+            topology?: { description?: { type?: string } };
+          }
+        ).topology?.description?.type?.includes("ReplicaSet"),
+      ))
+  );
+};
+
+// POST /api/orders (Protected - Transaction-Safe Concurrency Guarded Checkout)
 export const createOrder = async (
   req: Request,
   res: Response,
@@ -33,77 +50,82 @@ export const createOrder = async (
   const { shippingAddress, paymentMethod } = validationResult.data;
   const userId = req.user!._id;
 
-  const session = await mongoose.startSession();
-  session.startTransaction();
+  // 1. Fetch user's cart
+  const cart = await Cart.findOne({ user: userId });
+  if (!cart || cart.items.length === 0) {
+    res.status(400).json({
+      success: false,
+      message: "Your cart is empty. Cannot place an order.",
+    });
+    return;
+  }
+
+  const canUseTransactions = isReplicaSet();
+  const session = canUseTransactions ? await mongoose.startSession() : null;
+  if (session) session.startTransaction();
+
+  const reservedProducts: Array<{ id: string; quantity: number }> = [];
 
   try {
-    // 1. Fetch user's cart inside session
-    const cart = await Cart.findOne({ user: userId }).session(session);
-    if (!cart || cart.items.length === 0) {
-      await session.abortTransaction();
-      res.status(400).json({
-        success: false,
-        message: "Your cart is empty. Cannot place an order.",
-      });
-      return;
-    }
-
     const orderItems: IOrderItemSnapshot[] = [];
     let calculatedSubtotal = 0;
 
-    // 2. Validate availability and atomically decrement stock within session
+    // 2. Concurrency-safe atomic reservation loop
     for (const cartItem of cart.items) {
-      const product = await Product.findOne({
-        _id: cartItem.product,
-        isActive: true,
-      }).session(session);
-
-      if (!product) {
-        await session.abortTransaction();
-        res.status(400).json({
-          success: false,
-          message: `Product is no longer available.`,
-        });
-        return;
-      }
-
-      if (product.stock < cartItem.quantity) {
-        await session.abortTransaction();
-        res.status(400).json({
-          success: false,
-          message: `Insufficient stock for "${product.name}". Available: ${product.stock}`,
-        });
-        return;
-      }
-
+      // Atomic Decrement: Only decrements if stock >= requested quantity AND product is active
       const updatedProduct = await Product.findOneAndUpdate(
         {
-          _id: product._id,
+          _id: cartItem.product,
           stock: { $gte: cartItem.quantity },
           isActive: true,
         },
         { $inc: { stock: -cartItem.quantity } },
-        { session, new: true },
+        { session: session || undefined, new: true },
       );
 
       if (!updatedProduct) {
-        await session.abortTransaction();
-        res.status(400).json({
+        // Find product to provide accurate error reason
+        const existing = await Product.findById(cartItem.product);
+        const reason = !existing
+          ? "Item was deleted or discontinued."
+          : !existing.isActive
+            ? `"${existing.name}" is currently inactive.`
+            : `Insufficient stock for "${existing.name}". Only ${existing.stock} remaining.`;
+
+        // Roll back any previously decremented items if not in replica transaction
+        if (!session) {
+          for (const reserved of reservedProducts) {
+            await Product.findByIdAndUpdate(reserved.id, {
+              $inc: { stock: reserved.quantity },
+            });
+          }
+        } else {
+          await session.abortTransaction();
+        }
+
+        res.status(409).json({
           success: false,
-          message: `Stock reservation failed due to concurrent checkout for "${product.name}".`,
+          message: `Checkout failed: ${reason}`,
         });
         return;
       }
 
+      // Track successfully reserved item
+      reservedProducts.push({
+        id: cartItem.product.toString(),
+        quantity: cartItem.quantity,
+      });
+
       const effectivePrice =
-        product.discountPrice !== undefined && product.discountPrice > 0
-          ? product.discountPrice
-          : product.price;
+        updatedProduct.discountPrice !== undefined &&
+        updatedProduct.discountPrice > 0
+          ? updatedProduct.discountPrice
+          : updatedProduct.price;
 
       orderItems.push({
-        product: product._id,
-        name: product.name,
-        image: product.images[0] || "",
+        product: updatedProduct._id,
+        name: updatedProduct.name,
+        image: updatedProduct.images[0] || "",
         price: effectivePrice,
         quantity: cartItem.quantity,
       });
@@ -119,34 +141,33 @@ export const createOrder = async (
 
     const trackingNumber = generateTrackingNumber();
 
-    // 3. Create order document inside session
-    const [order] = await Order.create(
-      [
-        {
-          user: userId,
-          items: orderItems,
-          shippingAddress,
-          subtotal: calculatedSubtotal,
-          shippingFee,
-          discount,
-          total,
-          paymentMethod: paymentMethod || "COD",
-          paymentStatus: "pending",
-          orderStatus: "pending",
-          trackingNumber,
-        },
-      ],
-      { session },
-    );
+    // 3. Create order document using model instance (type-safe for union literals and sessions)
+    const order = new Order({
+      user: userId,
+      items: orderItems,
+      shippingAddress,
+      subtotal: calculatedSubtotal,
+      shippingFee,
+      discount,
+      total,
+      paymentMethod:
+        (paymentMethod as "COD" | "Card" | "UPI" | undefined) || "COD",
+      paymentStatus: "pending" as const,
+      orderStatus: "pending" as const,
+      trackingNumber,
+    });
 
-    // 4. Clear user's cart inside session
+    await order.save({ session: session || undefined });
+
+    // 4. Clear user's cart
     cart.items = [];
     cart.totalItems = 0;
     cart.subtotal = 0;
-    await cart.save({ session });
+    await cart.save({ session: session || undefined });
 
-    // 5. Commit atomic transaction
-    await session.commitTransaction();
+    if (session) {
+      await session.commitTransaction();
+    }
 
     res.status(201).json({
       success: true,
@@ -154,10 +175,21 @@ export const createOrder = async (
       order,
     });
   } catch (error) {
-    await session.abortTransaction();
+    if (session) {
+      await session.abortTransaction();
+    } else {
+      // Manual rollback in case of unexpected exception
+      for (const reserved of reservedProducts) {
+        await Product.findByIdAndUpdate(reserved.id, {
+          $inc: { stock: reserved.quantity },
+        });
+      }
+    }
     next(error);
   } finally {
-    session.endSession();
+    if (session) {
+      session.endSession();
+    }
   }
 };
 
@@ -225,15 +257,12 @@ export const getOrderById = async (
   }
 };
 
-// PATCH /api/orders/:id/cancel (Protected - Atomic & Transaction-Safe Customer Cancellation)
+// PATCH /api/orders/:id/cancel (Protected - Customer Cancellation)
 export const cancelOrder = async (
   req: Request,
   res: Response,
   next: NextFunction,
 ): Promise<void> => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
   try {
     const userId = req.user!._id;
     const isAdmin = req.user!.role === "admin";
@@ -248,7 +277,7 @@ export const cancelOrder = async (
       query.user = userId;
     }
 
-    // Atomically transition status inside session to prevent race conditions & double cancellation
+    // Atomically transition status to prevent double-cancellation
     const order = await Order.findOneAndUpdate(
       query,
       {
@@ -257,11 +286,10 @@ export const cancelOrder = async (
           cancelledAt: new Date(),
         },
       },
-      { session, new: true },
+      { new: true },
     );
 
     if (!order) {
-      await session.abortTransaction();
       res.status(400).json({
         success: false,
         message:
@@ -270,16 +298,12 @@ export const cancelOrder = async (
       return;
     }
 
-    // Restock all items atomically within the exact same transaction session
+    // Restock all items
     for (const item of order.items) {
-      await Product.findByIdAndUpdate(
-        item.product,
-        { $inc: { stock: item.quantity } },
-        { session },
-      );
+      await Product.findByIdAndUpdate(item.product, {
+        $inc: { stock: item.quantity },
+      });
     }
-
-    await session.commitTransaction();
 
     res.status(200).json({
       success: true,
@@ -287,14 +311,11 @@ export const cancelOrder = async (
       order,
     });
   } catch (error) {
-    await session.abortTransaction();
     next(error);
-  } finally {
-    session.endSession();
   }
 };
 
-// PATCH /api/orders/:id/status (Admin Only - Status & Tracking Update)
+// PATCH /api/orders/:id/status (Admin Only - Status & Restock Management)
 export const updateOrderStatus = async (
   req: Request,
   res: Response,
@@ -320,6 +341,18 @@ export const updateOrderStatus = async (
         message: "Order not found",
       });
       return;
+    }
+
+    const previousStatus = order.orderStatus;
+
+    // Guard: If admin cancels an order that was NOT cancelled before -> Restock inventory!
+    if (orderStatus === "cancelled" && previousStatus !== "cancelled") {
+      for (const item of order.items) {
+        await Product.findByIdAndUpdate(item.product, {
+          $inc: { stock: item.quantity },
+        });
+      }
+      order.cancelledAt = new Date();
     }
 
     order.orderStatus = orderStatus;

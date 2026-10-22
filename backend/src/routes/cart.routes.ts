@@ -1,6 +1,7 @@
 import { Router } from "express";
 import {
   getCart,
+  validateCart,
   addToCart,
   updateCartItemQuantity,
   removeCartItem,
@@ -14,6 +15,7 @@ const router = Router();
 router.use(protect);
 
 router.get("/", getCart);
+router.get("/validate", validateCart);
 router.post("/items", addToCart);
 router.patch("/items/:productId", updateCartItemQuantity);
 router.delete("/items/:productId", removeCartItem);

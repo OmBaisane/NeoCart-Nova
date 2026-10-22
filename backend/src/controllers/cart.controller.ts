@@ -30,6 +30,110 @@ export const getCart = async (
   }
 };
 
+// GET /api/cart/validate (Protected - Live Stock & Price Concurrency Guard)
+export const validateCart = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const userId = req.user!._id;
+
+    const cart = await Cart.findOne({ user: userId });
+    if (!cart || cart.items.length === 0) {
+      res.status(200).json({
+        success: true,
+        isValid: false,
+        message: "Your cart is empty.",
+        issues: [],
+      });
+      return;
+    }
+
+    const issues: Array<{
+      productId: string;
+      name: string;
+      issueType:
+        | "OUT_OF_STOCK"
+        | "INSUFFICIENT_STOCK"
+        | "INACTIVE"
+        | "PRICE_CHANGED";
+      message: string;
+      availableStock: number;
+      requestedQuantity: number;
+    }> = [];
+
+    let hasPriceOrStockMismatch = false;
+
+    for (const item of cart.items) {
+      const product = await Product.findById(item.product);
+
+      if (!product || !product.isActive) {
+        issues.push({
+          productId: item.product.toString(),
+          name: product?.name || "Discontinued Item",
+          issueType: "INACTIVE",
+          message: `"${product?.name || "Item"}" is no longer available.`,
+          availableStock: 0,
+          requestedQuantity: item.quantity,
+        });
+        hasPriceOrStockMismatch = true;
+        continue;
+      }
+
+      if (product.stock === 0) {
+        issues.push({
+          productId: product._id.toString(),
+          name: product.name,
+          issueType: "OUT_OF_STOCK",
+          message: `"${product.name}" is completely out of stock.`,
+          availableStock: 0,
+          requestedQuantity: item.quantity,
+        });
+        hasPriceOrStockMismatch = true;
+        continue;
+      }
+
+      if (product.stock < item.quantity) {
+        issues.push({
+          productId: product._id.toString(),
+          name: product.name,
+          issueType: "INSUFFICIENT_STOCK",
+          message: `Only ${product.stock} units available for "${product.name}" (requested ${item.quantity}).`,
+          availableStock: product.stock,
+          requestedQuantity: item.quantity,
+        });
+        hasPriceOrStockMismatch = true;
+      }
+
+      const livePrice =
+        product.discountPrice !== undefined && product.discountPrice > 0
+          ? product.discountPrice
+          : product.price;
+
+      if (livePrice !== item.price) {
+        item.price = livePrice;
+        hasPriceOrStockMismatch = true;
+      }
+    }
+
+    // Auto-update price adjustments if live product prices shifted
+    if (hasPriceOrStockMismatch) {
+      recalculateCart(cart);
+      await cart.save();
+    }
+
+    res.status(200).json({
+      success: true,
+      isValid: issues.length === 0,
+      issues,
+      cart,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // POST /api/cart/items (Protected - Add item or increment)
 export const addToCart = async (
   req: Request,

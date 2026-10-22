@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
@@ -15,9 +16,11 @@ import {
   User as UserIcon,
   CheckCircle2,
   AlertCircle,
+  AlertTriangle,
   Loader2,
   Lock,
   ShoppingBag,
+  ArrowRight,
 } from "lucide-react";
 
 interface ShippingAddressState {
@@ -27,6 +30,19 @@ interface ShippingAddressState {
   city: string;
   state: string;
   pincode: string;
+}
+
+interface StockIssue {
+  productId: string;
+  name: string;
+  issueType:
+    | "OUT_OF_STOCK"
+    | "INSUFFICIENT_STOCK"
+    | "INACTIVE"
+    | "PRICE_CHANGED";
+  message: string;
+  availableStock: number;
+  requestedQuantity: number;
 }
 
 export default function CheckoutPage() {
@@ -65,11 +81,11 @@ export default function CheckoutPage() {
     }
   }, [user, isAuthLoading, router]);
 
-  // Fetch Cart with Zero StaleTime & Instant Mount Sync
+  // 1. Fetch Cart
   const {
     data: cartData,
     isLoading: isCartLoading,
-    isFetching,
+    isFetching: isCartFetching,
   } = useQuery({
     queryKey: ["cart"],
     queryFn: async () => {
@@ -81,6 +97,29 @@ export default function CheckoutPage() {
     refetchOnMount: "always",
   });
 
+  // 2. Concurrency Guard: Real-time Live Stock Validation
+  const {
+    data: validationData,
+    isLoading: isValidating,
+    refetch: recheckStock,
+  } = useQuery<{
+    success: boolean;
+    isValid: boolean;
+    issues: StockIssue[];
+  }>({
+    queryKey: ["cart-validation"],
+    queryFn: async () => {
+      const res = await api.get("/cart/validate");
+      return res.data;
+    },
+    enabled: !!user && !!cartData && cartData?.items?.length > 0,
+    staleTime: 0,
+    refetchOnWindowFocus: true,
+  });
+
+  const stockIssues = validationData?.issues || [];
+  const hasStockErrors = stockIssues.length > 0;
+
   const placeOrderMutation = useMutation({
     mutationFn: async () => {
       const res = await api.post("/orders", {
@@ -91,6 +130,7 @@ export default function CheckoutPage() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["cart"] });
+      queryClient.invalidateQueries({ queryKey: ["cart-validation"] });
       queryClient.invalidateQueries({ queryKey: ["orders"] });
       queryClient.invalidateQueries({ queryKey: ["my-orders"] });
       const orderId = data.order._id;
@@ -103,12 +143,13 @@ export default function CheckoutPage() {
       setValidationError(
         err.response?.data?.message ||
           err.message ||
-          "Failed to place order. Please check your stock and try again.",
+          "Failed to place order. Please review your cart inventory.",
       );
+      // Re-trigger live stock check on order failure
+      recheckStock();
     },
   });
 
-  // Guard: Show spinner while auth is resolving or cart is genuinely fetching first-time
   if (isAuthLoading || (user && isCartLoading && !cartData)) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
@@ -126,8 +167,7 @@ export default function CheckoutPage() {
   const shippingFee = subtotal >= 1000 || subtotal === 0 ? 0 : 99;
   const total = subtotal + shippingFee;
 
-  // Only show empty state if NOT fetching and genuinely 0 items
-  if (!isFetching && items.length === 0) {
+  if (!isCartFetching && items.length === 0) {
     return (
       <main className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8 text-center">
         <EmptyState
@@ -149,6 +189,13 @@ export default function CheckoutPage() {
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setValidationError(null);
+
+    if (hasStockErrors) {
+      setValidationError(
+        "Please resolve inventory issues before placing the order.",
+      );
+      return;
+    }
 
     if (form.fullName.trim().length < 2) {
       setValidationError("Full name must be at least 2 characters long.");
@@ -182,8 +229,42 @@ export default function CheckoutPage() {
         </p>
       </div>
 
+      {/* Real-time Inventory Concurrency Alert Banner */}
+      {hasStockErrors && (
+        <div className="mt-6 rounded-2xl border border-amber-300 bg-amber-50 p-4 dark:border-amber-900/60 dark:bg-amber-950/40">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+            <div className="flex-1 space-y-1.5">
+              <h3 className="text-xs sm:text-sm font-bold text-amber-900 dark:text-amber-200">
+                Inventory Availability Changed
+              </h3>
+              <p className="text-xs text-amber-800 dark:text-amber-300">
+                Some items in your cart have sold out or have limited quantities
+                remaining:
+              </p>
+              <ul className="list-disc pl-4 text-xs text-amber-800 dark:text-amber-300 space-y-1">
+                {stockIssues.map((issue, idx) => (
+                  <li key={idx}>
+                    <strong>{issue.name}:</strong> {issue.message}
+                  </li>
+                ))}
+              </ul>
+              <div className="pt-2">
+                <Link
+                  href="/cart"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-amber-700 transition"
+                >
+                  <span>Update Cart Items</span>
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="mt-6 sm:mt-8 grid grid-cols-1 gap-6 lg:grid-cols-3 lg:gap-12">
-        {/* Left 2 Cols: Shipping Form */}
+        {/* Left: Shipping Form */}
         <section className="lg:col-span-2">
           <form onSubmit={handleFormSubmit} className="space-y-4 sm:space-y-6">
             {validationError && (
@@ -193,7 +274,7 @@ export default function CheckoutPage() {
               </div>
             )}
 
-            {/* Address Details Block */}
+            {/* Address Details */}
             <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 shadow-2xs space-y-4 dark:border-slate-800 dark:bg-slate-900">
               <div className="flex items-center gap-2 border-b border-slate-100 pb-3 dark:border-slate-800">
                 <MapPin className="h-4 w-4 text-brand-blue dark:text-cyan-400" />
@@ -333,7 +414,7 @@ export default function CheckoutPage() {
               </div>
             </div>
 
-            {/* Payment Method Block */}
+            {/* Payment Method */}
             <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 shadow-2xs space-y-3 dark:border-slate-800 dark:bg-slate-900">
               <div className="flex items-center gap-2 border-b border-slate-100 pb-3 dark:border-slate-800">
                 <CreditCard className="h-4 w-4 text-brand-blue dark:text-cyan-400" />
@@ -361,17 +442,26 @@ export default function CheckoutPage() {
               </div>
             </div>
 
-            {/* Submit CTA */}
+            {/* Place Order CTA with Concurrency Guards */}
             <button
               type="submit"
-              disabled={placeOrderMutation.isPending}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-blue py-3.5 px-4 sm:px-6 text-xs sm:text-sm font-bold text-white shadow-lg shadow-blue-500/25 transition hover:bg-blue-600 focus:ring-2 focus:ring-brand-blue focus:ring-offset-2 disabled:opacity-60 dark:bg-blue-600 dark:hover:bg-blue-500"
+              disabled={
+                placeOrderMutation.isPending || hasStockErrors || isValidating
+              }
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-blue py-3.5 px-4 sm:px-6 text-xs sm:text-sm font-bold text-white shadow-lg shadow-blue-500/25 transition hover:bg-blue-600 focus:ring-2 focus:ring-brand-blue focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-blue-600 dark:hover:bg-blue-500"
             >
               {placeOrderMutation.isPending ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  <span>Validating Stock & Placing Order...</span>
+                  <span>Locking Stock & Placing Order...</span>
                 </>
+              ) : isValidating ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Verifying Live Inventory...</span>
+                </>
+              ) : hasStockErrors ? (
+                <span>Resolve Stock Issues to Checkout</span>
               ) : (
                 <>
                   <Lock className="h-4 w-4" />
@@ -382,44 +472,69 @@ export default function CheckoutPage() {
           </form>
         </section>
 
-        {/* Right Col: Order Snapshot */}
+        {/* Right: Order Snapshot */}
         <aside className="h-fit rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 shadow-2xs space-y-5 sm:space-y-6 dark:border-slate-800 dark:bg-slate-900">
-          <div className="border-b border-slate-100 pb-3 dark:border-slate-800">
+          <div className="border-b border-slate-100 pb-3 dark:border-slate-800 flex items-center justify-between">
             <h2 className="text-xs sm:text-sm font-bold text-brand-charcoal uppercase tracking-wider dark:text-white">
               Order Items ({cartData?.totalItems || 0})
             </h2>
+            {isValidating && (
+              <span className="text-[10px] text-cyan-600 dark:text-cyan-400 animate-pulse font-medium">
+                Syncing stock...
+              </span>
+            )}
           </div>
 
           {/* Items Preview */}
           <div className="space-y-3 max-h-56 sm:max-h-60 overflow-y-auto pr-1">
             {items.map(
               (item: {
-                product?: { _id: string; name: string; images?: string[] };
+                product?: {
+                  _id: string;
+                  name: string;
+                  images?: string[];
+                  stock?: number;
+                };
                 quantity: number;
                 price: number;
-              }) => (
-                <div
-                  key={item.product?._id}
-                  className="flex items-center gap-3 text-xs"
-                >
-                  <img
-                    src={item.product?.images?.[0] || ""}
-                    alt={item.product?.name || "Product"}
-                    className="h-11 w-11 sm:h-12 sm:w-12 rounded-lg object-cover bg-slate-100 dark:bg-slate-800 shrink-0"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-bold text-brand-charcoal truncate text-[11px] sm:text-xs dark:text-white">
-                      {item.product?.name}
-                    </h4>
-                    <p className="text-slate-400 text-[10px] sm:text-[11px] dark:text-slate-500">
-                      Qty: {item.quantity}
-                    </p>
+              }) => {
+                const itemIssue = stockIssues.find(
+                  (iss) => iss.productId === item.product?._id,
+                );
+
+                return (
+                  <div
+                    key={item.product?._id}
+                    className={`flex items-center gap-3 text-xs p-2 rounded-xl transition ${
+                      itemIssue
+                        ? "bg-rose-50 border border-rose-200 dark:bg-rose-950/30 dark:border-rose-900/40"
+                        : ""
+                    }`}
+                  >
+                    <img
+                      src={item.product?.images?.[0] || ""}
+                      alt={item.product?.name || "Product"}
+                      className="h-11 w-11 sm:h-12 sm:w-12 rounded-lg object-cover bg-slate-100 dark:bg-slate-800 shrink-0"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-bold text-brand-charcoal truncate text-[11px] sm:text-xs dark:text-white">
+                        {item.product?.name}
+                      </h4>
+                      <p className="text-slate-400 text-[10px] sm:text-[11px] dark:text-slate-500">
+                        Qty: {item.quantity}
+                      </p>
+                      {itemIssue && (
+                        <span className="text-[10px] font-bold text-rose-600 dark:text-rose-400 block truncate">
+                          {itemIssue.message}
+                        </span>
+                      )}
+                    </div>
+                    <span className="font-bold text-brand-charcoal text-xs shrink-0 dark:text-white">
+                      ₹{(item.price * item.quantity).toLocaleString("en-IN")}
+                    </span>
                   </div>
-                  <span className="font-bold text-brand-charcoal text-xs shrink-0 dark:text-white">
-                    ₹{(item.price * item.quantity).toLocaleString("en-IN")}
-                  </span>
-                </div>
-              ),
+                );
+              },
             )}
           </div>
 
@@ -453,11 +568,11 @@ export default function CheckoutPage() {
           <div className="rounded-xl bg-slate-50 dark:bg-slate-800/60 p-3 space-y-1 text-[11px] text-slate-500 dark:text-slate-400 border border-slate-100 dark:border-slate-800">
             <div className="flex items-center gap-1.5 font-semibold text-slate-700 dark:text-slate-200">
               <ShieldCheck className="h-4 w-4 text-cyan-accent dark:text-cyan-400 shrink-0" />
-              <span>Zero-Trust Price Guarantee</span>
+              <span>Live Concurrency Guard Active</span>
             </div>
             <p className="leading-tight text-[10px] sm:text-[11px]">
-              Your order prices and inventory allocations are calculated and
-              locked directly on the database.
+              Inventory is verified in real time. Items are safely allocated
+              upon checkout confirmation.
             </p>
           </div>
         </aside>
