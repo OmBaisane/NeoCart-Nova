@@ -1,225 +1,153 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { TableSkeleton } from "@/components/ui/Skeletons";
-import { EmptyState } from "@/components/ui/EmptyState";
+import { useAuth } from "@/context/AuthContext";
 import {
   Users,
   Search,
+  Loader2,
+  ShieldAlert,
   Mail,
   Phone,
-  MapPin,
-  Shield,
-  UserCheck,
   Calendar,
 } from "lucide-react";
 
-interface UserAddress {
-  street?: string;
-  city?: string;
-  state?: string;
-  pincode?: string;
-}
-
-interface AdminUserItem {
+interface AdminUser {
   _id: string;
   name: string;
   email: string;
   phone?: string;
-  role: "admin" | "user";
-  address?: UserAddress;
+  role: string;
   createdAt: string;
 }
 
-interface AdminUsersResponse {
-  success: boolean;
-  count: number;
-  users: AdminUserItem[];
-}
-
 export default function AdminUsersPage() {
-  const [searchTerm, setSearchTerm] = useState("");
+  const { user, isLoading: isAuthLoading } = useAuth();
+  const [searchQuery, setSearchQuery] = useState("");
 
-  const { data, isLoading } = useQuery<AdminUsersResponse>({
-    queryKey: ["admin-users-list"],
+  const { data, isLoading } = useQuery<{
+    success: boolean;
+    users: AdminUser[];
+    totalUsers: number;
+  }>({
+    queryKey: ["admin-users", searchQuery],
     queryFn: async () => {
-      const res = await api.get("/admin/users");
+      const res = await api.get(
+        `/admin/users?search=${encodeURIComponent(searchQuery)}`,
+      );
       return res.data;
     },
-    staleTime: 0,
-    refetchOnMount: "always",
+    enabled: !!user && user.role === "admin",
   });
+
+  if (isAuthLoading || isLoading) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-brand-blue dark:text-cyan-400" />
+      </div>
+    );
+  }
+
+  if (!user || user.role !== "admin") {
+    return null;
+  }
 
   const users = data?.users || [];
 
-  const filteredUsers = users.filter((user) => {
-    const term = searchTerm.toLowerCase();
-    const nameMatch = user.name?.toLowerCase().includes(term);
-    const emailMatch = user.email?.toLowerCase().includes(term);
-    const phoneMatch = user.phone?.toLowerCase().includes(term);
-    const cityMatch = user.address?.city?.toLowerCase().includes(term);
-    return nameMatch || emailMatch || phoneMatch || cityMatch;
-  });
-
   return (
-    <main className="space-y-4 sm:space-y-6">
-      {/* Header bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 border-b border-slate-200 pb-4 sm:pb-6 dark:border-slate-800">
+    <main className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-4 dark:border-slate-800">
         <div>
-          <h1 className="text-xl sm:text-3xl font-extrabold tracking-tight text-brand-charcoal dark:text-white">
-            Registered Customers & Users
+          <h1 className="text-xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+            Customer Directory
           </h1>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-            Inspect buyer identities, contact details, shipping addresses, and
-            system roles.
+            View registered customer accounts and contact information.
           </p>
         </div>
       </div>
 
-      {/* Search & Filter Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-3.5 sm:p-4 shadow-2xs dark:border-slate-800 dark:bg-slate-900">
-        <div className="relative flex-1 max-w-full sm:max-w-md">
-          <input
-            type="text"
-            placeholder="Search by customer name, email, phone, city..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full rounded-lg border border-slate-300 py-2 pl-9 pr-3 text-xs outline-none focus:border-brand-blue dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder-slate-400 dark:focus:border-cyan-500"
-          />
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400 dark:text-slate-500" />
-        </div>
-
-        <span className="text-[11px] sm:text-xs font-semibold text-slate-500 dark:text-slate-400 shrink-0">
-          Showing {filteredUsers.length} of {users.length} accounts
-        </span>
+      {/* Search Bar */}
+      <div className="relative max-w-md">
+        <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search customers by name or email..."
+          className="w-full rounded-xl border border-slate-200 bg-white py-2 pl-9 pr-3 text-xs outline-none focus:border-brand-blue dark:border-slate-800 dark:bg-slate-900 dark:text-white dark:placeholder-slate-500"
+        />
       </div>
 
-      {/* Users Table Card */}
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xs dark:border-slate-800 dark:bg-slate-900">
-        {isLoading ? (
-          <div className="p-4">
-            <TableSkeleton rows={6} cols={5} />
-          </div>
-        ) : filteredUsers.length === 0 ? (
-          <div className="p-6 sm:p-8">
-            <EmptyState
-              icon={Users}
-              title="No customer accounts found"
-              description="No user profiles match your search criteria."
-              actionLabel="Clear Search"
-              onAction={() => setSearchTerm("")}
-            />
-          </div>
-        ) : (
+      {/* Users Table */}
+      {users.length === 0 ? (
+        <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center shadow-2xs dark:border-slate-800 dark:bg-slate-900">
+          <Users className="mx-auto h-10 w-10 text-slate-300 mb-2" />
+          <p className="text-xs font-semibold text-slate-500">
+            No registered customers found.
+          </p>
+        </div>
+      ) : (
+        <div className="rounded-2xl border border-slate-200 bg-white shadow-2xs overflow-hidden dark:border-slate-800 dark:bg-slate-900">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-160 text-left text-xs text-slate-600 dark:text-slate-300">
-              <thead className="border-b border-slate-200 bg-slate-50/70 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:border-slate-800 dark:bg-slate-800/90 dark:text-slate-200">
+            <table className="w-full text-left text-xs text-slate-600 dark:text-slate-300">
+              <thead className="bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-slate-500 border-b border-slate-200 dark:bg-slate-800/80 dark:border-slate-800 dark:text-slate-400">
                 <tr>
-                  <th scope="col" className="py-3.5 px-4">
-                    Customer
-                  </th>
-                  <th scope="col" className="py-3.5 px-4">
-                    Contact Details
-                  </th>
-                  <th scope="col" className="py-3.5 px-4">
-                    Default Address
-                  </th>
-                  <th scope="col" className="py-3.5 px-4">
-                    Account Role
-                  </th>
-                  <th scope="col" className="py-3.5 px-4 text-right">
-                    Joined Date
-                  </th>
+                  <th className="py-3 px-4">Customer Name</th>
+                  <th className="py-3 px-4">Email Address</th>
+                  <th className="py-3 px-4">Phone Number</th>
+                  <th className="py-3 px-4">Joined Date</th>
+                  <th className="py-3 px-4 text-right">Role</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {filteredUsers.map((u) => (
+                {users.map((usr) => (
                   <tr
-                    key={u._id}
-                    className="transition hover:bg-slate-50/60 dark:hover:bg-slate-800/50"
+                    key={usr._id}
+                    className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition"
                   >
-                    {/* Customer */}
-                    <td className="py-3 px-4">
-                      <div className="flex items-center gap-2.5 sm:gap-3">
-                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-900 text-xs font-bold text-white uppercase dark:bg-slate-800">
-                          {u.name ? u.name.charAt(0) : "U"}
-                        </div>
-                        <div className="min-w-0">
-                          <h4 className="font-bold text-slate-900 dark:text-white text-xs sm:text-sm truncate max-w-40">
-                            {u.name}
-                          </h4>
-                          <span className="text-[10px] text-slate-400 dark:text-slate-400 font-mono">
-                            ID: {u._id.slice(-6)}
-                          </span>
-                        </div>
-                      </div>
+                    <td className="py-3 px-4 font-bold text-slate-900 dark:text-white">
+                      {usr.name}
                     </td>
-
-                    {/* Contact Details */}
-                    <td className="py-3 px-4">
-                      <div className="flex flex-col space-y-0.5">
-                        <div className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300">
-                          <Mail className="h-3 w-3 text-slate-400 dark:text-slate-500 shrink-0" />
-                          <span className="truncate max-w-44">{u.email}</span>
-                        </div>
-                        {u.phone && (
-                          <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
-                            <Phone className="h-3 w-3 text-slate-400 dark:text-slate-500 shrink-0" />
-                            <span>{u.phone}</span>
-                          </div>
-                        )}
-                      </div>
+                    <td className="py-3 px-4 flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
+                      <Mail className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                      <span>{usr.email}</span>
                     </td>
-
-                    {/* Default Address */}
                     <td className="py-3 px-4">
-                      {u.address?.city ? (
-                        <div className="flex items-start gap-1.5 text-slate-600 dark:text-slate-300 max-w-48">
-                          <MapPin className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500 shrink-0 mt-0.5" />
-                          <span className="truncate">
-                            {u.address.city}, {u.address.state}
-                          </span>
-                        </div>
+                      {usr.phone ? (
+                        <span className="inline-flex items-center gap-1.5">
+                          <Phone className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                          <span>{usr.phone}</span>
+                        </span>
                       ) : (
-                        <span className="text-[11px] text-slate-400 dark:text-slate-500 italic">
-                          No address saved
+                        <span className="text-slate-400 italic">
+                          Not provided
                         </span>
                       )}
                     </td>
-
-                    {/* Account Role */}
                     <td className="py-3 px-4">
-                      {u.role === "admin" ? (
-                        <span className="inline-flex items-center gap-1 rounded-md bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-brand-blue uppercase tracking-wider dark:bg-blue-950/60 dark:text-cyan-400">
-                          <Shield className="h-3 w-3" />
-                          Admin
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600 uppercase tracking-wider dark:bg-slate-800 dark:text-slate-300">
-                          <UserCheck className="h-3 w-3" />
-                          Customer
-                        </span>
-                      )}
-                    </td>
-
-                    {/* Joined Date */}
-                    <td className="py-3 px-4 text-right">
-                      <div className="flex items-center justify-end gap-1.5 text-slate-500 dark:text-slate-400 text-[11px]">
-                        <Calendar className="h-3 w-3" />
+                      <span className="inline-flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
+                        <Calendar className="h-3.5 w-3.5 shrink-0" />
                         <span>
-                          {new Date(u.createdAt).toLocaleDateString()}
+                          {new Date(usr.createdAt).toLocaleDateString()}
                         </span>
-                      </div>
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-right">
+                      <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-[10px] font-bold text-brand-blue uppercase dark:bg-blue-950/60 dark:text-cyan-400">
+                        {usr.role}
+                      </span>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </main>
   );
 }

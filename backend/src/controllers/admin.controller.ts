@@ -9,6 +9,7 @@ import {
   OrderStatus,
 } from "../utils/validators.js";
 
+// GET /api/admin/stats (Admin Analytics Summary)
 export const getDashboardStats = async (
   _req: Request,
   res: Response,
@@ -61,6 +62,7 @@ export const getDashboardStats = async (
   }
 };
 
+// GET /api/admin/users
 export const getAllUsers = async (
   req: Request,
   res: Response,
@@ -102,6 +104,7 @@ export const getAllUsers = async (
   }
 };
 
+// GET /api/admin/products
 export const getAdminProducts = async (
   req: Request,
   res: Response,
@@ -111,7 +114,7 @@ export const getAdminProducts = async (
     const page = Math.max(1, parseInt(req.query.page as string, 10) || 1);
     const limit = Math.max(1, parseInt(req.query.limit as string, 10) || 20);
     const search = (req.query.search as string)?.trim();
-    const status = req.query.status as string; // 'all' | 'active' | 'inactive' | 'low_stock'
+    const status = req.query.status as string;
     const skip = (page - 1) * limit;
 
     const filter: Record<string, any> = {};
@@ -154,6 +157,7 @@ export const getAdminProducts = async (
   }
 };
 
+// PATCH /api/admin/products/:id/toggle-status
 export const toggleProductStatus = async (
   req: Request<{ id: string }>,
   res: Response,
@@ -181,6 +185,7 @@ export const toggleProductStatus = async (
   }
 };
 
+// GET /api/admin/orders
 export const getAdminOrders = async (
   req: Request,
   res: Response,
@@ -230,6 +235,7 @@ export const getAdminOrders = async (
   }
 };
 
+// PATCH /api/admin/orders/:id/status (Strict State Machine & Restock Guard)
 export const updateOrderStatus = async (
   req: Request<{ id: string }>,
   res: Response,
@@ -240,7 +246,17 @@ export const updateOrderStatus = async (
 
   try {
     const { id } = req.params;
-    const validatedData = updateOrderStatusSchema.parse(req.body);
+    const validationResult = updateOrderStatusSchema.safeParse(req.body);
+    if (!validationResult.success) {
+      await session.abortTransaction();
+      res.status(400).json({
+        success: false,
+        message: validationResult.error.issues[0].message,
+      });
+      return;
+    }
+
+    const validatedData = validationResult.data;
 
     const order = await Order.findById(id).session(session);
     if (!order) {
@@ -282,6 +298,12 @@ export const updateOrderStatus = async (
           { session },
         );
       }
+      order.cancelledAt = new Date();
+    }
+
+    if (nextStatus === "delivered") {
+      order.deliveredAt = new Date();
+      order.paymentStatus = "paid";
     }
 
     order.orderStatus = nextStatus;
