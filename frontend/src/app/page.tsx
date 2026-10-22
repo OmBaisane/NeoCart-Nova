@@ -13,6 +13,7 @@ import {
   Sparkles,
   Layers,
   Loader2,
+  CheckCircle2,
 } from "lucide-react";
 
 interface CategoryItem {
@@ -44,34 +45,34 @@ export default function HomePage() {
 
   return (
     <main className="flex flex-col gap-12 sm:gap-16 pb-12 sm:pb-20">
-      {/* 1. Perfectly Fitted Viewport Hero Section */}
-      <section className="relative flex min-h-[calc(100vh-4rem)] items-center overflow-hidden bg-brand-indigo px-4 py-12 text-white sm:px-6 lg:px-8 border-b border-slate-800/80">
-        <div className="absolute -top-16 -left-20 h-72 w-72 sm:h-96 sm:w-96 rounded-full bg-blue-600/20 blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-20 right-0 h-72 w-72 sm:h-96 sm:w-96 rounded-full bg-cyan-400/15 blur-3xl pointer-events-none" />
+      {/* 1. Clean & Balanced Hero Section */}
+      <section className="relative flex min-h-[70vh] items-center overflow-hidden bg-brand-indigo px-4 py-12 text-white sm:px-6 lg:px-8 border-b border-slate-800/80">
+        <div className="absolute top-0 left-1/4 h-64 w-64 rounded-full bg-blue-600/15 blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 right-1/4 h-64 w-64 rounded-full bg-cyan-400/10 blur-3xl pointer-events-none" />
 
-        <div className="relative mx-auto max-w-7xl w-full">
-          <div className="max-w-2xl space-y-4 sm:space-y-6">
-            <div className="inline-flex items-center gap-2 rounded-full border border-slate-700/80 bg-slate-900/90 px-3.5 py-1.5 text-[11px] sm:text-xs font-semibold text-cyan-400 shadow-inner">
+        <div className="relative mx-auto max-w-7xl w-full text-center py-8">
+          <div className="max-w-3xl mx-auto space-y-5">
+            <div className="inline-flex items-center gap-2 rounded-full border border-slate-700/80 bg-slate-900/90 px-3.5 py-1.5 text-xs font-semibold text-cyan-400 shadow-sm">
               <Sparkles className="h-3.5 w-3.5 text-cyan-400 shrink-0" />
               <span>Next-Gen Full-Stack E-Commerce</span>
             </div>
 
-            <h1 className="text-3xl font-extrabold tracking-tight text-white sm:text-5xl lg:text-6xl sm:leading-tight">
+            <h1 className="text-3xl font-extrabold tracking-tight text-white sm:text-5xl lg:text-6xl leading-tight">
               Curated gear,{" "}
-              <span className="bg-linear-to-r from-blue-500 via-cyan-400 to-cyan-300 bg-clip-text text-transparent drop-shadow-sm">
+              <span className="bg-linear-to-r from-blue-400 via-cyan-300 to-teal-300 bg-clip-text text-transparent">
                 verified delivery.
               </span>
             </h1>
 
-            <p className="text-xs sm:text-base leading-relaxed text-slate-300 font-normal max-w-xl">
+            <p className="text-xs sm:text-base leading-relaxed text-slate-300 font-normal max-w-xl mx-auto">
               Engineered with zero-trust server validation, live inventory
               tracking, and authenticated Cash on Delivery checkouts.
             </p>
 
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 pt-2">
+            <div className="flex flex-wrap items-center justify-center gap-3 pt-3">
               <Link
                 href="/products"
-                className="flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-3 sm:py-3.5 text-xs sm:text-sm font-bold text-white shadow-lg shadow-blue-500/25 transition hover:bg-blue-500 active:scale-[0.98]"
+                className="flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-3.5 text-xs sm:text-sm font-bold text-white shadow-lg shadow-blue-500/20 transition hover:bg-blue-500 active:scale-[0.98]"
               >
                 <span>Browse Catalog</span>
                 <ArrowRight className="h-4 w-4" />
@@ -79,10 +80,24 @@ export default function HomePage() {
 
               <Link
                 href="/products?sort=newest"
-                className="flex items-center justify-center rounded-xl border border-slate-700 bg-slate-800/90 px-6 py-3 sm:py-3.5 text-xs sm:text-sm font-semibold text-slate-200 transition hover:bg-slate-700 hover:text-white"
+                className="flex items-center justify-center rounded-xl border border-slate-700 bg-slate-800/90 px-6 py-3.5 text-xs sm:text-sm font-semibold text-slate-200 transition hover:bg-slate-700 hover:text-white"
               >
                 New Arrivals
               </Link>
+            </div>
+
+            <div className="pt-6 flex flex-wrap items-center justify-center gap-6 text-xs text-slate-400">
+              <span className="flex items-center gap-1.5">
+                <CheckCircle2 className="h-4 w-4 text-emerald-400" /> Live Stock
+                Sync
+              </span>
+              <span className="flex items-center gap-1.5">
+                <CheckCircle2 className="h-4 w-4 text-emerald-400" /> Secure COD
+              </span>
+              <span className="flex items-center gap-1.5">
+                <CheckCircle2 className="h-4 w-4 text-emerald-400" /> Verified
+                Reviews
+              </span>
             </div>
           </div>
         </div>
@@ -91,9 +106,9 @@ export default function HomePage() {
       {/* 2. Value Propositions Bar */}
       <section className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8 w-full">
         <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
-          <div className="flex items-center gap-3.5 sm:gap-4 rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-xs dark:border-slate-800 dark:bg-slate-900">
-            <div className="flex h-11 w-11 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950/60 dark:text-cyan-400">
-              <Truck className="h-5 w-5 sm:h-6 sm:w-6" />
+          <div className="flex items-center gap-3.5 sm:gap-4 rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-2xs dark:border-slate-800 dark:bg-slate-900">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950/60 dark:text-cyan-400">
+              <Truck className="h-5 w-5" />
             </div>
             <div>
               <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
@@ -105,9 +120,9 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3.5 sm:gap-4 rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-xs dark:border-slate-800 dark:bg-slate-900">
-            <div className="flex h-11 w-11 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-xl bg-cyan-50 text-cyan-600 dark:bg-cyan-950/60 dark:text-cyan-400">
-              <ShieldCheck className="h-5 w-5 sm:h-6 sm:w-6" />
+          <div className="flex items-center gap-3.5 sm:gap-4 rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-2xs dark:border-slate-800 dark:bg-slate-900">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-cyan-50 text-cyan-600 dark:bg-cyan-950/60 dark:text-cyan-400">
+              <ShieldCheck className="h-5 w-5" />
             </div>
             <div>
               <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
@@ -119,9 +134,9 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3.5 sm:gap-4 rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-xs dark:border-slate-800 dark:bg-slate-900">
-            <div className="flex h-11 w-11 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-950/60 dark:text-indigo-400">
-              <RotateCcw className="h-5 w-5 sm:h-6 sm:w-6" />
+          <div className="flex items-center gap-3.5 sm:gap-4 rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-2xs dark:border-slate-800 dark:bg-slate-900">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-950/60 dark:text-indigo-400">
+              <RotateCcw className="h-5 w-5" />
             </div>
             <div>
               <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
@@ -133,9 +148,9 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3.5 sm:gap-4 rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-xs dark:border-slate-800 dark:bg-slate-900">
-            <div className="flex h-11 w-11 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600 dark:bg-amber-950/60 dark:text-amber-400">
-              <Sparkles className="h-5 w-5 sm:h-6 sm:w-6" />
+          <div className="flex items-center gap-3.5 sm:gap-4 rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-2xs dark:border-slate-800 dark:bg-slate-900">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600 dark:bg-amber-950/60 dark:text-amber-400">
+              <Sparkles className="h-5 w-5" />
             </div>
             <div>
               <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
@@ -179,7 +194,7 @@ export default function HomePage() {
               <Link
                 key={cat._id}
                 href={`/products?category=${cat.slug}`}
-                className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2 sm:px-4 sm:py-2.5 text-xs font-semibold text-slate-700 shadow-xs transition hover:border-blue-600 hover:text-blue-600 hover:shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-cyan-500 dark:hover:text-cyan-400"
+                className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2 sm:px-4 sm:py-2.5 text-xs font-semibold text-slate-700 shadow-2xs transition hover:border-blue-600 hover:text-blue-600 hover:shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-cyan-500 dark:hover:text-cyan-400"
               >
                 <Layers className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500 shrink-0" />
                 <span>{cat.name}</span>
