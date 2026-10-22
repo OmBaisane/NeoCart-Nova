@@ -6,6 +6,8 @@ export interface IReview extends Document {
   product: Types.ObjectId;
   rating: number;
   comment: string;
+  images: string[];
+  isVerifiedPurchase: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -40,6 +42,20 @@ const reviewSchema = new Schema<IReview, IReviewModel>(
       trim: true,
       maxlength: [500, "Comment cannot exceed 500 characters"],
     },
+    images: {
+      type: [String],
+      default: [],
+      validate: {
+        validator: function (v: string[]) {
+          return v.length <= 3;
+        },
+        message: "A review cannot exceed 3 attached proof images",
+      },
+    },
+    isVerifiedPurchase: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,
@@ -68,12 +84,13 @@ reviewSchema.statics.calculateAverageRating = async function (
 
   if (stats.length > 0) {
     await Product.findByIdAndUpdate(productId, {
+      numReviews: stats[0].nRating,
       reviewCount: stats[0].nRating,
-      rating: Math.round(stats[0].avgRating * 10) / 10, // Round to 1 decimal point e.g., 4.5
+      rating: Math.round(stats[0].avgRating * 10) / 10,
     });
   } else {
-    // If all reviews are deleted, reset to 0
     await Product.findByIdAndUpdate(productId, {
+      numReviews: 0,
       reviewCount: 0,
       rating: 0,
     });

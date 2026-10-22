@@ -205,6 +205,10 @@ export const createReviewSchema = z.object({
     .trim()
     .min(3, "Comment must be at least 3 characters")
     .max(500, "Comment cannot exceed 500 characters"),
+  images: z
+    .array(z.string().url("Each review image must be a valid URL"))
+    .max(3, "Cannot upload more than 3 proof images")
+    .optional(),
 });
 
 export const updateReviewSchema = z.object({
@@ -219,6 +223,10 @@ export const updateReviewSchema = z.object({
     .trim()
     .min(3, "Comment must be at least 3 characters")
     .max(500, "Comment cannot exceed 500 characters")
+    .optional(),
+  images: z
+    .array(z.string().url("Each review image must be a valid URL"))
+    .max(3, "Cannot upload more than 3 proof images")
     .optional(),
 });
 

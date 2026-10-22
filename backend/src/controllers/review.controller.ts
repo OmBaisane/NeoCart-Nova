@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import mongoose from "mongoose";
 import { Review, IReviewModel } from "../models/review.model.js";
 import { Product } from "../models/product.model.js";
+import { Order } from "../models/order.model.js";
 import { createReviewSchema, updateReviewSchema } from "../utils/validators.js";
 
 // GET /api/products/:productId/reviews (Public)
@@ -62,9 +63,9 @@ export const createReview = async (
       return;
     }
 
-    const { rating, comment } = validationResult.data;
+    const { rating, comment, images } = validationResult.data;
 
-    // 1. Verify product exists
+    // 1. Verify product exists and active
     const product = await Product.findById(productId);
     if (!product || !product.isActive) {
       res.status(404).json({
@@ -84,21 +85,31 @@ export const createReview = async (
       res.status(400).json({
         success: false,
         message:
-          "You have already reviewed this product. You can edit your existing review.",
+          "You have already reviewed this product. You can update your existing review.",
       });
       return;
     }
 
-    // 3. Create review instance
+    // 3. Verification Guard: Did user purchase and receive this item?
+    const deliveredOrder = await Order.findOne({
+      user: userId,
+      orderStatus: "delivered",
+      "items.product": new mongoose.Types.ObjectId(productId as string),
+    });
+
+    const isVerifiedPurchase = Boolean(deliveredOrder);
+
+    // 4. Create review document
     const review = new Review({
       user: userId,
       product: new mongoose.Types.ObjectId(productId as string),
       rating,
       comment,
+      images: images || [],
+      isVerifiedPurchase,
     });
 
-    await review.save(); // Triggers post('save') to update Product rating
-
+    await review.save(); // Triggers post('save') to update Product average rating
     await review.populate("user", "name avatar");
 
     res.status(201).json({
@@ -156,12 +167,12 @@ export const updateReview = async (
       return;
     }
 
-    const { rating, comment } = validationResult.data;
+    const { rating, comment, images } = validationResult.data;
     if (rating !== undefined) review.rating = rating;
     if (comment !== undefined) review.comment = comment;
+    if (images !== undefined) review.images = images;
 
     await review.save(); // Triggers post('save') average rating update
-
     await review.populate("user", "name avatar");
 
     res.status(200).json({
