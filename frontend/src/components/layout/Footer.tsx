@@ -3,7 +3,7 @@ import { Logo } from "./Logo";
 
 export const Footer = () => {
   return (
-    <footer className="border-t border-slate-200 bg-brand-dark text-slate-400 transition-colors duration-200 dark:border-slate-800 dark:bg-slate-950">
+    <footer className="border-t border-slate-200 bg-slate-900 text-slate-400 transition-colors duration-200 dark:border-slate-800 dark:bg-slate-950">
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 gap-8 md:grid-cols-4">
           {/* Brand Info */}

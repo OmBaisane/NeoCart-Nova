@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { ProductCard, ProductItem } from "@/components/ui/ProductCard";
 import { ProductGridSkeleton } from "@/components/ui/Skeletons";
+import { RecentlyViewedSection } from "@/components/ui/RecentlyViewed";
 import {
   ArrowRight,
   ShieldCheck,
@@ -258,6 +259,9 @@ export default function HomePage() {
           </div>
         )}
       </section>
+
+      {/* 5. Recently Viewed Section */}
+      <RecentlyViewedSection />
     </main>
   );
 }
