@@ -3,6 +3,20 @@ import mongoose from "mongoose";
 import { Wishlist } from "../models/wishlist.model.js";
 import { Product } from "../models/product.model.js";
 
+// Helper interface for populated product
+interface PopulatedProduct {
+  _id: mongoose.Types.ObjectId;
+  name: string;
+  slug: string;
+  price: number;
+  discountPrice?: number;
+  images: string[];
+  stock: number;
+  rating: number;
+  reviewCount: number;
+  isActive: boolean;
+}
+
 // GET /api/wishlist (Protected)
 export const getWishlist = async (
   req: Request,
@@ -22,7 +36,10 @@ export const getWishlist = async (
       wishlist = await Wishlist.create({ user: userId, products: [] });
     }
 
-    const validProducts = wishlist.products.filter((p: any) => p && p.isActive);
+    // Safely cast and filter active products without using 'any'
+    const populatedProducts =
+      wishlist.products as unknown as PopulatedProduct[];
+    const validProducts = populatedProducts.filter((p) => p && p.isActive);
 
     res.status(200).json({
       success: true,

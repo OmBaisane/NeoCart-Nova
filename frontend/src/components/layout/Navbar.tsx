@@ -22,6 +22,7 @@ import {
   Loader2,
   ArrowRight,
   Layers,
+  Heart,
 } from "lucide-react";
 
 interface CategoryItem {
@@ -112,6 +113,19 @@ export const Navbar = () => {
   });
 
   const cartItemCount = cartData?.totalItems || 0;
+
+  // Wishlist total items count
+  const { data: wishlistData } = useQuery({
+    queryKey: ["wishlist"],
+    queryFn: async () => {
+      const res = await api.get("/wishlist");
+      return res.data;
+    },
+    enabled: !!user,
+    staleTime: 1000 * 60,
+  });
+
+  const wishlistItemCount = wishlistData?.count || 0;
 
   // Fetch navigation categories
   const { data: categories } = useQuery<CategoryItem[]>({
@@ -297,6 +311,20 @@ export const Navbar = () => {
         <div className="flex items-center gap-3 shrink-0">
           {/* Theme Switcher Toggle */}
           <ThemeToggle />
+
+          {/* Wishlist Icon CTA */}
+          <Link
+            href="/wishlist"
+            className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200/80 text-slate-700 transition hover:bg-slate-100 hover:text-slate-900 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
+            aria-label="Wishlist"
+          >
+            <Heart className="h-4 w-4" />
+            {wishlistItemCount > 0 && (
+              <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-extrabold text-white">
+                {wishlistItemCount}
+              </span>
+            )}
+          </Link>
 
           {/* Cart Icon CTA */}
           <Link
