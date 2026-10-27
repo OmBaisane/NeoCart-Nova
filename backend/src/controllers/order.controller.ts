@@ -6,6 +6,8 @@ import { Product } from "../models/product.model.js";
 import {
   createOrderSchema,
   updateOrderStatusSchema,
+  ALLOWED_STATUS_TRANSITIONS,
+  OrderStatus,
 } from "../utils/validators.js";
 
 // Generates a unique human-readable tracking number
@@ -16,7 +18,7 @@ const generateTrackingNumber = (): string => {
 };
 
 // Check if current MongoDB deployment supports multi-document transactions
-const isReplicaSet = (): boolean => {
+export const isReplicaSet = (): boolean => {
   const client = mongoose.connection.getClient();
   return !!(
     client?.options?.replicaSet ||
@@ -141,7 +143,7 @@ export const createOrder = async (
 
     const trackingNumber = generateTrackingNumber();
 
-    // 3. Create order document using model instance (type-safe for union literals and sessions)
+    // 3. Create order document using model instance
     const order = new Order({
       user: userId,
       items: orderItems,
@@ -159,7 +161,7 @@ export const createOrder = async (
 
     await order.save({ session: session || undefined });
 
-    // 4. Clear user's cart
+    // 4. Clear user's cart atomically within the checkout boundary
     cart.items = [];
     cart.totalItems = 0;
     cart.subtotal = 0;
@@ -178,7 +180,6 @@ export const createOrder = async (
     if (session) {
       await session.abortTransaction();
     } else {
-      // Manual rollback in case of unexpected exception
       for (const reserved of reservedProducts) {
         await Product.findByIdAndUpdate(reserved.id, {
           $inc: { stock: reserved.quantity },
@@ -257,7 +258,7 @@ export const getOrderById = async (
   }
 };
 
-// PATCH /api/orders/:id/cancel (Protected - Customer Cancellation)
+// PATCH /api/orders/:id/cancel (Protected - Customer & Admin Cancellation with Exactly-Once Restock Guard)
 export const cancelOrder = async (
   req: Request,
   res: Response,
@@ -277,7 +278,7 @@ export const cancelOrder = async (
       query.user = userId;
     }
 
-    // Atomically transition status to prevent double-cancellation
+    // Atomically transition status to prevent double-cancellation and race conditions
     const order = await Order.findOneAndUpdate(
       query,
       {
@@ -298,7 +299,7 @@ export const cancelOrder = async (
       return;
     }
 
-    // Restock all items
+    // Restock all items exactly once
     for (const item of order.items) {
       await Product.findByIdAndUpdate(item.product, {
         $inc: { stock: item.quantity },
@@ -315,15 +316,20 @@ export const cancelOrder = async (
   }
 };
 
-// PATCH /api/orders/:id/status (Admin Only - Status & Restock Management)
+// PATCH /api/orders/:id/status (Admin Only - Strict State Machine & Replicaset-Safe Transitions)
 export const updateOrderStatus = async (
   req: Request,
   res: Response,
   next: NextFunction,
 ): Promise<void> => {
+  const canUseTransactions = isReplicaSet();
+  const session = canUseTransactions ? await mongoose.startSession() : null;
+  if (session) session.startTransaction();
+
   try {
     const validationResult = updateOrderStatusSchema.safeParse(req.body);
     if (!validationResult.success) {
+      if (session) await session.abortTransaction();
       res.status(400).json({
         success: false,
         message: validationResult.error.issues[0].message,
@@ -334,8 +340,11 @@ export const updateOrderStatus = async (
     const { orderStatus, paymentStatus, trackingNumber } =
       validationResult.data;
 
-    const order = await Order.findById(req.params.id);
+    const order = await (session
+      ? Order.findById(req.params.id).session(session)
+      : Order.findById(req.params.id));
     if (!order) {
+      if (session) await session.abortTransaction();
       res.status(404).json({
         success: false,
         message: "Order not found",
@@ -343,41 +352,79 @@ export const updateOrderStatus = async (
       return;
     }
 
-    const previousStatus = order.orderStatus;
+    if (!order) {
+      if (session) await session.abortTransaction();
+      res.status(404).json({
+        success: false,
+        message: "Order not found",
+      });
+      return;
+    }
 
-    // Guard: If admin cancels an order that was NOT cancelled before -> Restock inventory!
-    if (orderStatus === "cancelled" && previousStatus !== "cancelled") {
+    if (
+      order.orderStatus === "cancelled" ||
+      order.orderStatus === "delivered"
+    ) {
+      if (session) await session.abortTransaction();
+      res.status(400).json({
+        success: false,
+        message: `Cannot change status of an already ${order.orderStatus} order`,
+      });
+      return;
+    }
+
+    const currentStatus = order.orderStatus as OrderStatus;
+    const nextStatus = orderStatus as OrderStatus;
+    const allowedTransitions = ALLOWED_STATUS_TRANSITIONS[currentStatus] || [];
+
+    if (!allowedTransitions.includes(nextStatus)) {
+      if (session) await session.abortTransaction();
+      res.status(400).json({
+        success: false,
+        message: `Invalid transition from "${currentStatus}" to "${nextStatus}". Permitted transitions: ${allowedTransitions.join(", ") || "none"}`,
+      });
+      return;
+    }
+
+    // If transitioned to 'cancelled' from active state, restock items exactly once
+    if (nextStatus === "cancelled") {
       for (const item of order.items) {
-        await Product.findByIdAndUpdate(item.product, {
-          $inc: { stock: item.quantity },
-        });
+        await Product.findByIdAndUpdate(
+          item.product,
+          { $inc: { stock: item.quantity } },
+          { session: session || undefined },
+        );
       }
       order.cancelledAt = new Date();
     }
 
-    order.orderStatus = orderStatus;
+    if (nextStatus === "delivered") {
+      order.deliveredAt = new Date();
+      order.paymentStatus = "paid";
+    }
+
+    order.orderStatus = nextStatus;
 
     if (paymentStatus) {
       order.paymentStatus = paymentStatus;
     }
 
-    if (trackingNumber) {
+    if (trackingNumber !== undefined) {
       order.trackingNumber = trackingNumber;
     }
 
-    if (orderStatus === "delivered") {
-      order.deliveredAt = new Date();
-      order.paymentStatus = "paid";
-    }
-
-    await order.save();
+    await order.save({ session: session || undefined });
+    if (session) await session.commitTransaction();
 
     res.status(200).json({
       success: true,
-      message: "Order status updated successfully.",
+      message: `Order status successfully updated to ${nextStatus}`,
       order,
     });
   } catch (error) {
+    if (session) await session.abortTransaction();
     next(error);
+  } finally {
+    if (session) session.endSession();
   }
 };

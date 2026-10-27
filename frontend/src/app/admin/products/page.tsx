@@ -1,19 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
-import {
-  Package,
-  Search,
-  Plus,
-  ToggleLeft,
-  ToggleRight,
-  AlertTriangle,
-  Loader2,
-  Layers,
-} from "lucide-react";
+import { Package, Search, Plus, AlertTriangle, Loader2 } from "lucide-react";
 
 interface AdminProduct {
   _id: string;

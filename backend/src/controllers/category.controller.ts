@@ -6,15 +6,17 @@ import {
 } from "../utils/validators.js";
 import { Product } from "../models/product.model.js";
 
-// GET /api/categories (Public)
+// GET /api/categories (Public with Admin Privileges Guard)
 export const getCategories = async (
   req: Request,
   res: Response,
   next: NextFunction,
 ): Promise<void> => {
   try {
-    // Customers only see active categories, admins can see all via query
-    const filter = req.query.all === "true" ? {} : { isActive: true };
+    // Only authenticated admins are allowed to retrieve inactive categories via query parameter (?all=true)
+    const isAdmin = req.user?.role === "admin";
+    const filter =
+      isAdmin && req.query.all === "true" ? {} : { isActive: true };
     const categories = await Category.find(filter).sort({ name: 1 });
 
     res.status(200).json({
@@ -27,14 +29,20 @@ export const getCategories = async (
   }
 };
 
-// GET /api/categories/:id (Public)
+// GET /api/categories/:id (Public with Inactive Masking for Non-Admins)
 export const getCategoryById = async (
   req: Request,
   res: Response,
   next: NextFunction,
 ): Promise<void> => {
   try {
-    const category = await Category.findById(req.params.id);
+    const isAdmin = req.user?.role === "admin";
+    const filter: Record<string, unknown> = { _id: req.params.id };
+    if (!isAdmin) {
+      filter.isActive = true;
+    }
+
+    const category = await Category.findOne(filter);
 
     if (!category) {
       res.status(404).json({

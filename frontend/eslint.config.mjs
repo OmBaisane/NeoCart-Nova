@@ -14,7 +14,7 @@ const eslintConfig = defineConfig([
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
       ],
       "react-hooks/set-state-in-effect": "off",
-      "@next/next/no-img-element": "warn",
+      "@next/next/no-img-element": "off",
     },
   },
 ]);

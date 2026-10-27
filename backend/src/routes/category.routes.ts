@@ -6,13 +6,17 @@ import {
   updateCategory,
   deleteCategory,
 } from "../controllers/category.controller.js";
-import { protect, adminOnly } from "../middleware/auth.middleware.js";
+import {
+  protect,
+  optionalProtect,
+  adminOnly,
+} from "../middleware/auth.middleware.js";
 
 const router = Router();
 
-// Public routes
-router.get("/", getCategories);
-router.get("/:id", getCategoryById);
+// Public routes (with optional auth extraction for privileged filters)
+router.get("/", optionalProtect, getCategories);
+router.get("/:id", optionalProtect, getCategoryById);
 
 // Admin-protected routes
 router.post("/", protect, adminOnly, createCategory);

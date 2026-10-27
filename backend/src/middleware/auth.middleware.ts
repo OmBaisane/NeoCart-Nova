@@ -10,7 +10,7 @@ export const protect = async (
   try {
     let token: string | undefined = req.cookies?.token;
 
-    // Fallback support for Authorization: Bearer <token> header (useful for API testing tools)
+    // Fallback support for Authorization: Bearer <token> header
     if (!token && req.headers.authorization?.startsWith("Bearer ")) {
       token = req.headers.authorization.split(" ")[1];
     }
@@ -46,6 +46,35 @@ export const protect = async (
       message: "Invalid or expired session. Please log in again.",
     });
   }
+};
+
+/**
+ * Optional authentication: extracts req.user if a valid token is present,
+ * but does not reject anonymous visitors with 401.
+ */
+export const optionalProtect = async (
+  req: Request,
+  _res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    let token: string | undefined = req.cookies?.token;
+
+    if (!token && req.headers.authorization?.startsWith("Bearer ")) {
+      token = req.headers.authorization.split(" ")[1];
+    }
+
+    if (token) {
+      const decoded = verifyToken(token);
+      const currentUser = await User.findById(decoded.userId);
+      if (currentUser) {
+        req.user = currentUser;
+      }
+    }
+  } catch {
+    // Silently continue for unauthenticated visitors
+  }
+  next();
 };
 
 export const adminOnly = (

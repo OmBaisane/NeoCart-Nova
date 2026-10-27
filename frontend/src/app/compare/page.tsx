@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { ProductItem } from "@/components/ui/ProductCard";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { Scale, Trash2, ArrowRight, Loader2, Star } from "lucide-react";
+import { Scale, Trash2, Loader2, Star } from "lucide-react";
 
 export default function ComparePage() {
   const [compareIds, setCompareIds] = useState<string[]>([]);
@@ -144,7 +144,7 @@ export default function ComparePage() {
                 <td className="p-4 font-bold bg-slate-50 dark:bg-slate-800/60">
                   Category
                 </td>
-                {products.map((p: any) => (
+                {products.map((p) => (
                   <td key={p._id} className="p-4 font-medium">
                     {p.category?.name || "General"}
                   </td>

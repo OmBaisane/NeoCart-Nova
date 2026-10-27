@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
@@ -14,7 +13,6 @@ import {
   ArrowRight,
   Loader2,
   ShieldAlert,
-  Clock,
 } from "lucide-react";
 
 interface AdminStats {

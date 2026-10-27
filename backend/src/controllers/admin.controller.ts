@@ -8,6 +8,7 @@ import {
   ALLOWED_STATUS_TRANSITIONS,
   OrderStatus,
 } from "../utils/validators.js";
+import { isReplicaSet } from "./order.controller.js";
 
 // GET /api/admin/stats (Admin Analytics Summary)
 export const getDashboardStats = async (
@@ -235,20 +236,21 @@ export const getAdminOrders = async (
   }
 };
 
-// PATCH /api/admin/orders/:id/status (Strict State Machine & Restock Guard)
+// PATCH /api/admin/orders/:id/status (Strict State Machine & Replicaset-Safe Restock Guard)
 export const updateOrderStatus = async (
   req: Request<{ id: string }>,
   res: Response,
   next: NextFunction,
 ): Promise<void> => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
+  const canUseTransactions = isReplicaSet();
+  const session = canUseTransactions ? await mongoose.startSession() : null;
+  if (session) session.startTransaction();
 
   try {
     const { id } = req.params;
     const validationResult = updateOrderStatusSchema.safeParse(req.body);
     if (!validationResult.success) {
-      await session.abortTransaction();
+      if (session) await session.abortTransaction();
       res.status(400).json({
         success: false,
         message: validationResult.error.issues[0].message,
@@ -258,9 +260,11 @@ export const updateOrderStatus = async (
 
     const validatedData = validationResult.data;
 
-    const order = await Order.findById(id).session(session);
+    const order = await (session
+      ? Order.findById(id).session(session)
+      : Order.findById(id));
     if (!order) {
-      await session.abortTransaction();
+      if (session) await session.abortTransaction();
       res.status(404).json({ success: false, message: "Order not found" });
       return;
     }
@@ -269,7 +273,7 @@ export const updateOrderStatus = async (
       order.orderStatus === "cancelled" ||
       order.orderStatus === "delivered"
     ) {
-      await session.abortTransaction();
+      if (session) await session.abortTransaction();
       res.status(400).json({
         success: false,
         message: `Cannot change status of an already ${order.orderStatus} order`,
@@ -282,7 +286,7 @@ export const updateOrderStatus = async (
     const allowedTransitions = ALLOWED_STATUS_TRANSITIONS[currentStatus] || [];
 
     if (!allowedTransitions.includes(nextStatus)) {
-      await session.abortTransaction();
+      if (session) await session.abortTransaction();
       res.status(400).json({
         success: false,
         message: `Invalid transition from "${currentStatus}" to "${nextStatus}". Permitted transitions: ${allowedTransitions.join(", ") || "none"}`,
@@ -295,7 +299,7 @@ export const updateOrderStatus = async (
         await Product.findByIdAndUpdate(
           item.product,
           { $inc: { stock: item.quantity } },
-          { session },
+          { session: session || undefined },
         );
       }
       order.cancelledAt = new Date();
@@ -314,8 +318,8 @@ export const updateOrderStatus = async (
       order.trackingNumber = validatedData.trackingNumber;
     }
 
-    await order.save({ session });
-    await session.commitTransaction();
+    await order.save({ session: session || undefined });
+    if (session) await session.commitTransaction();
 
     res.status(200).json({
       success: true,
@@ -323,9 +327,9 @@ export const updateOrderStatus = async (
       order,
     });
   } catch (error) {
-    await session.abortTransaction();
+    if (session) await session.abortTransaction();
     next(error);
   } finally {
-    await session.endSession();
+    if (session) session.endSession();
   }
 };
