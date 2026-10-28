@@ -5,6 +5,7 @@ import {
   createProductSchema,
   updateProductSchema,
 } from "../utils/validators.js";
+import { boundedPositiveInt, escapeRegex } from "../utils/querySafety.js";
 
 // GET /api/products (Public with Search, Filter, Sort, Pagination)
 export const getProducts = async (
@@ -55,10 +56,28 @@ export const getProducts = async (
     }
 
     // 3. Price Range Filtering
-    if (minPrice || maxPrice) {
+    if (minPrice !== undefined || maxPrice !== undefined) {
+      const parsedMin = minPrice === undefined ? undefined : Number(minPrice);
+      const parsedMax = maxPrice === undefined ? undefined : Number(maxPrice);
+      if (
+        (parsedMin !== undefined &&
+          (!Number.isFinite(parsedMin) || parsedMin < 0)) ||
+        (parsedMax !== undefined &&
+          (!Number.isFinite(parsedMax) || parsedMax < 0)) ||
+        (parsedMin !== undefined &&
+          parsedMax !== undefined &&
+          parsedMin > parsedMax)
+      ) {
+        res.status(400).json({
+          success: false,
+          message:
+            "Price filters must be non-negative numbers and minimum cannot exceed maximum.",
+        });
+        return;
+      }
       const priceFilter: Record<string, number> = {};
-      if (minPrice) priceFilter.$gte = Number(minPrice);
-      if (maxPrice) priceFilter.$lte = Number(maxPrice);
+      if (parsedMin !== undefined) priceFilter.$gte = parsedMin;
+      if (parsedMax !== undefined) priceFilter.$lte = parsedMax;
       query.price = priceFilter;
     }
 
@@ -75,8 +94,8 @@ export const getProducts = async (
     if (sort === "name-asc") sortOptions = { name: 1 };
 
     // 6. Pagination
-    const pageNumber = Math.max(1, parseInt(page as string, 10) || 1);
-    const limitNumber = Math.max(1, parseInt(limit as string, 10) || 12);
+    const pageNumber = boundedPositiveInt(page, 1, 1_000_000);
+    const limitNumber = boundedPositiveInt(limit, 12, 100);
     const skip = (pageNumber - 1) * limitNumber;
 
     const totalProducts = await Product.countDocuments(query);
@@ -321,14 +340,15 @@ export const getProductSuggestions = async (
   next: NextFunction,
 ): Promise<void> => {
   try {
-    const query = (req.query.q as string)?.trim();
+    const query =
+      typeof req.query.q === "string" ? req.query.q.trim().slice(0, 80) : "";
 
-    if (!query || query.length < 2) {
+    if (query.length < 2) {
       res.status(200).json({ success: true, suggestions: [] });
       return;
     }
 
-    const regex = new RegExp(query, "i");
+    const regex = new RegExp(escapeRegex(query), "i");
 
     const suggestions = await Product.find({
       isActive: true,

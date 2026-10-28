@@ -35,12 +35,18 @@ const seedDatabase = async () => {
     const demoUserPassword = getRequiredSeedEnv("SEED_DEMO_USER_PASSWORD");
     const demoUserPhone = getRequiredSeedEnv("SEED_DEMO_USER_PHONE");
 
+    if (process.env.SEED_ALLOW_RESET !== "true") {
+      throw new Error(
+        "Seeding deletes existing catalog, review, order, and demo-user data. Set SEED_ALLOW_RESET=true only for a disposable development database.",
+      );
+    }
+
     await connectDB();
     console.log(
-      "Connected to MongoDB. Purging existing development seed data...",
+      "Connected to MongoDB. Resetting data in the explicitly approved development database...",
     );
 
-    // Clean existing data for clean idempotent seed
+    // Clean existing data for a clean seed only after explicit opt-in.
     await Promise.all([
       User.deleteMany({ email: { $in: [adminEmail, demoUserEmail] } }),
       Category.deleteMany({}),

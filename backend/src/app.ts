@@ -30,11 +30,10 @@ app.use(
 app.use(
   cors({
     origin: (origin, callback) => {
-      const allowedOrigins = [
-        ENV.CLIENT_URL.trim(),
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-      ];
+      const allowedOrigins = [ENV.CLIENT_URL.trim()];
+      if (ENV.NODE_ENV !== "production") {
+        allowedOrigins.push("http://localhost:3000", "http://127.0.0.1:3000");
+      }
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {

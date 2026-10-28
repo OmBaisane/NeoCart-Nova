@@ -18,14 +18,25 @@ export const csrfProtection = (
   // Extract originating URL
   const originHeader = req.headers["origin"];
   const refererHeader = req.headers["referer"];
-  const requestOrigin =
-    originHeader || (refererHeader ? new URL(refererHeader).origin : null);
+  let requestOrigin: string | null = null;
+  try {
+    requestOrigin = originHeader
+      ? new URL(originHeader).origin
+      : refererHeader
+        ? new URL(refererHeader).origin
+        : null;
+  } catch {
+    res.status(403).json({
+      success: false,
+      message: "Cross-Site Request Forgery validation failed: Invalid origin.",
+    });
+    return;
+  }
 
-  const allowedOrigins = [
-    ENV.CLIENT_URL.trim(),
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-  ];
+  const allowedOrigins = [ENV.CLIENT_URL.trim()];
+  if (ENV.NODE_ENV !== "production") {
+    allowedOrigins.push("http://localhost:3000", "http://127.0.0.1:3000");
+  }
 
   // In production, require valid cross-origin header for state-changing calls
   if (ENV.NODE_ENV === "production") {

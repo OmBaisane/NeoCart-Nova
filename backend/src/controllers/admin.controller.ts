@@ -9,6 +9,7 @@ import {
   OrderStatus,
 } from "../utils/validators.js";
 import { isReplicaSet } from "./order.controller.js";
+import { boundedPositiveInt, escapeRegex } from "../utils/querySafety.js";
 
 // GET /api/admin/stats (Admin Analytics Summary)
 export const getDashboardStats = async (
@@ -70,16 +71,19 @@ export const getAllUsers = async (
   next: NextFunction,
 ): Promise<void> => {
   try {
-    const page = Math.max(1, parseInt(req.query.page as string, 10) || 1);
-    const limit = Math.max(1, parseInt(req.query.limit as string, 10) || 20);
-    const search = (req.query.search as string)?.trim();
+    const page = boundedPositiveInt(req.query.page, 1, 1_000_000);
+    const limit = boundedPositiveInt(req.query.limit, 20, 100);
+    const search =
+      typeof req.query.search === "string"
+        ? req.query.search.trim().slice(0, 80)
+        : "";
     const skip = (page - 1) * limit;
 
     const query: Record<string, any> = { role: "user" };
     if (search) {
       query.$or = [
-        { name: { $regex: search, $options: "i" } },
-        { email: { $regex: search, $options: "i" } },
+        { name: { $regex: escapeRegex(search), $options: "i" } },
+        { email: { $regex: escapeRegex(search), $options: "i" } },
       ];
     }
 
@@ -112,9 +116,12 @@ export const getAdminProducts = async (
   next: NextFunction,
 ): Promise<void> => {
   try {
-    const page = Math.max(1, parseInt(req.query.page as string, 10) || 1);
-    const limit = Math.max(1, parseInt(req.query.limit as string, 10) || 20);
-    const search = (req.query.search as string)?.trim();
+    const page = boundedPositiveInt(req.query.page, 1, 1_000_000);
+    const limit = boundedPositiveInt(req.query.limit, 20, 100);
+    const search =
+      typeof req.query.search === "string"
+        ? req.query.search.trim().slice(0, 80)
+        : "";
     const status = req.query.status as string;
     const skip = (page - 1) * limit;
 
@@ -122,8 +129,8 @@ export const getAdminProducts = async (
 
     if (search) {
       filter.$or = [
-        { name: { $regex: search, $options: "i" } },
-        { description: { $regex: search, $options: "i" } },
+        { name: { $regex: escapeRegex(search), $options: "i" } },
+        { description: { $regex: escapeRegex(search), $options: "i" } },
       ];
     }
 
@@ -193,10 +200,13 @@ export const getAdminOrders = async (
   next: NextFunction,
 ): Promise<void> => {
   try {
-    const page = Math.max(1, parseInt(req.query.page as string, 10) || 1);
-    const limit = Math.max(1, parseInt(req.query.limit as string, 10) || 20);
+    const page = boundedPositiveInt(req.query.page, 1, 1_000_000);
+    const limit = boundedPositiveInt(req.query.limit, 20, 100);
     const status = req.query.status as string;
-    const search = (req.query.search as string)?.trim();
+    const search =
+      typeof req.query.search === "string"
+        ? req.query.search.trim().slice(0, 80)
+        : "";
     const skip = (page - 1) * limit;
 
     const filter: Record<string, any> = {};
@@ -207,9 +217,19 @@ export const getAdminOrders = async (
 
     if (search) {
       filter.$or = [
-        { trackingNumber: { $regex: search, $options: "i" } },
-        { "shippingAddress.fullName": { $regex: search, $options: "i" } },
-        { "shippingAddress.city": { $regex: search, $options: "i" } },
+        { trackingNumber: { $regex: escapeRegex(search), $options: "i" } },
+        {
+          "shippingAddress.fullName": {
+            $regex: escapeRegex(search),
+            $options: "i",
+          },
+        },
+        {
+          "shippingAddress.city": {
+            $regex: escapeRegex(search),
+            $options: "i",
+          },
+        },
       ];
     }
 
