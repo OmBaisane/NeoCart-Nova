@@ -184,11 +184,18 @@ export const ALLOWED_STATUS_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
   cancelled: [],
 };
 
-export const updateOrderStatusSchema = z.object({
-  orderStatus: z.enum(ORDER_STATUSES),
-  paymentStatus: z.enum(["pending", "paid", "failed", "refunded"]).optional(),
-  trackingNumber: z.string().trim().optional(),
-});
+export const updateOrderStatusSchema = z
+  .object({
+    orderStatus: z.enum(ORDER_STATUSES),
+    paymentStatus: z.enum(["pending", "paid", "failed", "refunded"]).optional(),
+    trackingNumber: z
+      .string()
+      .trim()
+      .min(1, "Tracking number cannot be empty")
+      .max(80, "Tracking number cannot exceed 80 characters")
+      .optional(),
+  })
+  .strict();
 
 export type ShippingAddressInput = z.infer<typeof shippingAddressSchema>;
 export type CreateOrderInput = z.infer<typeof createOrderSchema>;

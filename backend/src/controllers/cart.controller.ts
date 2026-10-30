@@ -3,6 +3,48 @@ import { Cart, recalculateCart } from "../models/cart.model.js";
 import { Product } from "../models/product.model.js";
 import { addToCartSchema, updateCartItemSchema } from "../utils/validators.js";
 
+const handleCartWriteError = (
+  error: unknown,
+  res: Response,
+  next: NextFunction,
+): void => {
+  if (error instanceof Error && error.name === "VersionError") {
+    res.status(409).json({
+      success: false,
+      message:
+        "Your cart was updated by another request. Please refresh your cart and try again.",
+    });
+    return;
+  }
+
+  next(error);
+};
+
+// Safely find or create a cart, handling simultaneous first requests.
+const findOrCreateCart = async (userId: string) => {
+  const existingCart = await Cart.findOne({ user: userId });
+
+  if (existingCart) return existingCart;
+
+  try {
+    return await Cart.create({ user: userId, items: [] });
+  } catch (error) {
+    // Another request may have created this user's cart first.
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      error.code === 11000
+    ) {
+      const cart = await Cart.findOne({ user: userId });
+
+      if (cart) return cart;
+    }
+
+    throw error;
+  }
+};
+
 // GET /api/cart (Protected)
 export const getCart = async (
   req: Request,
@@ -10,27 +52,25 @@ export const getCart = async (
   next: NextFunction,
 ): Promise<void> => {
   try {
-    const userId = req.user!._id;
+    const userId = req.user!._id.toString();
 
-    let cart = await Cart.findOne({ user: userId }).populate({
+    const cart = await findOrCreateCart(userId);
+
+    await cart.populate({
       path: "items.product",
       select: "name slug price discountPrice images stock isActive",
     });
-
-    if (!cart) {
-      cart = await Cart.create({ user: userId, items: [] });
-    }
 
     res.status(200).json({
       success: true,
       cart,
     });
   } catch (error) {
-    next(error);
+    handleCartWriteError(error, res, next);
   }
 };
 
-// GET /api/cart/validate (Protected - Live Stock & Price Concurrency Guard)
+// GET /api/cart/validate (Protected - Live Stock & Price Validation)
 export const validateCart = async (
   req: Request,
   res: Response,
@@ -40,6 +80,7 @@ export const validateCart = async (
     const userId = req.user!._id;
 
     const cart = await Cart.findOne({ user: userId });
+
     if (!cart || cart.items.length === 0) {
       res.status(200).json({
         success: true,
@@ -63,7 +104,7 @@ export const validateCart = async (
       requestedQuantity: number;
     }> = [];
 
-    let hasPriceOrStockMismatch = false;
+    let hasPriceChanged = false;
 
     for (const item of cart.items) {
       const product = await Product.findById(item.product);
@@ -77,7 +118,7 @@ export const validateCart = async (
           availableStock: 0,
           requestedQuantity: item.quantity,
         });
-        hasPriceOrStockMismatch = true;
+
         continue;
       }
 
@@ -90,7 +131,7 @@ export const validateCart = async (
           availableStock: 0,
           requestedQuantity: item.quantity,
         });
-        hasPriceOrStockMismatch = true;
+
         continue;
       }
 
@@ -103,7 +144,6 @@ export const validateCart = async (
           availableStock: product.stock,
           requestedQuantity: item.quantity,
         });
-        hasPriceOrStockMismatch = true;
       }
 
       const livePrice =
@@ -113,12 +153,12 @@ export const validateCart = async (
 
       if (livePrice !== item.price) {
         item.price = livePrice;
-        hasPriceOrStockMismatch = true;
+        hasPriceChanged = true;
       }
     }
 
-    // Auto-update price adjustments if live product prices shifted
-    if (hasPriceOrStockMismatch) {
+    // Update cart totals only when product prices actually change.
+    if (hasPriceChanged) {
       recalculateCart(cart);
       await cart.save();
     }
@@ -130,7 +170,7 @@ export const validateCart = async (
       cart,
     });
   } catch (error) {
-    next(error);
+    handleCartWriteError(error, res, next);
   }
 };
 
@@ -142,6 +182,7 @@ export const addToCart = async (
 ): Promise<void> => {
   try {
     const validationResult = addToCartSchema.safeParse(req.body);
+
     if (!validationResult.success) {
       res.status(400).json({
         success: false,
@@ -153,8 +194,8 @@ export const addToCart = async (
     const { productId, quantity } = validationResult.data;
     const userId = req.user!._id;
 
-    // Fetch live product from DB
     const product = await Product.findById(productId);
+
     if (!product || !product.isActive) {
       res.status(404).json({
         success: false,
@@ -163,11 +204,7 @@ export const addToCart = async (
       return;
     }
 
-    // Fetch or initialize user cart
-    let cart = await Cart.findOne({ user: userId });
-    if (!cart) {
-      cart = new Cart({ user: userId, items: [] });
-    }
+    const cart = await findOrCreateCart(userId.toString());
 
     const existingItemIndex = cart.items.findIndex(
       (item) => item.product.toString() === productId,
@@ -175,6 +212,7 @@ export const addToCart = async (
 
     const currentQtyInCart =
       existingItemIndex > -1 ? cart.items[existingItemIndex].quantity : 0;
+
     const finalQuantity = currentQtyInCart + quantity;
 
     if (finalQuantity > product.stock) {
@@ -215,7 +253,7 @@ export const addToCart = async (
       cart,
     });
   } catch (error) {
-    next(error);
+    handleCartWriteError(error, res, next);
   }
 };
 
@@ -227,6 +265,7 @@ export const updateCartItemQuantity = async (
 ): Promise<void> => {
   try {
     const { productId } = req.params;
+
     const validationResult = updateCartItemSchema.safeParse(req.body);
 
     if (!validationResult.success) {
@@ -241,6 +280,7 @@ export const updateCartItemQuantity = async (
     const userId = req.user!._id;
 
     const cart = await Cart.findOne({ user: userId });
+
     if (!cart) {
       res.status(404).json({
         success: false,
@@ -265,6 +305,7 @@ export const updateCartItemQuantity = async (
       cart.items.splice(itemIndex, 1);
     } else {
       const product = await Product.findById(productId);
+
       if (!product || !product.isActive) {
         res.status(400).json({
           success: false,
@@ -304,7 +345,7 @@ export const updateCartItemQuantity = async (
       cart,
     });
   } catch (error) {
-    next(error);
+    handleCartWriteError(error, res, next);
   }
 };
 
@@ -319,6 +360,7 @@ export const removeCartItem = async (
     const userId = req.user!._id;
 
     const cart = await Cart.findOne({ user: userId });
+
     if (!cart) {
       res.status(404).json({
         success: false,
@@ -345,7 +387,7 @@ export const removeCartItem = async (
       cart,
     });
   } catch (error) {
-    next(error);
+    handleCartWriteError(error, res, next);
   }
 };
 
@@ -359,10 +401,12 @@ export const clearCart = async (
     const userId = req.user!._id;
 
     const cart = await Cart.findOne({ user: userId });
+
     if (cart) {
       cart.items = [];
       cart.totalItems = 0;
       cart.subtotal = 0;
+
       await cart.save();
     }
 
@@ -372,6 +416,6 @@ export const clearCart = async (
       cart: cart || { items: [], totalItems: 0, subtotal: 0 },
     });
   } catch (error) {
-    next(error);
+    handleCartWriteError(error, res, next);
   }
 };

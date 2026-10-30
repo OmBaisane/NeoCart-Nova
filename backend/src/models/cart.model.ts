@@ -63,6 +63,7 @@ const cartSchema = new Schema<ICart>(
   },
   {
     timestamps: true,
+    optimisticConcurrency: true,
   },
 );
 

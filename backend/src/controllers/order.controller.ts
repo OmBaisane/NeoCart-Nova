@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import mongoose from "mongoose";
+import { randomBytes } from "node:crypto";
 import { Order, IOrderItemSnapshot } from "../models/order.model.js";
 import { Cart } from "../models/cart.model.js";
 import { Product } from "../models/product.model.js";
@@ -10,37 +11,70 @@ import {
   OrderStatus,
 } from "../utils/validators.js";
 
-// Generates a unique human-readable tracking number
+// Generates a stronger human-readable tracking number.
 const generateTrackingNumber = (): string => {
   const timestamp = Date.now().toString(36).toUpperCase();
-  const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
+  const randomSuffix = randomBytes(4).toString("hex").toUpperCase();
+
   return `NC-NOV-${timestamp}-${randomSuffix}`;
 };
 
-// Check if current MongoDB deployment supports multi-document transactions
+// MongoDB transactions require a replica set, sharded cluster,
+// or another transaction-capable deployment.
 export const isReplicaSet = (): boolean => {
+  if (mongoose.connection.readyState !== 1) return false;
+
   const client = mongoose.connection.getClient();
-  return !!(
-    client?.options?.replicaSet ||
-    (mongoose.connection.db &&
-      mongoose.connection.readyState === 1 &&
-      Boolean(
-        (
-          mongoose.connection as unknown as {
-            topology?: { description?: { type?: string } };
-          }
-        ).topology?.description?.type?.includes("ReplicaSet"),
-      ))
+
+  const topologyType = (
+    client as unknown as {
+      topology?: { description?: { type?: string } };
+    }
+  ).topology?.description?.type;
+
+  return Boolean(
+    client.options.replicaSet ||
+    topologyType?.startsWith("ReplicaSet") ||
+    topologyType === "Sharded" ||
+    topologyType === "LoadBalanced",
   );
 };
 
-// POST /api/orders (Protected - Transaction-Safe Concurrency Guarded Checkout)
+const sendTransactionUnavailable = (res: Response): void => {
+  res.status(503).json({
+    success: false,
+    message:
+      "This operation requires MongoDB transaction support. Configure MongoDB as a replica set or use a transaction-capable cluster.",
+  });
+};
+
+const roundCurrency = (value: number): number =>
+  Math.round((value + Number.EPSILON) * 100) / 100;
+
+// Restores inventory inside the caller's active transaction.
+// A missing product is skipped because a deleted product has no
+// inventory record left to restore.
+const restoreOrderInventory = async (
+  items: IOrderItemSnapshot[],
+  session: mongoose.ClientSession,
+): Promise<void> => {
+  for (const item of items) {
+    await Product.updateOne(
+      { _id: item.product },
+      { $inc: { stock: item.quantity } },
+      { session },
+    );
+  }
+};
+
+// POST /api/orders (Protected - Transaction-Safe Checkout)
 export const createOrder = async (
   req: Request,
   res: Response,
   next: NextFunction,
 ): Promise<void> => {
   const validationResult = createOrderSchema.safeParse(req.body);
+
   if (!validationResult.success) {
     res.status(400).json({
       success: false,
@@ -49,61 +83,63 @@ export const createOrder = async (
     return;
   }
 
-  const { shippingAddress, paymentMethod } = validationResult.data;
-  const userId = req.user!._id;
-
-  // 1. Fetch user's cart
-  const cart = await Cart.findOne({ user: userId });
-  if (!cart || cart.items.length === 0) {
-    res.status(400).json({
-      success: false,
-      message: "Your cart is empty. Cannot place an order.",
-    });
+  if (!isReplicaSet()) {
+    sendTransactionUnavailable(res);
     return;
   }
 
-  const canUseTransactions = isReplicaSet();
-  const session = canUseTransactions ? await mongoose.startSession() : null;
-  if (session) session.startTransaction();
-
-  const reservedProducts: Array<{ id: string; quantity: number }> = [];
+  const { shippingAddress, paymentMethod } = validationResult.data;
+  const userId = req.user!._id;
+  let session: mongoose.ClientSession | undefined;
 
   try {
+    session = await mongoose.startSession();
+    session.startTransaction();
+
+    const cart = await Cart.findOne({ user: userId }).session(session);
+
+    if (!cart || cart.items.length === 0) {
+      await session.abortTransaction();
+
+      res.status(400).json({
+        success: false,
+        message: "Your cart is empty. Cannot place an order.",
+      });
+      return;
+    }
+
     const orderItems: IOrderItemSnapshot[] = [];
     let calculatedSubtotal = 0;
 
-    // 2. Concurrency-safe atomic reservation loop
+    // Atomically reserve every product's current stock.
     for (const cartItem of cart.items) {
-      // Atomic Decrement: Only decrements if stock >= requested quantity AND product is active
       const updatedProduct = await Product.findOneAndUpdate(
         {
           _id: cartItem.product,
           stock: { $gte: cartItem.quantity },
           isActive: true,
         },
-        { $inc: { stock: -cartItem.quantity } },
-        { session: session || undefined, new: true },
+        {
+          $inc: { stock: -cartItem.quantity },
+        },
+        {
+          session,
+          new: true,
+        },
       );
 
       if (!updatedProduct) {
-        // Find product to provide accurate error reason
-        const existing = await Product.findById(cartItem.product);
-        const reason = !existing
-          ? "Item was deleted or discontinued."
-          : !existing.isActive
-            ? `"${existing.name}" is currently inactive.`
-            : `Insufficient stock for "${existing.name}". Only ${existing.stock} remaining.`;
+        const existing = await Product.findById(cartItem.product).session(
+          session,
+        );
 
-        // Roll back any previously decremented items if not in replica transaction
-        if (!session) {
-          for (const reserved of reservedProducts) {
-            await Product.findByIdAndUpdate(reserved.id, {
-              $inc: { stock: reserved.quantity },
-            });
-          }
-        } else {
-          await session.abortTransaction();
-        }
+        const reason = !existing
+          ? "An item was deleted or discontinued."
+          : !existing.isActive
+            ? `"${existing.name}" is currently unavailable.`
+            : `Insufficient stock for "${existing.name}". Only ${existing.stock} units remain.`;
+
+        await session.abortTransaction();
 
         res.status(409).json({
           success: false,
@@ -111,12 +147,6 @@ export const createOrder = async (
         });
         return;
       }
-
-      // Track successfully reserved item
-      reservedProducts.push({
-        id: cartItem.product.toString(),
-        quantity: cartItem.quantity,
-      });
 
       const effectivePrice =
         updatedProduct.discountPrice !== undefined &&
@@ -135,15 +165,12 @@ export const createOrder = async (
       calculatedSubtotal += effectivePrice * cartItem.quantity;
     }
 
-    calculatedSubtotal = Math.round(calculatedSubtotal * 100) / 100;
+    calculatedSubtotal = roundCurrency(calculatedSubtotal);
+
     const shippingFee = calculatedSubtotal >= 1000 ? 0 : 99;
     const discount = 0;
-    const total =
-      Math.round((calculatedSubtotal + shippingFee - discount) * 100) / 100;
+    const total = roundCurrency(calculatedSubtotal + shippingFee - discount);
 
-    const trackingNumber = generateTrackingNumber();
-
-    // 3. Create order document using model instance
     const order = new Order({
       user: userId,
       items: orderItems,
@@ -152,24 +179,23 @@ export const createOrder = async (
       shippingFee,
       discount,
       total,
-      paymentMethod:
-        (paymentMethod as "COD" | "Card" | "UPI" | undefined) || "COD",
-      paymentStatus: "pending" as const,
-      orderStatus: "pending" as const,
-      trackingNumber,
+      paymentMethod,
+      paymentStatus: "pending",
+      orderStatus: "pending",
+      trackingNumber: generateTrackingNumber(),
+      inventoryRestocked: false,
     });
 
-    await order.save({ session: session || undefined });
+    await order.save({ session });
 
-    // 4. Clear user's cart atomically within the checkout boundary
+    // Clear the same cart document within this transaction.
     cart.items = [];
     cart.totalItems = 0;
     cart.subtotal = 0;
-    await cart.save({ session: session || undefined });
 
-    if (session) {
-      await session.commitTransaction();
-    }
+    await cart.save({ session });
+
+    await session.commitTransaction();
 
     res.status(201).json({
       success: true,
@@ -177,19 +203,14 @@ export const createOrder = async (
       order,
     });
   } catch (error) {
-    if (session) {
+    if (session?.inTransaction()) {
       await session.abortTransaction();
-    } else {
-      for (const reserved of reservedProducts) {
-        await Product.findByIdAndUpdate(reserved.id, {
-          $inc: { stock: reserved.quantity },
-        });
-      }
     }
+
     next(error);
   } finally {
     if (session) {
-      session.endSession();
+      await session.endSession();
     }
   }
 };
@@ -227,6 +248,14 @@ export const getOrderById = async (
   next: NextFunction,
 ): Promise<void> => {
   try {
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      res.status(400).json({
+        success: false,
+        message: "Invalid order ID.",
+      });
+      return;
+    }
+
     const order = await Order.findById(req.params.id);
 
     if (!order) {
@@ -258,127 +287,153 @@ export const getOrderById = async (
   }
 };
 
-// PATCH /api/orders/:id/cancel (Protected - Customer & Admin Cancellation with Exactly-Once Restock Guard)
+// PATCH /api/orders/:id/cancel
+// Protected - Transaction-Safe Exactly-Once Inventory Restoration
 export const cancelOrder = async (
   req: Request,
   res: Response,
   next: NextFunction,
 ): Promise<void> => {
+  if (!mongoose.isValidObjectId(req.params.id)) {
+    res.status(400).json({
+      success: false,
+      message: "Invalid order ID.",
+    });
+    return;
+  }
+
+  if (!isReplicaSet()) {
+    sendTransactionUnavailable(res);
+    return;
+  }
+
+  const userId = req.user!._id;
+  const isAdmin = req.user!.role === "admin";
+  let session: mongoose.ClientSession | undefined;
+
   try {
-    const userId = req.user!._id;
-    const isAdmin = req.user!.role === "admin";
-    const orderId = req.params.id;
+    session = await mongoose.startSession();
+    session.startTransaction();
 
     const query: Record<string, unknown> = {
-      _id: orderId,
+      _id: req.params.id,
       orderStatus: { $in: ["pending", "confirmed"] },
+      inventoryRestocked: { $ne: true },
     };
 
     if (!isAdmin) {
       query.user = userId;
     }
 
-    // Atomically transition status to prevent double-cancellation and race conditions
+    // The state transition and restoration marker are written
+    // together. Concurrent cancellation attempts cannot both win.
     const order = await Order.findOneAndUpdate(
       query,
       {
         $set: {
           orderStatus: "cancelled",
           cancelledAt: new Date(),
+          inventoryRestocked: true,
         },
       },
-      { new: true },
+      {
+        new: true,
+        session,
+        runValidators: true,
+      },
     );
 
     if (!order) {
+      await session.abortTransaction();
+
       res.status(400).json({
         success: false,
         message:
-          "Order cannot be cancelled. It may already be processed, dispatched, or cancelled.",
+          "Order cannot be cancelled. It may not exist, may belong to another user, or may already be processed or cancelled.",
       });
       return;
     }
 
-    // Restock all items exactly once
-    for (const item of order.items) {
-      await Product.findByIdAndUpdate(item.product, {
-        $inc: { stock: item.quantity },
-      });
-    }
+    await restoreOrderInventory(order.items, session);
+
+    await session.commitTransaction();
 
     res.status(200).json({
       success: true,
-      message: "Order cancelled successfully and inventory has been restocked.",
+      message: "Order cancelled successfully and inventory has been restored.",
       order,
     });
   } catch (error) {
+    if (session?.inTransaction()) {
+      await session.abortTransaction();
+    }
+
     next(error);
+  } finally {
+    if (session) {
+      await session.endSession();
+    }
   }
 };
 
-// PATCH /api/orders/:id/status (Admin Only - Strict State Machine & Replicaset-Safe Transitions)
+// PATCH /api/orders/:id/status
+// Admin Only - Transaction-Safe State Machine
 export const updateOrderStatus = async (
   req: Request,
   res: Response,
   next: NextFunction,
 ): Promise<void> => {
-  const canUseTransactions = isReplicaSet();
-  const session = canUseTransactions ? await mongoose.startSession() : null;
-  if (session) session.startTransaction();
+  const validationResult = updateOrderStatusSchema.safeParse(req.body);
+
+  if (!validationResult.success) {
+    res.status(400).json({
+      success: false,
+      message: validationResult.error.issues[0].message,
+    });
+    return;
+  }
+
+  if (!mongoose.isValidObjectId(req.params.id)) {
+    res.status(400).json({
+      success: false,
+      message: "Invalid order ID.",
+    });
+    return;
+  }
+
+  if (!isReplicaSet()) {
+    sendTransactionUnavailable(res);
+    return;
+  }
+
+  const { orderStatus, paymentStatus, trackingNumber } = validationResult.data;
+
+  let session: mongoose.ClientSession | undefined;
 
   try {
-    const validationResult = updateOrderStatusSchema.safeParse(req.body);
-    if (!validationResult.success) {
-      if (session) await session.abortTransaction();
-      res.status(400).json({
-        success: false,
-        message: validationResult.error.issues[0].message,
-      });
-      return;
-    }
+    session = await mongoose.startSession();
+    session.startTransaction();
 
-    const { orderStatus, paymentStatus, trackingNumber } =
-      validationResult.data;
+    const order = await Order.findById(req.params.id).session(session);
 
-    const order = await (session
-      ? Order.findById(req.params.id).session(session)
-      : Order.findById(req.params.id));
     if (!order) {
-      if (session) await session.abortTransaction();
+      await session.abortTransaction();
+
       res.status(404).json({
         success: false,
         message: "Order not found",
-      });
-      return;
-    }
-
-    if (!order) {
-      if (session) await session.abortTransaction();
-      res.status(404).json({
-        success: false,
-        message: "Order not found",
-      });
-      return;
-    }
-
-    if (
-      order.orderStatus === "cancelled" ||
-      order.orderStatus === "delivered"
-    ) {
-      if (session) await session.abortTransaction();
-      res.status(400).json({
-        success: false,
-        message: `Cannot change status of an already ${order.orderStatus} order`,
       });
       return;
     }
 
     const currentStatus = order.orderStatus as OrderStatus;
     const nextStatus = orderStatus as OrderStatus;
+
     const allowedTransitions = ALLOWED_STATUS_TRANSITIONS[currentStatus] || [];
 
     if (!allowedTransitions.includes(nextStatus)) {
-      if (session) await session.abortTransaction();
+      await session.abortTransaction();
+
       res.status(400).json({
         success: false,
         message: `Invalid transition from "${currentStatus}" to "${nextStatus}". Permitted transitions: ${allowedTransitions.join(", ") || "none"}`,
@@ -386,15 +441,40 @@ export const updateOrderStatus = async (
       return;
     }
 
-    // If transitioned to 'cancelled' from active state, restock items exactly once
+    // COD orders remain pending until delivery.
+    // Payment integrations and manual refunds are not implemented.
+    const resultingPaymentStatus =
+      nextStatus === "delivered" ? "paid" : order.paymentStatus;
+
+    if (
+      paymentStatus !== undefined &&
+      paymentStatus !== resultingPaymentStatus
+    ) {
+      await session.abortTransaction();
+
+      res.status(400).json({
+        success: false,
+        message:
+          "Payment status cannot be changed independently. COD orders are marked paid only when delivered.",
+      });
+      return;
+    }
+
     if (nextStatus === "cancelled") {
-      for (const item of order.items) {
-        await Product.findByIdAndUpdate(
-          item.product,
-          { $inc: { stock: item.quantity } },
-          { session: session || undefined },
-        );
+      if (order.inventoryRestocked) {
+        await session.abortTransaction();
+
+        res.status(409).json({
+          success: false,
+          message:
+            "Inventory for this order has already been restored. Cancellation cannot be repeated.",
+        });
+        return;
       }
+
+      await restoreOrderInventory(order.items, session);
+
+      order.inventoryRestocked = true;
       order.cancelledAt = new Date();
     }
 
@@ -405,16 +485,13 @@ export const updateOrderStatus = async (
 
     order.orderStatus = nextStatus;
 
-    if (paymentStatus) {
-      order.paymentStatus = paymentStatus;
-    }
-
     if (trackingNumber !== undefined) {
       order.trackingNumber = trackingNumber;
     }
 
-    await order.save({ session: session || undefined });
-    if (session) await session.commitTransaction();
+    await order.save({ session });
+
+    await session.commitTransaction();
 
     res.status(200).json({
       success: true,
@@ -422,9 +499,14 @@ export const updateOrderStatus = async (
       order,
     });
   } catch (error) {
-    if (session) await session.abortTransaction();
+    if (session?.inTransaction()) {
+      await session.abortTransaction();
+    }
+
     next(error);
   } finally {
-    if (session) session.endSession();
+    if (session) {
+      await session.endSession();
+    }
   }
 };

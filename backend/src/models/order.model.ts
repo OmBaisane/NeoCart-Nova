@@ -35,6 +35,7 @@ export interface IOrder extends Document {
     | "delivered"
     | "cancelled";
   trackingNumber: string;
+  inventoryRestocked: boolean;
   cancelledAt?: Date;
   deliveredAt?: Date;
   createdAt: Date;
@@ -157,6 +158,13 @@ const orderSchema = new Schema<IOrder>(
       uppercase: true,
       trim: true,
       index: true,
+    },
+    // Set to true only in the same transaction that restores inventory.
+    // This prevents accidental duplicate stock restoration.
+    inventoryRestocked: {
+      type: Boolean,
+      default: false,
+      required: true,
     },
     cancelledAt: {
       type: Date,
