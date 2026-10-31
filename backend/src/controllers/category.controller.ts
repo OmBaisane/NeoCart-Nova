@@ -6,17 +6,17 @@ import {
 } from "../utils/validators.js";
 import { Product } from "../models/product.model.js";
 
-// GET /api/categories (Public with Admin Privileges Guard)
+// GET /api/categories
 export const getCategories = async (
   req: Request,
   res: Response,
   next: NextFunction,
 ): Promise<void> => {
   try {
-    // Only authenticated admins are allowed to retrieve inactive categories via query parameter (?all=true)
     const isAdmin = req.user?.role === "admin";
     const filter =
       isAdmin && req.query.all === "true" ? {} : { isActive: true };
+
     const categories = await Category.find(filter).sort({ name: 1 });
 
     res.status(200).json({
@@ -29,7 +29,7 @@ export const getCategories = async (
   }
 };
 
-// GET /api/categories/:id (Public with Inactive Masking for Non-Admins)
+// GET /api/categories/:id
 export const getCategoryById = async (
   req: Request,
   res: Response,
@@ -38,6 +38,7 @@ export const getCategoryById = async (
   try {
     const isAdmin = req.user?.role === "admin";
     const filter: Record<string, unknown> = { _id: req.params.id };
+
     if (!isAdmin) {
       filter.isActive = true;
     }
@@ -61,7 +62,7 @@ export const getCategoryById = async (
   }
 };
 
-// POST /api/categories (Admin Only)
+// POST /api/categories
 export const createCategory = async (
   req: Request,
   res: Response,
@@ -69,6 +70,7 @@ export const createCategory = async (
 ): Promise<void> => {
   try {
     const validationResult = createCategorySchema.safeParse(req.body);
+
     if (!validationResult.success) {
       res.status(400).json({
         success: false,
@@ -80,6 +82,14 @@ export const createCategory = async (
     const { name, description, image } = validationResult.data;
     const generatedSlug = slugify(name);
 
+    if (!generatedSlug) {
+      res.status(400).json({
+        success: false,
+        message: "Category name must contain valid characters.",
+      });
+      return;
+    }
+
     const existingCategory = await Category.findOne({
       $or: [{ name }, { slug: generatedSlug }],
     });
@@ -87,7 +97,7 @@ export const createCategory = async (
     if (existingCategory) {
       res.status(409).json({
         success: false,
-        message: "Category with this name already exists",
+        message: "A category with this name or URL slug already exists.",
       });
       return;
     }
@@ -109,7 +119,7 @@ export const createCategory = async (
   }
 };
 
-// PATCH /api/categories/:id (Admin Only)
+// PATCH /api/categories/:id
 export const updateCategory = async (
   req: Request,
   res: Response,
@@ -117,6 +127,7 @@ export const updateCategory = async (
 ): Promise<void> => {
   try {
     const validationResult = updateCategorySchema.safeParse(req.body);
+
     if (!validationResult.success) {
       res.status(400).json({
         success: false,
@@ -126,6 +137,7 @@ export const updateCategory = async (
     }
 
     const category = await Category.findById(req.params.id);
+
     if (!category) {
       res.status(404).json({
         success: false,
@@ -136,25 +148,45 @@ export const updateCategory = async (
 
     const { name, description, image, isActive } = validationResult.data;
 
-    if (name && name !== category.name) {
-      const duplicate = await Category.findOne({
-        name,
-        _id: { $ne: category._id },
-      });
-      if (duplicate) {
-        res.status(409).json({
+    if (name !== undefined && name !== category.name) {
+      const generatedSlug = slugify(name);
+
+      if (!generatedSlug) {
+        res.status(400).json({
           success: false,
-          message: "Another category with this name already exists",
+          message: "Category name must contain valid characters.",
         });
         return;
       }
+
+      const duplicate = await Category.findOne({
+        _id: { $ne: category._id },
+        $or: [{ name }, { slug: generatedSlug }],
+      });
+
+      if (duplicate) {
+        res.status(409).json({
+          success: false,
+          message: "Another category already uses this name or URL slug.",
+        });
+        return;
+      }
+
       category.name = name;
-      category.slug = slugify(name);
+      category.slug = generatedSlug;
     }
 
-    if (description !== undefined) category.description = description;
-    if (image !== undefined) category.image = image;
-    if (isActive !== undefined) category.isActive = isActive;
+    if (description !== undefined) {
+      category.description = description;
+    }
+
+    if (image !== undefined) {
+      category.image = image;
+    }
+
+    if (isActive !== undefined) {
+      category.isActive = isActive;
+    }
 
     await category.save();
 
@@ -168,6 +200,7 @@ export const updateCategory = async (
   }
 };
 
+// DELETE /api/categories/:id
 export const deleteCategory = async (
   req: Request,
   res: Response,
@@ -176,7 +209,16 @@ export const deleteCategory = async (
   try {
     const categoryId = req.params.id;
 
-    // Check if any product is associated with this category
+    const category = await Category.findById(categoryId);
+
+    if (!category) {
+      res.status(404).json({
+        success: false,
+        message: "Category not found",
+      });
+      return;
+    }
+
     const linkedProductsCount = await Product.countDocuments({
       category: categoryId,
     });
@@ -189,14 +231,7 @@ export const deleteCategory = async (
       return;
     }
 
-    const category = await Category.findByIdAndDelete(categoryId);
-    if (!category) {
-      res.status(404).json({
-        success: false,
-        message: "Category not found",
-      });
-      return;
-    }
+    await category.deleteOne();
 
     res.status(200).json({
       success: true,

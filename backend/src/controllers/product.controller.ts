@@ -26,7 +26,15 @@ export const getProducts = async (
       limit = "12",
     } = req.query;
 
-    const query: Record<string, unknown> = { isActive: true };
+    // Only products belonging to active categories are publicly visible.
+    const activeCategoryIds = await Category.distinct("_id", {
+      isActive: true,
+    });
+
+    const query: Record<string, unknown> = {
+      isActive: true,
+      category: { $in: activeCategoryIds },
+    };
 
     if (req.query.inStock === "true") {
       query.stock = { $gt: 0 };
@@ -38,6 +46,7 @@ export const getProducts = async (
         .trim()
         .slice(0, 80)
         .replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
       query.$or = [
         { name: { $regex: sanitized, $options: "i" } },
         { description: { $regex: sanitized, $options: "i" } },
@@ -46,20 +55,33 @@ export const getProducts = async (
 
     // 2. Category Filter (by Category ObjectId or Slug)
     if (category && typeof category === "string") {
-      if (category.match(/^[0-9a-fA-F]{24}$/)) {
-        query.category = category;
+      let selectedCategoryId: string | null = null;
+
+      if (mongoose.Types.ObjectId.isValid(category)) {
+        selectedCategoryId = category;
       } else {
-        const foundCategory = await Category.findOne({ slug: category });
-        if (foundCategory) {
-          query.category = foundCategory._id;
-        }
+        const foundCategory = await Category.findOne({
+          slug: category,
+          isActive: true,
+        }).select("_id");
+
+        selectedCategoryId = foundCategory?._id.toString() ?? null;
       }
+
+      query.category = selectedCategoryId
+        ? {
+            $in: activeCategoryIds.filter(
+              (id) => id.toString() === selectedCategoryId,
+            ),
+          }
+        : { $in: [] };
     }
 
     // 3. Price Range Filtering
     if (minPrice !== undefined || maxPrice !== undefined) {
       const parsedMin = minPrice === undefined ? undefined : Number(minPrice);
       const parsedMax = maxPrice === undefined ? undefined : Number(maxPrice);
+
       if (
         (parsedMin !== undefined &&
           (!Number.isFinite(parsedMin) || parsedMin < 0)) ||
@@ -76,9 +98,12 @@ export const getProducts = async (
         });
         return;
       }
+
       const priceFilter: Record<string, number> = {};
+
       if (parsedMin !== undefined) priceFilter.$gte = parsedMin;
       if (parsedMax !== undefined) priceFilter.$lte = parsedMax;
+
       query.price = priceFilter;
     }
 
@@ -89,6 +114,7 @@ export const getProducts = async (
 
     // 5. Sorting Setup
     let sortOptions: Record<string, 1 | -1> = { createdAt: -1 };
+
     if (sort === "price-asc") sortOptions = { price: 1 };
     if (sort === "price-desc") sortOptions = { price: -1 };
     if (sort === "rating") sortOptions = { rating: -1 };
@@ -130,9 +156,13 @@ export const getProductBySlug = async (
     const product = await Product.findOne({
       slug: req.params.slug,
       isActive: true,
-    }).populate("category", "name slug description");
+    }).populate({
+      path: "category",
+      match: { isActive: true },
+      select: "name slug description",
+    });
 
-    if (!product) {
+    if (!product || !product.category) {
       res.status(404).json({
         success: false,
         message: "Product not found",
@@ -170,9 +200,13 @@ export const getProductById = async (
     const product = await Product.findOne({
       _id: id,
       isActive: true,
-    }).populate("category", "name slug description");
+    }).populate({
+      path: "category",
+      match: { isActive: true },
+      select: "name slug description",
+    });
 
-    if (!product) {
+    if (!product || !product.category) {
       res.status(404).json({
         success: false,
         message: "Product not found or no longer active",
@@ -197,6 +231,7 @@ export const createProduct = async (
 ): Promise<void> => {
   try {
     const validationResult = createProductSchema.safeParse(req.body);
+
     if (!validationResult.success) {
       res.status(400).json({
         success: false,
@@ -217,11 +252,15 @@ export const createProduct = async (
       isActive,
     } = validationResult.data;
 
-    const categoryDoc = await Category.findById(category);
+    const categoryDoc = await Category.findOne({
+      _id: category,
+      isActive: true,
+    });
+
     if (!categoryDoc) {
-      res.status(404).json({
+      res.status(400).json({
         success: false,
-        message: "Assigned category does not exist",
+        message: "Please select an existing active category",
       });
       return;
     }
@@ -238,6 +277,7 @@ export const createProduct = async (
 
     let finalSlug = generatedSlug;
     const existingProduct = await Product.findOne({ slug: generatedSlug });
+
     if (existingProduct) {
       finalSlug = `${generatedSlug}-${Date.now().toString().slice(-4)}`;
     }
@@ -273,6 +313,7 @@ export const updateProduct = async (
 ): Promise<void> => {
   try {
     const validationResult = updateProductSchema.safeParse(req.body);
+
     if (!validationResult.success) {
       res.status(400).json({
         success: false,
@@ -282,6 +323,7 @@ export const updateProduct = async (
     }
 
     const product = await Product.findById(req.params.id);
+
     if (!product) {
       res.status(404).json({
         success: false,
@@ -293,18 +335,24 @@ export const updateProduct = async (
     const data = validationResult.data;
 
     if (data.category) {
-      const categoryDoc = await Category.findById(data.category);
+      const categoryDoc = await Category.findOne({
+        _id: data.category,
+        isActive: true,
+      });
+
       if (!categoryDoc) {
-        res.status(404).json({
+        res.status(400).json({
           success: false,
-          message: "Assigned category does not exist",
+          message: "Please select an existing active category",
         });
         return;
       }
+
       product.category = categoryDoc._id;
     }
 
     const targetPrice = data.price !== undefined ? data.price : product.price;
+
     const targetDiscount =
       data.discountPrice !== undefined
         ? data.discountPrice
@@ -389,10 +437,15 @@ export const getProductSuggestions = async (
       return;
     }
 
+    const activeCategoryIds = await Category.distinct("_id", {
+      isActive: true,
+    });
+
     const regex = new RegExp(escapeRegex(query), "i");
 
     const suggestions = await Product.find({
       isActive: true,
+      category: { $in: activeCategoryIds },
       $or: [{ name: regex }, { tags: regex }],
     })
       .select("_id name slug price discountPrice images stock category")
@@ -417,22 +470,43 @@ export const getCatalogFacets = async (
   next: NextFunction,
 ): Promise<void> => {
   try {
-    // 1. Group active products by category to calculate counts
+    const activeCategoryIds = await Category.distinct("_id", {
+      isActive: true,
+    });
+
+    // 1. Group active products belonging to active categories.
     const categoryCounts = await Product.aggregate([
-      { $match: { isActive: true } },
-      { $group: { _id: "$category", count: { $sum: 1 } } },
+      {
+        $match: {
+          isActive: true,
+          category: { $in: activeCategoryIds },
+        },
+      },
+      {
+        $group: {
+          _id: "$category",
+          count: { $sum: 1 },
+        },
+      },
     ]);
 
-    // 2. Calculate min & max price across active inventory
+    // 2. Calculate min & max price across publicly visible inventory.
     const priceStats = await Product.aggregate([
-      { $match: { isActive: true } },
+      {
+        $match: {
+          isActive: true,
+          category: { $in: activeCategoryIds },
+        },
+      },
       {
         $group: {
           _id: null,
           minPrice: { $min: "$price" },
           maxPrice: { $max: "$price" },
           totalInStock: {
-            $sum: { $cond: [{ $gt: ["$stock", 0] }, 1, 0] },
+            $sum: {
+              $cond: [{ $gt: ["$stock", 0] }, 1, 0],
+            },
           },
         },
       },

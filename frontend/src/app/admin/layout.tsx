@@ -18,6 +18,7 @@ import {
   ChevronRight,
   Menu,
   X,
+  Tags,
 } from "lucide-react";
 
 export default function AdminLayout({
@@ -72,6 +73,12 @@ export default function AdminLayout({
       href: "/admin/products",
       icon: Package,
       active: pathname.startsWith("/admin/products"),
+    },
+    {
+      name: "Categories",
+      href: "/admin/categories",
+      icon: Tags,
+      active: pathname.startsWith("/admin/categories"),
     },
     {
       name: "Customer Orders",
@@ -172,7 +179,7 @@ export default function AdminLayout({
 
           <div
             id="admin-mobile-drawer"
-            className="relative flex w-4/5 max-w-xs flex-1 flex-col justify-between bg-white p-4 sm:p-5 shadow-2xl dark:bg-slate-900"
+            className="relative flex w-4/5 max-w-xs flex-1 flex-col justify-between bg-white p-4 shadow-2xl sm:p-5 dark:bg-slate-900"
           >
             <div className="space-y-6">
               <div className="flex items-center justify-between border-b border-slate-100 pb-4 dark:border-slate-800">
@@ -252,11 +259,11 @@ export default function AdminLayout({
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Admin Top Header Bar */}
         <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-slate-200 bg-white/95 px-3 backdrop-blur-md transition-colors duration-200 dark:border-slate-800 dark:bg-slate-900/90 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+          <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
             <button
               type="button"
               onClick={() => setMobileMenuOpen(true)}
-              className="rounded-lg p-1.5 text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 md:hidden shrink-0"
+              className="shrink-0 rounded-lg p-1.5 text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 md:hidden"
               aria-label="Open administrative navigation drawer"
               aria-expanded={mobileMenuOpen}
               aria-controls="admin-mobile-drawer"
@@ -264,30 +271,28 @@ export default function AdminLayout({
               <Menu className="h-5 w-5" aria-hidden="true" />
             </button>
 
-            <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+            <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
               <ShieldCheck
-                className="h-4 w-4 text-brand-blue dark:text-cyan-400 shrink-0"
+                className="h-4 w-4 shrink-0 text-brand-blue dark:text-cyan-400"
                 aria-hidden="true"
               />
-              <span className="text-xs font-bold tracking-tight text-slate-800 dark:text-white truncate">
+              <span className="truncate text-xs font-bold tracking-tight text-slate-800 dark:text-white">
                 Admin Control Center
               </span>
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5 shrink-0">
-            {/* Global Theme Toggle */}
+          <div className="flex shrink-0 items-center gap-2.5">
             <ThemeToggle />
 
-            {/* Admin Profile Pill */}
-            <div className="flex items-center gap-1.5 sm:gap-2 rounded-full border border-slate-200 bg-slate-50 py-1 px-2 sm:px-3 text-xs font-semibold text-slate-800 shadow-2xs dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+            <div className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-semibold text-slate-800 shadow-2xs sm:gap-2 sm:px-3 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
               <div
-                className="flex h-5 w-5 items-center justify-center rounded-full bg-brand-blue text-[10px] font-bold text-white uppercase shrink-0 dark:bg-cyan-600"
+                className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-blue text-[10px] font-bold uppercase text-white dark:bg-cyan-600"
                 aria-hidden="true"
               >
                 {user.name.charAt(0)}
               </div>
-              <span className="hidden sm:inline max-w-32 truncate">
+              <span className="hidden max-w-32 truncate sm:inline">
                 {user.name}
               </span>
             </div>
@@ -295,7 +300,7 @@ export default function AdminLayout({
         </header>
 
         {/* Content View Area */}
-        <div className="flex-1 p-3.5 sm:p-6 lg:p-8 overflow-x-hidden">
+        <div className="flex-1 overflow-x-hidden p-3.5 sm:p-6 lg:p-8">
           {children}
         </div>
       </div>
