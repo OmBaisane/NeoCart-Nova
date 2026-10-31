@@ -1,45 +1,68 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
+import { Loader2, ShieldAlert, RefreshCw } from "lucide-react";
+
 import { api } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
-import {
-  Package,
-  ShoppingBag,
-  Users,
-  DollarSign,
-  AlertTriangle,
-  ArrowRight,
-  Loader2,
-  ShieldAlert,
-} from "lucide-react";
 
-interface AdminStats {
-  totalProducts: number;
-  totalOrders: number;
-  totalUsers: number;
-  totalRevenue: number;
-  lowStockProducts: number;
-  outOfStockProducts: number;
-}
+import type {
+  AdminStats,
+  AnalyticsData,
+  AnalyticsRange,
+  RecentOrder,
+} from "@/components/admin/dashboard/types";
 
-interface RecentOrder {
-  _id: string;
-  trackingNumber: string;
-  total: number;
-  orderStatus: string;
-  createdAt: string;
-  user: {
-    name: string;
-    email: string;
-  };
+import DashboardStats from "@/components/admin/dashboard/DashboardStats";
+import InventoryAlerts from "@/components/admin/dashboard/InventoryAlerts";
+import AnalyticsSection from "@/components/admin/dashboard/AnalyticsSection";
+import RecentOrders from "@/components/admin/dashboard/RecentOrders";
+
+function DashboardError({
+  title,
+  onRetry,
+}: {
+  title: string;
+  onRetry: () => void;
+}) {
+  return (
+    <div className="rounded-2xl border border-rose-200 bg-rose-50 p-6 text-center dark:border-rose-900/50 dark:bg-rose-950/20">
+      <ShieldAlert className="mx-auto mb-3 h-8 w-8 text-rose-500" />
+
+      <p className="text-sm font-bold text-rose-800 dark:text-rose-300">
+        {title}
+      </p>
+
+      <p className="mt-1 text-xs text-rose-700 dark:text-rose-400">
+        Something went wrong while fetching dashboard data.
+      </p>
+
+      <button
+        type="button"
+        onClick={onRetry}
+        className="mt-4 inline-flex items-center gap-2 rounded-lg bg-rose-600 px-4 py-2 text-xs font-bold text-white transition hover:bg-rose-700"
+      >
+        <RefreshCw className="h-3.5 w-3.5" />
+        Retry
+      </button>
+    </div>
+  );
 }
 
 export default function AdminDashboardPage() {
   const { user, isLoading: isAuthLoading } = useAuth();
+  const [range, setRange] = useState<AnalyticsRange>("30d");
 
-  const { data, isLoading } = useQuery<{
+  const isAdmin = !!user && user.role === "admin";
+
+  const {
+    data,
+    isLoading: isStatsLoading,
+    isError: isStatsError,
+    refetch: refetchStats,
+  } = useQuery<{
     success: boolean;
     stats: AdminStats;
     recentOrders: RecentOrder[];
@@ -49,10 +72,27 @@ export default function AdminDashboardPage() {
       const res = await api.get("/admin/stats");
       return res.data;
     },
-    enabled: !!user && user.role === "admin",
+    enabled: isAdmin,
   });
 
-  if (isAuthLoading || isLoading) {
+  const {
+    data: analytics,
+    isLoading: isAnalyticsLoading,
+    isError: isAnalyticsError,
+    refetch: refetchAnalytics,
+  } = useQuery<AnalyticsData>({
+    queryKey: ["admin-analytics", range],
+    queryFn: async () => {
+      const res = await api.get("/admin/analytics", {
+        params: { range },
+      });
+
+      return res.data;
+    },
+    enabled: isAdmin,
+  });
+
+  if (isAuthLoading || (isAdmin && isStatsLoading)) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-brand-blue dark:text-cyan-400" />
@@ -60,14 +100,16 @@ export default function AdminDashboardPage() {
     );
   }
 
-  if (!user || user.role !== "admin") {
+  if (!isAdmin) {
     return (
       <div className="mx-auto max-w-md py-20 text-center">
-        <ShieldAlert className="mx-auto h-12 w-12 text-rose-500 mb-4" />
+        <ShieldAlert className="mx-auto mb-4 h-12 w-12 text-rose-500" />
+
         <h2 className="text-lg font-bold text-slate-900 dark:text-white">
           Access Denied
         </h2>
-        <p className="text-xs text-slate-500 mt-1">
+
+        <p className="mt-1 text-xs text-slate-500">
           You must be logged in as an administrator to access this control
           center.
         </p>
@@ -75,184 +117,114 @@ export default function AdminDashboardPage() {
     );
   }
 
-  const stats = data?.stats || {
-    totalProducts: 0,
-    totalOrders: 0,
-    totalUsers: 0,
-    totalRevenue: 0,
-    lowStockProducts: 0,
-    outOfStockProducts: 0,
-  };
-
-  const recentOrders = data?.recentOrders || [];
+  const stats = data?.stats;
+  const recentOrders = data?.recentOrders ?? [];
 
   return (
-    <main className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-8">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-4 dark:border-slate-800">
+    <main className="mx-auto max-w-7xl space-y-8 px-3 py-6 sm:px-6 sm:py-8 lg:px-8">
+      {/* Dashboard Header */}
+      <div className="flex flex-col justify-between gap-4 border-b border-slate-200 pb-4 sm:flex-row sm:items-center dark:border-slate-800">
         <div>
-          <h1 className="text-xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+          <h1 className="text-xl font-extrabold tracking-tight text-slate-900 sm:text-3xl dark:text-white">
             Admin Control Center
           </h1>
+
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-            Real-time business analytics, inventory status, and order
-            management.
+            Business analytics, inventory status, and order management.
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
-          <Link
-            href="/admin/orders"
-            className="rounded-xl bg-brand-blue px-4 py-2 text-xs font-bold text-white shadow-md hover:bg-blue-600 transition dark:bg-blue-600"
-          >
-            Manage Orders
-          </Link>
-        </div>
+        <Link
+          href="/admin/orders"
+          className="rounded-xl bg-brand-blue px-4 py-2 text-center text-xs font-bold text-white shadow-md transition hover:bg-blue-600 dark:bg-blue-600"
+        >
+          Manage Orders
+        </Link>
       </div>
 
-      {/* Analytics Summary Cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {/* Total Revenue */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-2xs dark:border-slate-800 dark:bg-slate-900">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              Total Revenue
-            </span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400">
-              <DollarSign className="h-4 w-4" />
-            </div>
-          </div>
-          <p className="mt-3 text-2xl font-extrabold text-slate-900 dark:text-white">
-            ₹{stats.totalRevenue.toLocaleString("en-IN")}
-          </p>
-          <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold mt-1 block">
-            Excludes cancelled orders
-          </span>
-        </div>
+      {/* Dashboard Statistics */}
+      {isStatsError ? (
+        <DashboardError
+          title="Unable to load dashboard statistics"
+          onRetry={() => void refetchStats()}
+        />
+      ) : stats ? (
+        <>
+          <DashboardStats stats={stats} />
 
-        {/* Total Orders */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-2xs dark:border-slate-800 dark:bg-slate-900">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              Total Orders
-            </span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-50 text-brand-blue dark:bg-blue-950/60 dark:text-cyan-400">
-              <ShoppingBag className="h-4 w-4" />
-            </div>
-          </div>
-          <p className="mt-3 text-2xl font-extrabold text-slate-900 dark:text-white">
-            {stats.totalOrders}
-          </p>
-          <span className="text-[10px] text-slate-400 mt-1 block">
-            Lifetime fulfilled & pending
-          </span>
-        </div>
+          {(stats.lowStockProducts > 0 || stats.outOfStockProducts > 0) && (
+            <InventoryAlerts
+              lowStockProducts={stats.lowStockProducts}
+              outOfStockProducts={stats.outOfStockProducts}
+            />
+          )}
+        </>
+      ) : null}
 
-        {/* Active Products */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-2xs dark:border-slate-800 dark:bg-slate-900">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              Catalog Products
-            </span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-purple-50 text-purple-600 dark:bg-purple-950/60 dark:text-purple-400">
-              <Package className="h-4 w-4" />
-            </div>
+      {/* Business Analytics */}
+      {isAnalyticsError ? (
+        <section className="space-y-5">
+          <div>
+            <h2 className="text-lg font-extrabold text-slate-900 dark:text-white">
+              Business Analytics
+            </h2>
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+              Sales performance and order insights.
+            </p>
           </div>
-          <p className="mt-3 text-2xl font-extrabold text-slate-900 dark:text-white">
-            {stats.totalProducts}
-          </p>
-          <span className="text-[10px] text-slate-400 mt-1 block">
-            Active storefront gear
-          </span>
-        </div>
 
-        {/* Total Users */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-2xs dark:border-slate-800 dark:bg-slate-900">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              Registered Customers
-            </span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-50 text-amber-600 dark:bg-amber-950/60 dark:text-amber-400">
-              <Users className="h-4 w-4" />
-            </div>
+          <DashboardError
+            title="Unable to load analytics"
+            onRetry={() => void refetchAnalytics()}
+          />
+        </section>
+      ) : isAnalyticsLoading ? (
+        <section className="space-y-5">
+          <div>
+            <h2 className="text-lg font-extrabold text-slate-900 dark:text-white">
+              Business Analytics
+            </h2>
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+              Sales performance and order insights.
+            </p>
           </div>
-          <p className="mt-3 text-2xl font-extrabold text-slate-900 dark:text-white">
-            {stats.totalUsers}
-          </p>
-          <span className="text-[10px] text-slate-400 mt-1 block">
-            Customer accounts
-          </span>
-        </div>
-      </div>
 
-      {/* Inventory Alerts Grid */}
-      {(stats.lowStockProducts > 0 || stats.outOfStockProducts > 0) && (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-900/60 dark:bg-amber-950/40 flex items-center gap-3">
-          <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0" />
-          <div className="text-xs text-amber-900 dark:text-amber-200 flex-1">
-            <strong>Inventory Attention Required:</strong>{" "}
-            {stats.lowStockProducts} products are running low on stock (&le; 5
-            units) and {stats.outOfStockProducts} are completely sold out.
+          <div className="flex min-h-64 items-center justify-center rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+            <Loader2 className="h-7 w-7 animate-spin text-brand-blue dark:text-cyan-400" />
           </div>
-        </div>
-      )}
+        </section>
+      ) : analytics ? (
+        <AnalyticsSection
+          analytics={analytics}
+          range={range}
+          onRangeChange={setRange}
+        />
+      ) : null}
 
-      {/* Recent Orders Section */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-2xs space-y-4 dark:border-slate-800 dark:bg-slate-900">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-3 dark:border-slate-800">
-          <h2 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+      {/* Recent Orders */}
+      <section className="space-y-4">
+        <div className="flex items-center justify-between border-b border-slate-200 pb-3 dark:border-slate-800">
+          <h2 className="text-sm font-bold uppercase tracking-wider text-slate-900 dark:text-white">
             Recent Orders Snapshot
           </h2>
+
           <Link
             href="/admin/orders"
-            className="flex items-center gap-1 text-xs font-semibold text-brand-blue hover:underline dark:text-cyan-400"
+            className="text-xs font-semibold text-brand-blue hover:underline dark:text-cyan-400"
           >
-            <span>View All</span>
-            <ArrowRight className="h-3.5 w-3.5" />
+            View All →
           </Link>
         </div>
 
-        {recentOrders.length === 0 ? (
-          <p className="text-xs text-slate-400 py-6 text-center">
-            No orders placed yet.
+        {isStatsError ? (
+          <p className="py-6 text-center text-xs text-slate-400">
+            Recent orders are unavailable because dashboard data could not be
+            loaded.
           </p>
         ) : (
-          <div className="divide-y divide-slate-100 dark:divide-slate-800">
-            {recentOrders.map((ord) => (
-              <div
-                key={ord._id}
-                className="flex flex-col sm:flex-row sm:items-center justify-between py-3 gap-2 text-xs"
-              >
-                <div>
-                  <p className="font-bold text-slate-900 dark:text-white">
-                    {ord.trackingNumber}
-                  </p>
-                  <p className="text-[11px] text-slate-500">
-                    Customer: {ord.user?.name || "Guest"} ({ord.user?.email})
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-4">
-                  <span
-                    className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase ${
-                      ord.orderStatus === "delivered"
-                        ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400"
-                        : ord.orderStatus === "cancelled"
-                          ? "bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-400"
-                          : "bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-cyan-400"
-                    }`}
-                  >
-                    {ord.orderStatus}
-                  </span>
-                  <span className="font-extrabold text-slate-900 dark:text-white">
-                    ₹{ord.total.toLocaleString("en-IN")}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
+          <RecentOrders orders={recentOrders} />
         )}
-      </div>
+      </section>
     </main>
   );
 }

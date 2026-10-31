@@ -1,6 +1,12 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+} from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 
@@ -36,15 +42,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const clearUserQueries = async () => {
+  const clearUserQueries = useCallback(async () => {
     await queryClient.cancelQueries();
+
     queryClient.removeQueries({
       predicate: (query) =>
         ["wishlist", "cart"].includes(String(query.queryKey[0])),
     });
-  };
+  }, [queryClient]);
 
-  const fetchCurrentUser = async () => {
+  const fetchCurrentUser = useCallback(async () => {
     try {
       const response = await api.get("/auth/me");
 
@@ -60,11 +67,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [clearUserQueries]);
 
   useEffect(() => {
-    fetchCurrentUser();
-  }, []);
+    void fetchCurrentUser();
+  }, [fetchCurrentUser]);
 
   const login = (userData: User) => {
     setUser(userData);

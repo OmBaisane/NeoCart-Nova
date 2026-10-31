@@ -1,14 +1,8 @@
 import { Request, Response, NextFunction } from "express";
-import mongoose from "mongoose";
 import { Product } from "../models/product.model.js";
 import { Order } from "../models/order.model.js";
 import { User } from "../models/user.model.js";
-import {
-  updateOrderStatusSchema,
-  ALLOWED_STATUS_TRANSITIONS,
-  OrderStatus,
-} from "../utils/validators.js";
-import { isReplicaSet } from "./order.controller.js";
+import { updateOrderStatus as updateOrderStatusSafely } from "./order.controller.js";
 import { boundedPositiveInt, escapeRegex } from "../utils/querySafety.js";
 
 // GET /api/admin/stats (Admin Analytics Summary)
@@ -29,8 +23,14 @@ export const getDashboardStats = async (
       Product.countDocuments({ isActive: true }),
       Order.countDocuments(),
       User.countDocuments({ role: "user" }),
-      Product.countDocuments({ stock: { $gt: 0, $lte: 5 }, isActive: true }),
-      Product.countDocuments({ stock: { $lte: 0 }, isActive: true }),
+      Product.countDocuments({
+        stock: { $gt: 0, $lte: 5 },
+        isActive: true,
+      }),
+      Product.countDocuments({
+        stock: { $lte: 0 },
+        isActive: true,
+      }),
       Order.find()
         .sort({ createdAt: -1 })
         .limit(5)
@@ -41,8 +41,17 @@ export const getDashboardStats = async (
       _id: null;
       totalRevenue: number;
     }>([
-      { $match: { orderStatus: { $ne: "cancelled" } } },
-      { $group: { _id: null, totalRevenue: { $sum: "$total" } } },
+      {
+        $match: {
+          orderStatus: { $ne: "cancelled" },
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          totalRevenue: { $sum: "$total" },
+        },
+      },
     ]);
 
     const totalRevenue = revenueAggregation[0]?.totalRevenue || 0;
@@ -73,17 +82,32 @@ export const getAllUsers = async (
   try {
     const page = boundedPositiveInt(req.query.page, 1, 1_000_000);
     const limit = boundedPositiveInt(req.query.limit, 20, 100);
+
     const search =
       typeof req.query.search === "string"
         ? req.query.search.trim().slice(0, 80)
         : "";
+
     const skip = (page - 1) * limit;
 
-    const query: Record<string, any> = { role: "user" };
+    const query: Record<string, any> = {
+      role: "user",
+    };
+
     if (search) {
       query.$or = [
-        { name: { $regex: escapeRegex(search), $options: "i" } },
-        { email: { $regex: escapeRegex(search), $options: "i" } },
+        {
+          name: {
+            $regex: escapeRegex(search),
+            $options: "i",
+          },
+        },
+        {
+          email: {
+            $regex: escapeRegex(search),
+            $options: "i",
+          },
+        },
       ];
     }
 
@@ -118,10 +142,12 @@ export const getAdminProducts = async (
   try {
     const page = boundedPositiveInt(req.query.page, 1, 1_000_000);
     const limit = boundedPositiveInt(req.query.limit, 20, 100);
+
     const search =
       typeof req.query.search === "string"
         ? req.query.search.trim().slice(0, 80)
         : "";
+
     const status = req.query.status as string;
     const skip = (page - 1) * limit;
 
@@ -129,8 +155,18 @@ export const getAdminProducts = async (
 
     if (search) {
       filter.$or = [
-        { name: { $regex: escapeRegex(search), $options: "i" } },
-        { description: { $regex: escapeRegex(search), $options: "i" } },
+        {
+          name: {
+            $regex: escapeRegex(search),
+            $options: "i",
+          },
+        },
+        {
+          description: {
+            $regex: escapeRegex(search),
+            $options: "i",
+          },
+        },
       ];
     }
 
@@ -176,7 +212,10 @@ export const toggleProductStatus = async (
     const product = await Product.findById(id);
 
     if (!product) {
-      res.status(404).json({ success: false, message: "Product not found" });
+      res.status(404).json({
+        success: false,
+        message: "Product not found",
+      });
       return;
     }
 
@@ -202,11 +241,14 @@ export const getAdminOrders = async (
   try {
     const page = boundedPositiveInt(req.query.page, 1, 1_000_000);
     const limit = boundedPositiveInt(req.query.limit, 20, 100);
+
     const status = req.query.status as string;
+
     const search =
       typeof req.query.search === "string"
         ? req.query.search.trim().slice(0, 80)
         : "";
+
     const skip = (page - 1) * limit;
 
     const filter: Record<string, any> = {};
@@ -217,7 +259,12 @@ export const getAdminOrders = async (
 
     if (search) {
       filter.$or = [
-        { trackingNumber: { $regex: escapeRegex(search), $options: "i" } },
+        {
+          trackingNumber: {
+            $regex: escapeRegex(search),
+            $options: "i",
+          },
+        },
         {
           "shippingAddress.fullName": {
             $regex: escapeRegex(search),
@@ -256,100 +303,6 @@ export const getAdminOrders = async (
   }
 };
 
-// PATCH /api/admin/orders/:id/status (Strict State Machine & Replicaset-Safe Restock Guard)
-export const updateOrderStatus = async (
-  req: Request<{ id: string }>,
-  res: Response,
-  next: NextFunction,
-): Promise<void> => {
-  const canUseTransactions = isReplicaSet();
-  const session = canUseTransactions ? await mongoose.startSession() : null;
-  if (session) session.startTransaction();
-
-  try {
-    const { id } = req.params;
-    const validationResult = updateOrderStatusSchema.safeParse(req.body);
-    if (!validationResult.success) {
-      if (session) await session.abortTransaction();
-      res.status(400).json({
-        success: false,
-        message: validationResult.error.issues[0].message,
-      });
-      return;
-    }
-
-    const validatedData = validationResult.data;
-
-    const order = await (session
-      ? Order.findById(id).session(session)
-      : Order.findById(id));
-    if (!order) {
-      if (session) await session.abortTransaction();
-      res.status(404).json({ success: false, message: "Order not found" });
-      return;
-    }
-
-    if (
-      order.orderStatus === "cancelled" ||
-      order.orderStatus === "delivered"
-    ) {
-      if (session) await session.abortTransaction();
-      res.status(400).json({
-        success: false,
-        message: `Cannot change status of an already ${order.orderStatus} order`,
-      });
-      return;
-    }
-
-    const currentStatus = order.orderStatus as OrderStatus;
-    const nextStatus = validatedData.orderStatus as OrderStatus;
-    const allowedTransitions = ALLOWED_STATUS_TRANSITIONS[currentStatus] || [];
-
-    if (!allowedTransitions.includes(nextStatus)) {
-      if (session) await session.abortTransaction();
-      res.status(400).json({
-        success: false,
-        message: `Invalid transition from "${currentStatus}" to "${nextStatus}". Permitted transitions: ${allowedTransitions.join(", ") || "none"}`,
-      });
-      return;
-    }
-
-    if (nextStatus === "cancelled") {
-      for (const item of order.items) {
-        await Product.findByIdAndUpdate(
-          item.product,
-          { $inc: { stock: item.quantity } },
-          { session: session || undefined },
-        );
-      }
-      order.cancelledAt = new Date();
-    }
-
-    if (nextStatus === "delivered") {
-      order.deliveredAt = new Date();
-      order.paymentStatus = "paid";
-    }
-
-    order.orderStatus = nextStatus;
-    if (validatedData.paymentStatus) {
-      order.paymentStatus = validatedData.paymentStatus;
-    }
-    if (validatedData.trackingNumber !== undefined) {
-      order.trackingNumber = validatedData.trackingNumber;
-    }
-
-    await order.save({ session: session || undefined });
-    if (session) await session.commitTransaction();
-
-    res.status(200).json({
-      success: true,
-      message: `Order status successfully updated to ${nextStatus}`,
-      order,
-    });
-  } catch (error) {
-    if (session) await session.abortTransaction();
-    next(error);
-  } finally {
-    if (session) session.endSession();
-  }
-};
+// PATCH /api/admin/orders/:id/status
+// Reuse the canonical order controller implementation.
+export const updateOrderStatus = updateOrderStatusSafely;
