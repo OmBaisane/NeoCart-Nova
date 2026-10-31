@@ -32,7 +32,7 @@ interface ProductCardProps {
 
 export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const queryClient = useQueryClient();
 
   const hasDiscount =
@@ -43,57 +43,69 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const currentPrice = hasDiscount ? product.discountPrice! : product.price;
   const isOutOfStock = product.stock <= 0;
 
-  // Global Wishlist Query for the Card
-  const { data: wishlistData } = useQuery({
+  const { data: wishlistData, isLoading: wishlistLoading } = useQuery({
     queryKey: ["wishlist"],
     queryFn: async () => {
       const res = await api.get("/wishlist");
       return res.data;
     },
     enabled: !!user,
-    staleTime: 1000 * 60, // 1 minute
+    staleTime: 1000 * 60,
   });
 
-  const isInWishlist = wishlistData?.products?.some(
-    (p: { _id: string }) => p._id === product._id,
+  const isInWishlist = Boolean(
+    wishlistData?.products?.some(
+      (item: { _id: string }) => item._id === product._id,
+    ),
   );
 
   const toggleWishlistMutation = useMutation({
     mutationFn: async () => {
       if (isInWishlist) {
         return api.delete(`/wishlist/${product._id}`);
-      } else {
-        return api.post("/wishlist", { productId: product._id });
       }
+
+      return api.post("/wishlist", { productId: product._id });
     },
-    onSuccess: () => {
+    onSuccess: (response) => {
+      queryClient.setQueryData(["wishlist"], response.data);
       queryClient.invalidateQueries({ queryKey: ["wishlist"] });
     },
   });
 
-  const handleWishlistClick = (e: React.MouseEvent) => {
+  const handleWishlistClick = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     e.stopPropagation();
+
     if (!user) {
-      router.push("/login?redirect=/products");
+      router.push(
+        `/login?redirect=${encodeURIComponent(`/products/${product.slug}`)}`,
+      );
       return;
     }
-    toggleWishlistMutation.mutate();
+
+    if (!toggleWishlistMutation.isPending) {
+      toggleWishlistMutation.mutate();
+    }
   };
 
   return (
     <article className="group relative flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:shadow-slate-200/60 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-700 dark:hover:shadow-slate-950/60">
-      {/* Wishlist Button - Placed at Top Right */}
+      {/* Wishlist Button */}
       <button
         type="button"
         onClick={handleWishlistClick}
-        disabled={toggleWishlistMutation.isPending}
-        className={`absolute top-3 right-3 z-10 flex h-8 w-8 items-center justify-center rounded-full backdrop-blur-md transition-all shadow-sm ${
+        disabled={
+          authLoading ||
+          (!!user && (wishlistLoading || toggleWishlistMutation.isPending))
+        }
+        className={`absolute top-3 right-3 z-10 flex h-8 w-8 items-center justify-center rounded-full backdrop-blur-md shadow-sm transition-all ${
           isInWishlist
             ? "bg-rose-50 text-rose-500 hover:bg-rose-100 dark:bg-rose-500/20 dark:text-rose-400 dark:hover:bg-rose-500/40"
             : "bg-white/70 text-slate-400 hover:bg-white hover:text-rose-500 dark:bg-slate-900/60 dark:text-slate-300 dark:hover:bg-slate-900 dark:hover:text-rose-400"
         }`}
-        aria-label="Toggle Wishlist"
+        aria-label={isInWishlist ? "Remove from wishlist" : "Add to wishlist"}
+        aria-pressed={isInWishlist}
       >
         {toggleWishlistMutation.isPending ? (
           <Loader2 className="h-4 w-4 animate-spin" />
@@ -102,7 +114,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         )}
       </button>
 
-      {/* Product Image Container */}
+      {/* Product Image */}
       <Link
         href={`/products/${product.slug}`}
         className="relative block aspect-square w-full overflow-hidden bg-slate-100 dark:bg-slate-800/60"
@@ -116,16 +128,14 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           className="h-full w-full object-cover object-center transition-transform duration-300 group-hover:scale-105"
         />
 
-        {/* Discount Badge */}
         {hasDiscount && (
           <span className="absolute top-3 left-3 rounded-full bg-rose-600 px-2.5 py-0.5 text-[11px] font-bold text-white shadow-sm">
             SAVE ₹{product.price - product.discountPrice!}
           </span>
         )}
 
-        {/* Stock Status Pill */}
         {isOutOfStock ? (
-          <span className="absolute bottom-3 left-3 rounded-full bg-slate-900/80 px-2 py-0.5 text-[10px] font-semibold text-white backdrop-blur-xs dark:bg-slate-950/80 shadow-sm">
+          <span className="absolute bottom-3 left-3 rounded-full bg-slate-900/80 px-2 py-0.5 text-[10px] font-semibold text-white shadow-sm backdrop-blur-xs dark:bg-slate-950/80">
             Out of Stock
           </span>
         ) : product.stock <= 5 ? (
@@ -137,19 +147,16 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
       {/* Product Details */}
       <div className="flex flex-1 flex-col p-4">
-        {/* Category Name */}
         {product.category && (
           <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
             {product.category.name}
           </span>
         )}
 
-        {/* Title */}
         <h3 className="mt-1 line-clamp-1 text-sm font-bold text-brand-charcoal transition-colors group-hover:text-brand-blue dark:text-white dark:group-hover:text-cyan-400">
           <Link href={`/products/${product.slug}`}>{product.name}</Link>
         </h3>
 
-        {/* Rating Row */}
         <div className="mt-2 flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
           <div className="flex items-center text-amber-500">
             <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
@@ -164,12 +171,12 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           </span>
         </div>
 
-        {/* Price & Action Row */}
-        <div className="mt-4 flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800">
+        <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-2 dark:border-slate-800">
           <div className="flex flex-col">
             <span className="text-base font-extrabold text-brand-charcoal dark:text-white">
               ₹{currentPrice.toLocaleString("en-IN")}
             </span>
+
             {hasDiscount && (
               <span className="text-xs text-slate-400 line-through dark:text-slate-500">
                 ₹{product.price.toLocaleString("en-IN")}

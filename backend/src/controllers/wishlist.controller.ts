@@ -3,7 +3,12 @@ import mongoose from "mongoose";
 import { Wishlist } from "../models/wishlist.model.js";
 import { Product } from "../models/product.model.js";
 
-// Helper interface for populated product
+const PRODUCT_POPULATE = {
+  path: "products",
+  select:
+    "name slug price discountPrice images stock rating reviewCount category isActive",
+};
+
 interface PopulatedProduct {
   _id: mongoose.Types.ObjectId;
   name: string;
@@ -17,7 +22,7 @@ interface PopulatedProduct {
   isActive: boolean;
 }
 
-// GET /api/wishlist (Protected)
+// GET /api/wishlist
 export const getWishlist = async (
   req: Request,
   res: Response,
@@ -26,20 +31,16 @@ export const getWishlist = async (
   try {
     const userId = req.user!._id;
 
-    let wishlist = await Wishlist.findOne({ user: userId }).populate({
-      path: "products",
-      select:
-        "name slug price discountPrice images stock rating reviewCount category isActive",
-    });
+    const wishlist = await Wishlist.findOne({ user: userId }).populate(
+      PRODUCT_POPULATE,
+    );
 
-    if (!wishlist) {
-      wishlist = await Wishlist.create({ user: userId, products: [] });
-    }
+    const populatedProducts = (wishlist?.products ||
+      []) as unknown as PopulatedProduct[];
 
-    // Safely cast and filter active products without using 'any'
-    const populatedProducts =
-      wishlist.products as unknown as PopulatedProduct[];
-    const validProducts = populatedProducts.filter((p) => p && p.isActive);
+    const validProducts = populatedProducts.filter(
+      (product) => product && product.isActive,
+    );
 
     res.status(200).json({
       success: true,
@@ -51,7 +52,7 @@ export const getWishlist = async (
   }
 };
 
-// POST /api/wishlist (Protected)
+// POST /api/wishlist
 export const addToWishlist = async (
   req: Request,
   res: Response,
@@ -61,7 +62,10 @@ export const addToWishlist = async (
     const userId = req.user!._id;
     const productId = req.body.productId as string;
 
-    if (!productId || !mongoose.Types.ObjectId.isValid(productId)) {
+    if (
+      typeof productId !== "string" ||
+      !mongoose.Types.ObjectId.isValid(productId)
+    ) {
       res.status(400).json({
         success: false,
         message: "Valid product ID is required",
@@ -69,8 +73,14 @@ export const addToWishlist = async (
       return;
     }
 
-    const product = await Product.findById(productId);
-    if (!product || !product.isActive) {
+    const productObjectId = new mongoose.Types.ObjectId(productId);
+
+    const product = await Product.findOne({
+      _id: productObjectId,
+      isActive: true,
+    }).select("_id");
+
+    if (!product) {
       res.status(404).json({
         success: false,
         message: "Product not found or is no longer active",
@@ -78,40 +88,55 @@ export const addToWishlist = async (
       return;
     }
 
-    let wishlist = await Wishlist.findOne({ user: userId });
-    if (!wishlist) {
-      wishlist = new Wishlist({ user: userId, products: [] });
+    // Create wishlist if it does not exist.
+    // The unique user index protects against duplicate wishlists.
+    try {
+      await Wishlist.updateOne(
+        { user: userId },
+        { $setOnInsert: { user: userId, products: [] } },
+        { upsert: true },
+      );
+    } catch (error) {
+      // Another concurrent request may have created the wishlist.
+      if (
+        !(
+          error instanceof mongoose.mongo.MongoServerError &&
+          error.code === 11000
+        )
+      ) {
+        throw error;
+      }
     }
 
-    const productObjectId = new mongoose.Types.ObjectId(productId);
-    if (wishlist.products.some((id) => id.equals(productObjectId))) {
-      res.status(400).json({
-        success: false,
-        message: "Product is already in your wishlist",
-      });
-      return;
-    }
+    // Atomic addition prevents duplicate product IDs.
+    await Wishlist.updateOne(
+      { user: userId },
+      { $addToSet: { products: productObjectId } },
+    );
 
-    wishlist.products.push(productObjectId);
-    await wishlist.save();
+    const wishlist = await Wishlist.findOne({ user: userId }).populate(
+      PRODUCT_POPULATE,
+    );
 
-    await wishlist.populate({
-      path: "products",
-      select:
-        "name slug price discountPrice images stock rating reviewCount category isActive",
-    });
+    const populatedProducts = (wishlist?.products ||
+      []) as unknown as PopulatedProduct[];
+
+    const validProducts = populatedProducts.filter(
+      (item) => item && item.isActive,
+    );
 
     res.status(200).json({
       success: true,
       message: "Product added to wishlist successfully",
-      products: wishlist.products,
+      count: validProducts.length,
+      products: validProducts,
     });
   } catch (error) {
     next(error);
   }
 };
 
-// DELETE /api/wishlist/:productId (Protected)
+// DELETE /api/wishlist/:productId
 export const removeFromWishlist = async (
   req: Request,
   res: Response,
@@ -121,7 +146,10 @@ export const removeFromWishlist = async (
     const userId = req.user!._id;
     const productId = req.params.productId as string;
 
-    if (!productId || !mongoose.Types.ObjectId.isValid(productId)) {
+    if (
+      typeof productId !== "string" ||
+      !mongoose.Types.ObjectId.isValid(productId)
+    ) {
       res.status(400).json({
         success: false,
         message: "Valid product ID is required",
@@ -129,32 +157,30 @@ export const removeFromWishlist = async (
       return;
     }
 
-    const wishlist = await Wishlist.findOne({ user: userId });
-    if (!wishlist) {
-      res.status(404).json({
-        success: false,
-        message: "Wishlist not found",
-      });
-      return;
-    }
-
     const productObjectId = new mongoose.Types.ObjectId(productId);
-    wishlist.products = wishlist.products.filter(
-      (id) => !id.equals(productObjectId),
+
+    // Atomic removal; safe even if the product is already absent.
+    await Wishlist.updateOne(
+      { user: userId },
+      { $pull: { products: productObjectId } },
     );
 
-    await wishlist.save();
+    const wishlist = await Wishlist.findOne({ user: userId }).populate(
+      PRODUCT_POPULATE,
+    );
 
-    await wishlist.populate({
-      path: "products",
-      select:
-        "name slug price discountPrice images stock rating reviewCount category isActive",
-    });
+    const populatedProducts = (wishlist?.products ||
+      []) as unknown as PopulatedProduct[];
+
+    const validProducts = populatedProducts.filter(
+      (item) => item && item.isActive,
+    );
 
     res.status(200).json({
       success: true,
       message: "Product removed from wishlist successfully",
-      products: wishlist.products,
+      count: validProducts.length,
+      products: validProducts,
     });
   } catch (error) {
     next(error);
