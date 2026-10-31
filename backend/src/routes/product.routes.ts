@@ -2,6 +2,7 @@ import { Router } from "express";
 import {
   getProducts,
   getProductBySlug,
+  getProductById,
   createProduct,
   updateProduct,
   deleteProduct,
@@ -24,6 +25,7 @@ router.get("/suggestions", getProductSuggestions);
 
 // Public storefront routes
 router.get("/", getProducts);
+router.get("/by-id/:id", getProductById);
 router.get("/:slug", getProductBySlug);
 
 // Admin-only management routes

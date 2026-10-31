@@ -62,22 +62,28 @@ export default function ProductDetailsPage({ params }: ProductPageProps) {
   } = useQuery<ProductItem>({
     queryKey: ["product", slug],
     queryFn: async () => {
-      const res = await api.get("/products/${slug}");
+      const res = await api.get(`/products/${slug}`);
       return res.data?.product;
     },
     enabled: Boolean(slug),
   });
 
   // Wishlist
-  const { data: wishlistProducts = [], isLoading: isWishlistLoading } =
-    useQuery<ProductItem[]>({
-      queryKey: ["wishlist"],
-      queryFn: async () => {
-        const res = await api.get("/wishlist");
-        return res.data?.products ?? [];
-      },
-      enabled: Boolean(user),
-    });
+  const { data: wishlistData, isLoading: isWishlistLoading } = useQuery<{
+    success: boolean;
+    count: number;
+    products: ProductItem[];
+  }>({
+    queryKey: ["wishlist"],
+    queryFn: async () => {
+      const res = await api.get("/wishlist");
+      return res.data;
+    },
+    enabled: Boolean(user),
+    staleTime: 1000 * 60,
+  });
+
+  const wishlistProducts = wishlistData?.products ?? [];
 
   const isInWishlist = Boolean(
     product && wishlistProducts.some((item) => item._id === product._id),
@@ -85,7 +91,9 @@ export default function ProductDetailsPage({ params }: ProductPageProps) {
 
   const wishlistMutation = useMutation({
     mutationFn: async () => {
-      if (!product) throw new Error("Product not found.");
+      if (!product) {
+        throw new Error("Product not found.");
+      }
 
       if (isInWishlist) {
         return api.delete(`/wishlist/${product._id}`);
@@ -95,14 +103,19 @@ export default function ProductDetailsPage({ params }: ProductPageProps) {
         productId: product._id,
       });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["wishlist"] });
+
+    onSuccess: (response) => {
+      queryClient.setQueryData(["wishlist"], response.data);
+
+      queryClient.invalidateQueries({
+        queryKey: ["wishlist"],
+      });
     },
   });
 
   const handleWishlistToggle = () => {
     if (!user) {
-      router.push(`/login?redirect=$DIL0`);
+      router.push(`/login?redirect=${encodeURIComponent(`/products/${slug}`)}`);
       return;
     }
 
@@ -128,7 +141,7 @@ export default function ProductDetailsPage({ params }: ProductPageProps) {
 
   const handleAddToCart = () => {
     if (!user) {
-      router.push(`/login?redirect=$DIL0`);
+      router.push(`/login?redirect=${encodeURIComponent(`/products/${slug}`)}`);
       return;
     }
 
@@ -143,9 +156,15 @@ export default function ProductDetailsPage({ params }: ProductPageProps) {
 
     try {
       const storageKey = "neocart_recent_viewed";
-      const existing = JSON.parse(
+      const parsed: unknown = JSON.parse(
         localStorage.getItem(storageKey) || "[]",
-      ) as string[];
+      );
+
+      const existing = Array.isArray(parsed)
+        ? parsed.filter(
+            (id): id is string => typeof id === "string" && id.length > 0,
+          )
+        : [];
 
       const updated = [
         product._id,
@@ -164,11 +183,19 @@ export default function ProductDetailsPage({ params }: ProductPageProps) {
 
     try {
       const storageKey = "neocart_compare";
-      const existing = JSON.parse(
+      const parsed: unknown = JSON.parse(
         localStorage.getItem(storageKey) || "[]",
-      ) as string[];
+      );
 
-      if (existing.includes(product._id)) {
+      const existing = Array.isArray(parsed)
+        ? parsed.filter(
+            (id): id is string => typeof id === "string" && id.length > 0,
+          )
+        : [];
+
+      const uniqueIds = [...new Set(existing)].slice(0, 4);
+
+      if (uniqueIds.includes(product._id)) {
         setCompareMessage({
           text: "This product is already in your comparison list.",
           error: true,
@@ -176,18 +203,17 @@ export default function ProductDetailsPage({ params }: ProductPageProps) {
         return;
       }
 
-      if (existing.length >= 4) {
+      if (uniqueIds.length >= 4) {
         setCompareMessage({
-          text: "You can compare a maximum of 4 products.",
+          text: "You can compare a maximum of 4 products. Remove one to add another.",
           error: true,
         });
         return;
       }
 
-      localStorage.setItem(
-        storageKey,
-        JSON.stringify([...existing, product._id]),
-      );
+      const updated = [...uniqueIds, product._id];
+
+      localStorage.setItem(storageKey, JSON.stringify(updated));
 
       setCompareMessage({
         text: "Product added to comparison list.",

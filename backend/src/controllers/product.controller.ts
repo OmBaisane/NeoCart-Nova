@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { Product } from "../models/product.model.js";
+import mongoose from "mongoose";
 import { Category, slugify } from "../models/category.model.js";
 import {
   createProductSchema,
@@ -135,6 +136,46 @@ export const getProductBySlug = async (
       res.status(404).json({
         success: false,
         message: "Product not found",
+      });
+      return;
+    }
+
+    res.status(200).json({
+      success: true,
+      product,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// GET /api/products/by-id/:id
+// Public route: Fetch one active product using its MongoDB ID
+export const getProductById = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const id = req.params.id;
+
+    if (typeof id !== "string" || !mongoose.Types.ObjectId.isValid(id)) {
+      res.status(400).json({
+        success: false,
+        message: "Invalid product ID",
+      });
+      return;
+    }
+
+    const product = await Product.findOne({
+      _id: id,
+      isActive: true,
+    }).populate("category", "name slug description");
+
+    if (!product) {
+      res.status(404).json({
+        success: false,
+        message: "Product not found or no longer active",
       });
       return;
     }

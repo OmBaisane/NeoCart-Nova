@@ -1,58 +1,95 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { ProductItem } from "@/components/ui/ProductCard";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { Scale, Trash2, Loader2, Star } from "lucide-react";
+import { Scale, Trash2, Loader2, Star, ArrowRight, X } from "lucide-react";
+
+const STORAGE_KEY = "neocart_compare";
+const MAX_COMPARE_PRODUCTS = 4;
 
 export default function ComparePage() {
   const [compareIds, setCompareIds] = useState<string[]>([]);
+  const [storageLoaded, setStorageLoaded] = useState(false);
 
   useEffect(() => {
     try {
-      const stored = localStorage.getItem("neocart_compare_list");
+      const stored = localStorage.getItem(STORAGE_KEY);
+
       if (stored) {
-        setCompareIds(JSON.parse(stored));
+        const parsed: unknown = JSON.parse(stored);
+
+        if (Array.isArray(parsed)) {
+          const validIds = parsed.filter(
+            (id): id is string => typeof id === "string" && id.length > 0,
+          );
+
+          const uniqueIds = [...new Set(validIds)].slice(
+            0,
+            MAX_COMPARE_PRODUCTS,
+          );
+
+          setCompareIds(uniqueIds);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(uniqueIds));
+        }
       }
-    } catch (e) {
-      console.error("Failed to load comparison list:", e);
+    } catch (error) {
+      console.error("Failed to load comparison list:", error);
+      localStorage.removeItem(STORAGE_KEY);
+    } finally {
+      setStorageLoaded(true);
     }
   }, []);
 
-  const { data, isLoading } = useQuery<{
-    success: boolean;
-    products: ProductItem[];
-  }>({
+  const { data: products = [], isLoading } = useQuery<ProductItem[]>({
     queryKey: ["compare-products", compareIds],
-    queryFn: async () => {
-      if (compareIds.length === 0) return { success: true, products: [] };
-      const promises = compareIds.map((id) =>
-        api.get(`/products/${id}`).catch(() => null),
-      );
-      const results = await Promise.all(promises);
-      const products = results.map((res) => res?.data?.product).filter(Boolean);
-      return { success: true, products };
-    },
-    enabled: compareIds.length > 0,
-  });
 
-  const products = data?.products || [];
+    queryFn: async () => {
+      const results = await Promise.all(
+        compareIds.map(async (id) => {
+          try {
+            const response = await api.get(`/products/by-id/${id}`);
+            return response.data?.product as ProductItem | undefined;
+          } catch {
+            return undefined;
+          }
+        }),
+      );
+
+      return results.filter((product): product is ProductItem =>
+        Boolean(product?._id),
+      );
+    },
+
+    enabled: storageLoaded && compareIds.length > 0,
+    retry: 1,
+  });
 
   const handleRemove = (id: string) => {
     const updated = compareIds.filter((item) => item !== id);
+
     setCompareIds(updated);
-    localStorage.setItem("neocart_compare_list", JSON.stringify(updated));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
   };
 
   const handleClear = () => {
     setCompareIds([]);
-    localStorage.removeItem("neocart_compare_list");
+    localStorage.removeItem(STORAGE_KEY);
   };
 
-  if (isLoading) {
+  const formatPrice = (price: number) => `₹${price.toLocaleString("en-IN")}`;
+
+  const getEffectivePrice = (product: ProductItem) =>
+    product.discountPrice !== undefined &&
+    product.discountPrice > 0 &&
+    product.discountPrice < product.price
+      ? product.discountPrice
+      : product.price;
+
+  if (!storageLoaded || isLoading) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-brand-blue dark:text-cyan-400" />
@@ -61,23 +98,25 @@ export default function ComparePage() {
   }
 
   return (
-    <main className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
-      <div className="flex items-center justify-between border-b border-slate-200 pb-4 dark:border-slate-800">
+    <main className="mx-auto max-w-7xl space-y-6 px-3 py-6 sm:px-6 sm:py-8 lg:px-8">
+      <div className="flex flex-col gap-4 border-b border-slate-200 pb-4 sm:flex-row sm:items-center sm:justify-between dark:border-slate-800">
         <div>
-          <h1 className="text-xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
-            Product Comparison ({products.length}/3)
+          <h1 className="text-xl font-extrabold tracking-tight text-slate-900 sm:text-3xl dark:text-white">
+            Product Comparison ({products.length}/{MAX_COMPARE_PRODUCTS})
           </h1>
-          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-            Compare specifications side-by-side for products within the same
-            category.
+
+          <p className="mt-1 text-xs text-slate-500 sm:text-sm dark:text-slate-400">
+            Compare product specifications side-by-side and find the right
+            choice.
           </p>
         </div>
 
         {products.length > 0 && (
           <button
             onClick={handleClear}
-            className="rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-100 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-300 transition"
+            className="inline-flex items-center justify-center gap-2 self-start rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 sm:self-auto dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-300"
           >
+            <Trash2 className="h-4 w-4" />
             Clear Comparison
           </button>
         )}
@@ -88,104 +127,182 @@ export default function ComparePage() {
           <EmptyState
             icon={Scale}
             title="No products selected for comparison"
-            description="You can compare up to 3 products from the same category by clicking 'Compare' on product pages."
+            description="Add products to your comparison list from product pages. You can compare up to 4 products."
             actionLabel="Browse Catalog"
             actionHref="/products"
           />
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-2xs dark:border-slate-800 dark:bg-slate-900">
-          <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300">
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-              <tr>
-                <td className="p-4 font-bold bg-slate-50 dark:bg-slate-800/60 w-36">
-                  Product
-                </td>
-                {products.map((p) => (
-                  <td key={p._id} className="p-4 min-w-55 align-top">
-                    <div className="relative aspect-square w-32 mx-auto overflow-hidden rounded-xl bg-slate-100 dark:bg-slate-800 mb-3">
-                      <img
-                        src={p.images[0]}
-                        alt={p.name}
-                        className="h-full w-full object-cover"
-                      />
-                      <button
-                        onClick={() => handleRemove(p._id)}
-                        className="absolute top-2 right-2 rounded-full bg-white/90 p-1 text-rose-600 shadow-sm dark:bg-slate-900/90"
+        <div className="space-y-4">
+          {products.length < MAX_COMPARE_PRODUCTS && (
+            <Link
+              href="/products"
+              className="inline-flex items-center gap-2 text-sm font-semibold text-brand-blue hover:underline dark:text-cyan-400"
+            >
+              Add another product
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          )}
+
+          <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-2xs dark:border-slate-800 dark:bg-slate-900">
+            <table className="w-full min-w-160 text-left text-xs text-slate-700 dark:text-slate-300">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                <tr>
+                  <th className="w-36 bg-slate-50 p-4 font-bold dark:bg-slate-800/60">
+                    Product
+                  </th>
+
+                  {products.map((product) => (
+                    <td key={product._id} className="min-w-48 p-4 align-top">
+                      <div className="relative mx-auto mb-3 aspect-square w-32 overflow-hidden rounded-xl bg-slate-100 dark:bg-slate-800">
+                        {product.images?.[0] ? (
+                          <img
+                            src={product.images[0]}
+                            alt={product.name}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-full items-center justify-center text-slate-400">
+                            No image
+                          </div>
+                        )}
+
+                        <button
+                          onClick={() => handleRemove(product._id)}
+                          aria-label={`Remove ${product.name} from comparison`}
+                          className="absolute right-2 top-2 rounded-full bg-white/90 p-1.5 text-rose-600 shadow-sm transition hover:bg-rose-50 dark:bg-slate-900/90"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+
+                      <Link
+                        href={`/products/${product.slug}`}
+                        className="block text-center font-bold text-slate-900 hover:underline dark:text-white"
                       >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                    <Link
-                      href={`/products/${p.slug}`}
-                      className="font-bold text-slate-900 dark:text-white hover:underline block text-center line-clamp-2"
+                        {product.name}
+                      </Link>
+
+                      <Link
+                        href={`/products/${product.slug}`}
+                        className="mt-2 flex items-center justify-center gap-1 text-xs font-semibold text-brand-blue hover:underline dark:text-cyan-400"
+                      >
+                        View Product
+                        <ArrowRight className="h-3 w-3" />
+                      </Link>
+                    </td>
+                  ))}
+                </tr>
+
+                <tr>
+                  <th className="bg-slate-50 p-4 font-bold dark:bg-slate-800/60">
+                    Price
+                  </th>
+
+                  {products.map((product) => {
+                    const effectivePrice = getEffectivePrice(product);
+                    const hasDiscount = effectivePrice < product.price;
+
+                    return (
+                      <td key={product._id} className="p-4">
+                        <div className="text-sm font-extrabold text-brand-blue dark:text-cyan-400">
+                          {formatPrice(effectivePrice)}
+                        </div>
+
+                        {hasDiscount && (
+                          <div className="mt-1 text-xs text-slate-500">
+                            <span className="line-through">
+                              {formatPrice(product.price)}
+                            </span>
+                            <span className="ml-2 font-semibold text-emerald-600 dark:text-emerald-400">
+                              {Math.round(
+                                ((product.price - effectivePrice) /
+                                  product.price) *
+                                  100,
+                              )}
+                              % OFF
+                            </span>
+                          </div>
+                        )}
+                      </td>
+                    );
+                  })}
+                </tr>
+
+                <tr>
+                  <th className="bg-slate-50 p-4 font-bold dark:bg-slate-800/60">
+                    Category
+                  </th>
+
+                  {products.map((product) => (
+                    <td key={product._id} className="p-4 font-medium">
+                      {product.category?.name || "General"}
+                    </td>
+                  ))}
+                </tr>
+
+                <tr>
+                  <th className="bg-slate-50 p-4 font-bold dark:bg-slate-800/60">
+                    Rating
+                  </th>
+
+                  {products.map((product) => (
+                    <td key={product._id} className="p-4">
+                      <div className="flex items-center gap-1 font-bold text-amber-500">
+                        <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
+                        <span>
+                          {product.rating > 0
+                            ? product.rating.toFixed(1)
+                            : "New"}
+                        </span>
+                      </div>
+
+                      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                        {product.reviewCount} reviews
+                      </p>
+                    </td>
+                  ))}
+                </tr>
+
+                <tr>
+                  <th className="bg-slate-50 p-4 font-bold dark:bg-slate-800/60">
+                    Availability
+                  </th>
+
+                  {products.map((product) => (
+                    <td key={product._id} className="p-4">
+                      {product.stock > 0 ? (
+                        <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                          In Stock ({product.stock})
+                        </span>
+                      ) : (
+                        <span className="font-bold text-rose-600 dark:text-rose-400">
+                          Sold Out
+                        </span>
+                      )}
+                    </td>
+                  ))}
+                </tr>
+
+                <tr>
+                  <th className="bg-slate-50 p-4 font-bold dark:bg-slate-800/60">
+                    Description
+                  </th>
+
+                  {products.map((product) => (
+                    <td
+                      key={product._id}
+                      className="max-w-xs p-4 leading-relaxed"
                     >
-                      {p.name}
-                    </Link>
-                  </td>
-                ))}
-              </tr>
-
-              <tr>
-                <td className="p-4 font-bold bg-slate-50 dark:bg-slate-800/60">
-                  Price
-                </td>
-                {products.map((p) => (
-                  <td
-                    key={p._id}
-                    className="p-4 font-extrabold text-brand-blue dark:text-cyan-400 text-sm"
-                  >
-                    ₹{(p.discountPrice || p.price).toLocaleString("en-IN")}
-                  </td>
-                ))}
-              </tr>
-
-              <tr>
-                <td className="p-4 font-bold bg-slate-50 dark:bg-slate-800/60">
-                  Category
-                </td>
-                {products.map((p) => (
-                  <td key={p._id} className="p-4 font-medium">
-                    {p.category?.name || "General"}
-                  </td>
-                ))}
-              </tr>
-
-              <tr>
-                <td className="p-4 font-bold bg-slate-50 dark:bg-slate-800/60">
-                  Availability
-                </td>
-                {products.map((p) => (
-                  <td key={p._id} className="p-4">
-                    {p.stock > 0 ? (
-                      <span className="text-emerald-600 dark:text-emerald-400 font-bold">
-                        In Stock ({p.stock})
-                      </span>
-                    ) : (
-                      <span className="text-rose-600 dark:text-rose-400 font-bold">
-                        Sold Out
-                      </span>
-                    )}
-                  </td>
-                ))}
-              </tr>
-
-              <tr>
-                <td className="p-4 font-bold bg-slate-50 dark:bg-slate-800/60">
-                  Rating
-                </td>
-                {products.map((p) => (
-                  <td
-                    key={p._id}
-                    className="p-4 flex items-center gap-1 text-amber-500 font-bold"
-                  >
-                    <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
-                    <span>{p.rating > 0 ? p.rating.toFixed(1) : "New"}</span>
-                  </td>
-                ))}
-              </tr>
-            </tbody>
-          </table>
+                      <p className="line-clamp-5">
+                        {product.description || "No description available"}
+                      </p>
+                    </td>
+                  ))}
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </main>
