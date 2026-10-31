@@ -1,12 +1,35 @@
 import { Request, Response, NextFunction } from "express";
-import { Product } from "../models/product.model.js";
 import mongoose from "mongoose";
+import { Product } from "../models/product.model.js";
 import { Category, slugify } from "../models/category.model.js";
 import {
   createProductSchema,
   updateProductSchema,
 } from "../utils/validators.js";
 import { boundedPositiveInt, escapeRegex } from "../utils/querySafety.js";
+
+const generateUniqueProductSlug = async (
+  name: string,
+  excludeProductId?: mongoose.Types.ObjectId,
+): Promise<string> => {
+  const baseSlug = slugify(name) || "product";
+  const exclusion = excludeProductId ? { _id: { $ne: excludeProductId } } : {};
+
+  let candidate = baseSlug;
+  let suffix = 2;
+
+  while (await Product.exists({ slug: candidate, ...exclusion })) {
+    candidate = `${baseSlug}-${suffix}`;
+    suffix += 1;
+  }
+
+  return candidate;
+};
+
+// Effective selling price: discountPrice when present, otherwise regular price.
+const effectivePriceExpression = {
+  $ifNull: ["$discountPrice", "$price"],
+};
 
 // GET /api/products (Public with Search, Filter, Sort, Pagination)
 export const getProducts = async (
@@ -26,7 +49,6 @@ export const getProducts = async (
       limit = "12",
     } = req.query;
 
-    // Only products belonging to active categories are publicly visible.
     const activeCategoryIds = await Category.distinct("_id", {
       isActive: true,
     });
@@ -40,12 +62,8 @@ export const getProducts = async (
       query.stock = { $gt: 0 };
     }
 
-    // 1. Text Search (Name or Description)
     if (search && typeof search === "string" && search.trim() !== "") {
-      const sanitized = search
-        .trim()
-        .slice(0, 80)
-        .replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const sanitized = escapeRegex(search.trim().slice(0, 80));
 
       query.$or = [
         { name: { $regex: sanitized, $options: "i" } },
@@ -53,7 +71,6 @@ export const getProducts = async (
       ];
     }
 
-    // 2. Category Filter (by Category ObjectId or Slug)
     if (category && typeof category === "string") {
       let selectedCategoryId: string | null = null;
 
@@ -77,7 +94,7 @@ export const getProducts = async (
         : { $in: [] };
     }
 
-    // 3. Price Range Filtering
+    // Validate and apply price filters against effective selling price.
     if (minPrice !== undefined || maxPrice !== undefined) {
       const parsedMin = minPrice === undefined ? undefined : Number(minPrice);
       const parsedMax = maxPrice === undefined ? undefined : Number(maxPrice);
@@ -99,20 +116,29 @@ export const getProducts = async (
         return;
       }
 
-      const priceFilter: Record<string, number> = {};
+      const priceConditions: Record<string, unknown>[] = [];
 
-      if (parsedMin !== undefined) priceFilter.$gte = parsedMin;
-      if (parsedMax !== undefined) priceFilter.$lte = parsedMax;
+      if (parsedMin !== undefined) {
+        priceConditions.push({
+          $gte: [effectivePriceExpression, parsedMin],
+        });
+      }
 
-      query.price = priceFilter;
+      if (parsedMax !== undefined) {
+        priceConditions.push({
+          $lte: [effectivePriceExpression, parsedMax],
+        });
+      }
+
+      query.$expr = {
+        $and: priceConditions,
+      };
     }
 
-    // 4. Featured Flag
     if (featured === "true") {
       query.isFeatured = true;
     }
 
-    // 5. Sorting Setup
     let sortOptions: Record<string, 1 | -1> = { createdAt: -1 };
 
     if (sort === "price-asc") sortOptions = { price: 1 };
@@ -120,7 +146,9 @@ export const getProducts = async (
     if (sort === "rating") sortOptions = { rating: -1 };
     if (sort === "name-asc") sortOptions = { name: 1 };
 
-    // 6. Pagination
+    // _id provides deterministic ordering when primary sort values match.
+    sortOptions._id = 1;
+
     const pageNumber = boundedPositiveInt(page, 1, 1_000_000);
     const limitNumber = boundedPositiveInt(limit, 12, 100);
     const skip = (pageNumber - 1) * limitNumber;
@@ -180,7 +208,6 @@ export const getProductBySlug = async (
 };
 
 // GET /api/products/by-id/:id
-// Public route: Fetch one active product using its MongoDB ID
 export const getProductById = async (
   req: Request,
   res: Response,
@@ -265,22 +292,7 @@ export const createProduct = async (
       return;
     }
 
-    if (discountPrice && discountPrice >= price) {
-      res.status(400).json({
-        success: false,
-        message: "Discount price must be less than the regular price",
-      });
-      return;
-    }
-
-    const generatedSlug = slugify(name);
-
-    let finalSlug = generatedSlug;
-    const existingProduct = await Product.findOne({ slug: generatedSlug });
-
-    if (existingProduct) {
-      finalSlug = `${generatedSlug}-${Date.now().toString().slice(-4)}`;
-    }
+    const finalSlug = await generateUniqueProductSlug(name);
 
     const product = await Product.create({
       name,
@@ -289,10 +301,10 @@ export const createProduct = async (
       price,
       discountPrice,
       images,
-      category,
+      category: categoryDoc._id,
       stock,
-      isFeatured: isFeatured || false,
-      isActive: isActive !== undefined ? isActive : true,
+      isFeatured: isFeatured ?? false,
+      isActive: isActive ?? true,
     });
 
     res.status(201).json({
@@ -312,6 +324,16 @@ export const updateProduct = async (
   next: NextFunction,
 ): Promise<void> => {
   try {
+    const id = req.params.id;
+
+    if (typeof id !== "string" || !mongoose.Types.ObjectId.isValid(id)) {
+      res.status(400).json({
+        success: false,
+        message: "Invalid product ID",
+      });
+      return;
+    }
+
     const validationResult = updateProductSchema.safeParse(req.body);
 
     if (!validationResult.success) {
@@ -322,7 +344,7 @@ export const updateProduct = async (
       return;
     }
 
-    const product = await Product.findById(req.params.id);
+    const product = await Product.findById(id);
 
     if (!product) {
       res.status(404).json({
@@ -334,7 +356,7 @@ export const updateProduct = async (
 
     const data = validationResult.data;
 
-    if (data.category) {
+    if (data.category !== undefined) {
       const categoryDoc = await Category.findOne({
         _id: data.category,
         isActive: true,
@@ -351,14 +373,13 @@ export const updateProduct = async (
       product.category = categoryDoc._id;
     }
 
-    const targetPrice = data.price !== undefined ? data.price : product.price;
-
+    const targetPrice = data.price ?? product.price;
     const targetDiscount =
       data.discountPrice !== undefined
         ? data.discountPrice
         : product.discountPrice;
 
-    if (targetDiscount && targetDiscount >= targetPrice) {
+    if (targetDiscount != null && targetDiscount >= targetPrice) {
       res.status(400).json({
         success: false,
         message: "Discount price must be lower than the price",
@@ -366,19 +387,38 @@ export const updateProduct = async (
       return;
     }
 
-    if (data.name && data.name !== product.name) {
+    if (data.name !== undefined && data.name !== product.name) {
       product.name = data.name;
-      product.slug = slugify(data.name);
+      product.slug = await generateUniqueProductSlug(data.name, product._id);
     }
 
-    if (data.description !== undefined) product.description = data.description;
-    if (data.price !== undefined) product.price = data.price;
-    if (data.discountPrice !== undefined)
+    if (data.description !== undefined) {
+      product.description = data.description;
+    }
+
+    if (data.price !== undefined) {
+      product.price = data.price;
+    }
+
+    if (data.discountPrice !== undefined) {
       product.discountPrice = data.discountPrice;
-    if (data.images !== undefined) product.images = data.images;
-    if (data.stock !== undefined) product.stock = data.stock;
-    if (data.isFeatured !== undefined) product.isFeatured = data.isFeatured;
-    if (data.isActive !== undefined) product.isActive = data.isActive;
+    }
+
+    if (data.images !== undefined) {
+      product.images = data.images;
+    }
+
+    if (data.stock !== undefined) {
+      product.stock = data.stock;
+    }
+
+    if (data.isFeatured !== undefined) {
+      product.isFeatured = data.isFeatured;
+    }
+
+    if (data.isActive !== undefined) {
+      product.isActive = data.isActive;
+    }
 
     await product.save();
 
@@ -399,8 +439,18 @@ export const deleteProduct = async (
   next: NextFunction,
 ): Promise<void> => {
   try {
+    const id = req.params.id;
+
+    if (typeof id !== "string" || !mongoose.Types.ObjectId.isValid(id)) {
+      res.status(400).json({
+        success: false,
+        message: "Invalid product ID",
+      });
+      return;
+    }
+
     const product = await Product.findByIdAndUpdate(
-      req.params.id,
+      id,
       { $set: { isActive: false } },
       { new: true },
     );
@@ -474,7 +524,6 @@ export const getCatalogFacets = async (
       isActive: true,
     });
 
-    // 1. Group active products belonging to active categories.
     const categoryCounts = await Product.aggregate([
       {
         $match: {
@@ -490,7 +539,6 @@ export const getCatalogFacets = async (
       },
     ]);
 
-    // 2. Calculate min & max price across publicly visible inventory.
     const priceStats = await Product.aggregate([
       {
         $match: {
@@ -501,13 +549,25 @@ export const getCatalogFacets = async (
       {
         $group: {
           _id: null,
-          minPrice: { $min: "$price" },
-          maxPrice: { $max: "$price" },
+          minPrice: {
+            $min: effectivePriceExpression,
+          },
+          maxPrice: {
+            $max: effectivePriceExpression,
+          },
           totalInStock: {
             $sum: {
               $cond: [{ $gt: ["$stock", 0] }, 1, 0],
             },
           },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          minPrice: 1,
+          maxPrice: 1,
+          totalInStock: 1,
         },
       },
     ]);
@@ -517,7 +577,7 @@ export const getCatalogFacets = async (
       categoryCounts,
       stats: priceStats[0] || {
         minPrice: 0,
-        maxPrice: 100000,
+        maxPrice: 0,
         totalInStock: 0,
       },
     });

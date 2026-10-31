@@ -37,10 +37,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
   const hasDiscount =
     product.discountPrice !== undefined &&
-    product.discountPrice > 0 &&
+    product.discountPrice !== null &&
     product.discountPrice < product.price;
 
   const currentPrice = hasDiscount ? product.discountPrice! : product.price;
+
   const isOutOfStock = product.stock <= 0;
 
   const { data: wishlistData, isLoading: wishlistLoading } = useQuery({
@@ -130,7 +131,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
         {hasDiscount && (
           <span className="absolute top-3 left-3 rounded-full bg-rose-600 px-2.5 py-0.5 text-[11px] font-bold text-white shadow-sm">
-            SAVE ₹{product.price - product.discountPrice!}
+            SAVE ₹{(product.price - currentPrice).toLocaleString("en-IN")}
           </span>
         )}
 

@@ -1,5 +1,4 @@
 import mongoose, { Document, Model, Schema, Types } from "mongoose";
-import { slugify } from "./category.model.js";
 
 export interface IProduct extends Document {
   name: string;
@@ -48,11 +47,10 @@ const productSchema = new Schema<IProduct>(
       type: Number,
       min: [0, "Discount price cannot be negative"],
       validate: {
-        validator: function (this: IProduct, val: number) {
-          // Discount price must be lower than original price
-          return !val || val < this.price;
+        validator: function (this: IProduct, val: number | undefined) {
+          return val === undefined || val === null || val < this.price;
         },
-        message: "Discount price ({VALUE}) must be lower than original price",
+        message: "Discount price must be lower than original price",
       },
     },
     images: {
@@ -103,13 +101,6 @@ const productSchema = new Schema<IProduct>(
     timestamps: true,
   },
 );
-
-// Pre-save hook: auto-generate slug if name is modified
-productSchema.pre<IProduct>("save", async function () {
-  if (this.isModified("name")) {
-    this.slug = slugify(this.name);
-  }
-});
 
 export const Product: Model<IProduct> = mongoose.model<IProduct>(
   "Product",
