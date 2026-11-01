@@ -19,6 +19,9 @@ import adminRoutes from "./routes/admin.routes.js";
 
 const app: Application = express();
 
+// Trust Render's reverse proxy for accurate client IP detection.
+app.set("trust proxy", 1);
+
 // Normalize configured frontend URL.
 const configuredClientOrigin = new URL(ENV.CLIENT_URL.trim()).origin;
 
