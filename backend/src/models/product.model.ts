@@ -31,7 +31,6 @@ const productSchema = new Schema<IProduct>(
       unique: true,
       lowercase: true,
       trim: true,
-      index: true,
     },
     description: {
       type: String,
@@ -58,9 +57,14 @@ const productSchema = new Schema<IProduct>(
       default: [],
       validate: {
         validator: function (val: string[]) {
-          return val.length > 0;
+          return (
+            val.length > 0 &&
+            val.every(
+              (image) => typeof image === "string" && image.trim().length > 0,
+            )
+          );
         },
-        message: "A product must have at least one image",
+        message: "A product must have at least one valid image",
       },
     },
     category: {
@@ -74,6 +78,10 @@ const productSchema = new Schema<IProduct>(
       required: [true, "Stock count is required"],
       min: [0, "Stock cannot be negative"],
       default: 0,
+      validate: {
+        validator: Number.isInteger,
+        message: "Stock must be a whole number",
+      },
     },
     rating: {
       type: Number,
@@ -85,6 +93,10 @@ const productSchema = new Schema<IProduct>(
       type: Number,
       default: 0,
       min: 0,
+      validate: {
+        validator: Number.isInteger,
+        message: "Review count must be a whole number",
+      },
     },
     isFeatured: {
       type: Boolean,

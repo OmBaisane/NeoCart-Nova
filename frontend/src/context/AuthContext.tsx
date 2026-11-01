@@ -44,18 +44,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const clearUserQueries = useCallback(async () => {
     await queryClient.cancelQueries();
-
-    queryClient.removeQueries({
-      predicate: (query) =>
-        ["wishlist", "cart"].includes(String(query.queryKey[0])),
-    });
+    queryClient.clear();
   }, [queryClient]);
 
   const fetchCurrentUser = useCallback(async () => {
     try {
       const response = await api.get("/auth/me");
 
-      if (response.data?.success) {
+      if (response.data?.success && response.data.user) {
         setUser(response.data.user);
       } else {
         setUser(null);
@@ -75,6 +71,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const login = (userData: User) => {
     setUser(userData);
+    queryClient.clear();
   };
 
   const logout = async () => {

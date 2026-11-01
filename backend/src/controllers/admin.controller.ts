@@ -1,11 +1,23 @@
 import { Request, Response, NextFunction } from "express";
+import mongoose from "mongoose";
 import { Product } from "../models/product.model.js";
 import { Order } from "../models/order.model.js";
 import { User } from "../models/user.model.js";
 import { updateOrderStatus as updateOrderStatusSafely } from "./order.controller.js";
 import { boundedPositiveInt, escapeRegex } from "../utils/querySafety.js";
 
-// GET /api/admin/stats (Admin Analytics Summary)
+const ORDER_STATUSES = [
+  "pending",
+  "confirmed",
+  "processing",
+  "shipped",
+  "delivered",
+  "cancelled",
+] as const;
+
+const PRODUCT_STATUSES = ["active", "inactive", "low_stock"] as const;
+
+// GET /api/admin/stats
 export const getDashboardStats = async (
   _req: Request,
   res: Response,
@@ -148,9 +160,22 @@ export const getAdminProducts = async (
         ? req.query.search.trim().slice(0, 80)
         : "";
 
-    const status = req.query.status as string;
-    const skip = (page - 1) * limit;
+    const status =
+      typeof req.query.status === "string" ? req.query.status : undefined;
 
+    if (
+      status !== undefined &&
+      status !== "all" &&
+      !PRODUCT_STATUSES.includes(status as (typeof PRODUCT_STATUSES)[number])
+    ) {
+      res.status(400).json({
+        success: false,
+        message: "Invalid product status filter.",
+      });
+      return;
+    }
+
+    const skip = (page - 1) * limit;
     const filter: Record<string, any> = {};
 
     if (search) {
@@ -209,6 +234,15 @@ export const toggleProductStatus = async (
 ): Promise<void> => {
   try {
     const { id } = req.params;
+
+    if (!mongoose.isValidObjectId(id)) {
+      res.status(400).json({
+        success: false,
+        message: "Invalid product ID.",
+      });
+      return;
+    }
+
     const product = await Product.findById(id);
 
     if (!product) {
@@ -242,7 +276,20 @@ export const getAdminOrders = async (
     const page = boundedPositiveInt(req.query.page, 1, 1_000_000);
     const limit = boundedPositiveInt(req.query.limit, 20, 100);
 
-    const status = req.query.status as string;
+    const status =
+      typeof req.query.status === "string" ? req.query.status : undefined;
+
+    if (
+      status !== undefined &&
+      status !== "all" &&
+      !ORDER_STATUSES.includes(status as (typeof ORDER_STATUSES)[number])
+    ) {
+      res.status(400).json({
+        success: false,
+        message: "Invalid order status filter.",
+      });
+      return;
+    }
 
     const search =
       typeof req.query.search === "string"
@@ -250,7 +297,6 @@ export const getAdminOrders = async (
         : "";
 
     const skip = (page - 1) * limit;
-
     const filter: Record<string, any> = {};
 
     if (status && status !== "all") {
@@ -304,7 +350,6 @@ export const getAdminOrders = async (
 };
 
 // PATCH /api/admin/orders/:id/status
-// Reuse the canonical order controller implementation.
 export const updateOrderStatus = updateOrderStatusSafely;
 
 const CSV_HEADERS = [
@@ -371,19 +416,13 @@ export const exportAdminOrders = async (
   let cursor: ReturnType<ReturnType<typeof Order.find>["cursor"]> | undefined;
 
   try {
-    const allowedStatuses = [
-      "pending",
-      "confirmed",
-      "processing",
-      "shipped",
-      "delivered",
-      "cancelled",
-    ];
-
     const status =
       typeof req.query.status === "string" ? req.query.status : "all";
 
-    if (status !== "all" && !allowedStatuses.includes(status)) {
+    if (
+      status !== "all" &&
+      !ORDER_STATUSES.includes(status as (typeof ORDER_STATUSES)[number])
+    ) {
       res.status(400).json({
         success: false,
         message: "Invalid order status filter.",
@@ -465,9 +504,7 @@ export const exportAdminOrders = async (
       } | null;
 
       const address = order.shippingAddress;
-
       const productNames = order.items.map((item) => item.name).join(" | ");
-
       const quantities = order.items.map((item) => item.quantity).join(" | ");
 
       const row = createCsvRow([

@@ -34,7 +34,7 @@ export const metadata: Metadata = {
   ],
   authors: [{ name: "NeoCart Nova Engineering" }],
   metadataBase: new URL(
-    process.env.NEXT_PUBLIC_SITE_URL || "https://neocart-nova.vercel.app",
+    process.env.NEXT_PUBLIC_SITE_URL || "https://neo-cart-nova.vercel.app",
   ),
   openGraph: {
     type: "website",

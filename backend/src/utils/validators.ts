@@ -1,5 +1,8 @@
 import { z } from "zod";
 
+const hasAtLeastOneField = (data: object): boolean =>
+  Object.keys(data).length > 0;
+
 export const registerSchema = z.object({
   name: z
     .string()
@@ -12,7 +15,11 @@ export const registerSchema = z.object({
     .email("Please provide a valid email address")
     .toLowerCase(),
   password: z.string().min(8, "Password must be at least 8 characters long"),
-  phone: z.string().trim().optional(),
+  phone: z
+    .string()
+    .trim()
+    .max(20, "Phone number cannot exceed 20 characters")
+    .optional(),
 });
 
 export const loginSchema = z.object({
@@ -33,21 +40,33 @@ export const createCategorySchema = z.object({
     .trim()
     .min(2, "Category name must be at least 2 characters")
     .max(50, "Category name cannot exceed 50 characters"),
-  description: z.string().trim().optional(),
-  image: z.string().trim().optional(),
-});
-
-export const updateCategorySchema = z.object({
-  name: z
+  description: z
     .string()
     .trim()
-    .min(2, "Category name must be at least 2 characters")
-    .max(50, "Category name cannot exceed 50 characters")
+    .max(500, "Description cannot exceed 500 characters")
     .optional(),
-  description: z.string().trim().optional(),
-  image: z.string().trim().optional(),
-  isActive: z.boolean().optional(),
+  image: z.string().trim().max(2048, "Image URL is too long").optional(),
 });
+
+export const updateCategorySchema = z
+  .object({
+    name: z
+      .string()
+      .trim()
+      .min(2, "Category name must be at least 2 characters")
+      .max(50, "Category name cannot exceed 50 characters")
+      .optional(),
+    description: z
+      .string()
+      .trim()
+      .max(500, "Description cannot exceed 500 characters")
+      .optional(),
+    image: z.string().trim().max(2048, "Image URL is too long").optional(),
+    isActive: z.boolean().optional(),
+  })
+  .refine(hasAtLeastOneField, {
+    message: "At least one field must be provided",
+  });
 
 export type CreateCategoryInput = z.infer<typeof createCategorySchema>;
 export type UpdateCategoryInput = z.infer<typeof updateCategorySchema>;
@@ -62,15 +81,18 @@ export const createProductSchema = z
     description: z
       .string()
       .trim()
-      .min(10, "Product description must be at least 10 characters"),
-    price: z.number().min(0, "Price cannot be negative"),
+      .min(10, "Product description must be at least 10 characters")
+      .max(10000, "Product description cannot exceed 10000 characters"),
+    price: z.number().finite().min(0, "Price cannot be negative"),
     discountPrice: z
       .number()
+      .finite()
       .min(0, "Discount price cannot be negative")
       .optional(),
     images: z
       .array(z.string().url("Each image must be a valid URL"))
-      .min(1, "At least one product image is required"),
+      .min(1, "At least one product image is required")
+      .max(10, "A product cannot have more than 10 images"),
     category: z
       .string()
       .trim()
@@ -104,15 +126,18 @@ export const updateProductSchema = z
       .string()
       .trim()
       .min(10, "Product description must be at least 10 characters")
+      .max(10000, "Product description cannot exceed 10000 characters")
       .optional(),
-    price: z.number().min(0, "Price cannot be negative").optional(),
+    price: z.number().finite().min(0, "Price cannot be negative").optional(),
     discountPrice: z
       .number()
+      .finite()
       .min(0, "Discount price cannot be negative")
       .optional(),
     images: z
       .array(z.string().url("Each image must be a valid URL"))
       .min(1, "At least one product image is required")
+      .max(10, "A product cannot have more than 10 images")
       .optional(),
     category: z
       .string()
@@ -126,6 +151,9 @@ export const updateProductSchema = z
       .optional(),
     isFeatured: z.boolean().optional(),
     isActive: z.boolean().optional(),
+  })
+  .refine(hasAtLeastOneField, {
+    message: "At least one field must be provided",
   })
   .superRefine((data, ctx) => {
     if (
@@ -175,14 +203,23 @@ export const shippingAddressSchema = z.object({
   phone: z
     .string()
     .trim()
-    .min(10, "Phone number must be at least 10 digits")
-    .max(15, "Phone number cannot exceed 15 digits"),
+    .min(10, "Phone number must be at least 10 characters")
+    .max(15, "Phone number cannot exceed 15 characters"),
   address: z
     .string()
     .trim()
-    .min(5, "Street address must be at least 5 characters"),
-  city: z.string().trim().min(2, "City must be at least 2 characters"),
-  state: z.string().trim().min(2, "State must be at least 2 characters"),
+    .min(5, "Street address must be at least 5 characters")
+    .max(500, "Street address cannot exceed 500 characters"),
+  city: z
+    .string()
+    .trim()
+    .min(2, "City must be at least 2 characters")
+    .max(100, "City cannot exceed 100 characters"),
+  state: z
+    .string()
+    .trim()
+    .min(2, "State must be at least 2 characters")
+    .max(100, "State cannot exceed 100 characters"),
   pincode: z
     .string()
     .trim()
@@ -249,50 +286,62 @@ export const createReviewSchema = z.object({
     .optional(),
 });
 
-export const updateReviewSchema = z.object({
-  rating: z
-    .number()
-    .int("Rating must be an integer")
-    .min(1, "Rating must be at least 1")
-    .max(5, "Rating cannot exceed 5")
-    .optional(),
-  comment: z
-    .string()
-    .trim()
-    .min(3, "Comment must be at least 3 characters")
-    .max(500, "Comment cannot exceed 500 characters")
-    .optional(),
-  images: z
-    .array(z.string().url("Each review image must be a valid URL"))
-    .max(3, "Cannot upload more than 3 proof images")
-    .optional(),
-});
+export const updateReviewSchema = z
+  .object({
+    rating: z
+      .number()
+      .int("Rating must be an integer")
+      .min(1, "Rating must be at least 1")
+      .max(5, "Rating cannot exceed 5")
+      .optional(),
+    comment: z
+      .string()
+      .trim()
+      .min(3, "Comment must be at least 3 characters")
+      .max(500, "Comment cannot exceed 500 characters")
+      .optional(),
+    images: z
+      .array(z.string().url("Each review image must be a valid URL"))
+      .max(3, "Cannot upload more than 3 proof images")
+      .optional(),
+  })
+  .refine(hasAtLeastOneField, {
+    message: "At least one field must be provided",
+  });
 
 export type CreateReviewInput = z.infer<typeof createReviewSchema>;
 export type UpdateReviewInput = z.infer<typeof updateReviewSchema>;
 
-export const updateProfileSchema = z.object({
-  name: z
-    .string()
-    .trim()
-    .min(2, "Name must be at least 2 characters")
-    .max(50, "Name cannot exceed 50 characters")
-    .optional(),
-  phone: z.string().trim().optional(),
-  avatar: z
-    .string()
-    .url("Avatar must be a valid URL")
-    .or(z.literal(""))
-    .optional(),
-  address: z
-    .object({
-      street: z.string().trim().optional(),
-      city: z.string().trim().optional(),
-      state: z.string().trim().optional(),
-      pincode: z.string().trim().optional(),
-    })
-    .optional(),
-});
+export const updateProfileSchema = z
+  .object({
+    name: z
+      .string()
+      .trim()
+      .min(2, "Name must be at least 2 characters")
+      .max(50, "Name cannot exceed 50 characters")
+      .optional(),
+    phone: z
+      .string()
+      .trim()
+      .max(20, "Phone number cannot exceed 20 characters")
+      .optional(),
+    avatar: z
+      .string()
+      .url("Avatar must be a valid URL")
+      .or(z.literal(""))
+      .optional(),
+    address: z
+      .object({
+        street: z.string().trim().max(200).optional(),
+        city: z.string().trim().max(100).optional(),
+        state: z.string().trim().max(100).optional(),
+        pincode: z.string().trim().max(10).optional(),
+      })
+      .optional(),
+  })
+  .refine(hasAtLeastOneField, {
+    message: "At least one field must be provided",
+  });
 
 export const updatePasswordSchema = z.object({
   currentPassword: z.string().min(1, "Current password is required"),

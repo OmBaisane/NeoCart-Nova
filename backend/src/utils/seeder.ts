@@ -1,6 +1,7 @@
 import dotenv from "dotenv";
 dotenv.config();
 
+import mongoose from "mongoose";
 import { connectDB } from "../config/db.js";
 import { User } from "../models/user.model.js";
 import { Category } from "../models/category.model.js";
@@ -18,22 +19,38 @@ const getRequiredSeedEnv = (name: string): string => {
   return value;
 };
 
-const seedDatabase = async () => {
+const seedDatabase = async (): Promise<void> => {
   try {
     if (process.env.NODE_ENV === "production") {
-      console.error(
-        "❌ FATAL: Database seeding is strictly disabled in production. Run only in development/staging.",
-      );
-      process.exit(1);
+      throw new Error("Database seeding is strictly disabled in production.");
     }
 
-    const adminEmail = getRequiredSeedEnv("SEED_ADMIN_EMAIL");
+    const adminEmail = getRequiredSeedEnv("SEED_ADMIN_EMAIL").toLowerCase();
     const adminPassword = getRequiredSeedEnv("SEED_ADMIN_PASSWORD");
     const adminPhone = getRequiredSeedEnv("SEED_ADMIN_PHONE");
 
-    const demoUserEmail = getRequiredSeedEnv("SEED_DEMO_USER_EMAIL");
+    const demoUserEmail = getRequiredSeedEnv(
+      "SEED_DEMO_USER_EMAIL",
+    ).toLowerCase();
     const demoUserPassword = getRequiredSeedEnv("SEED_DEMO_USER_PASSWORD");
     const demoUserPhone = getRequiredSeedEnv("SEED_DEMO_USER_PHONE");
+
+    if (adminEmail === demoUserEmail) {
+      throw new Error(
+        "SEED_ADMIN_EMAIL and SEED_DEMO_USER_EMAIL must be different.",
+      );
+    }
+
+    if (
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(adminEmail) ||
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(demoUserEmail)
+    ) {
+      throw new Error("Seed user email addresses must be valid.");
+    }
+
+    if (adminPassword.length < 8 || demoUserPassword.length < 8) {
+      throw new Error("Seed passwords must contain at least 8 characters.");
+    }
 
     if (process.env.SEED_ALLOW_RESET !== "true") {
       throw new Error(
@@ -42,13 +59,15 @@ const seedDatabase = async () => {
     }
 
     await connectDB();
+
     console.log(
       "Connected to MongoDB. Resetting data in the explicitly approved development database...",
     );
 
-    // Clean existing data for a clean seed only after explicit opt-in.
     await Promise.all([
-      User.deleteMany({ email: { $in: [adminEmail, demoUserEmail] } }),
+      User.deleteMany({
+        email: { $in: [adminEmail, demoUserEmail] },
+      }),
       Category.deleteMany({}),
       Product.deleteMany({}),
       Review.deleteMany({}),
@@ -206,9 +225,9 @@ const seedDatabase = async () => {
     ];
 
     const seededProducts = await Product.insertMany(products);
+
     console.log("Products seeded successfully.");
 
-    // Seed a genuine verified review for the first product so rating matches the review table
     await Review.create({
       product: seededProducts[0]._id,
       user: demoUser._id,
@@ -216,13 +235,16 @@ const seedDatabase = async () => {
       comment:
         "Exceptional soundstage, build quality, and comfort. Exceeded expectations!",
     });
-    console.log("Verified sample review seeded successfully.");
 
+    console.log("Verified sample review seeded successfully.");
     console.log("Database seeding completed successfully.");
-    process.exit(0);
   } catch (error) {
     console.error("Database seeding failed:", error);
-    process.exit(1);
+    process.exitCode = 1;
+  } finally {
+    if (mongoose.connection.readyState !== 0) {
+      await mongoose.disconnect();
+    }
   }
 };
 

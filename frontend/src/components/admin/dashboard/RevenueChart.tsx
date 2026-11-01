@@ -1,3 +1,4 @@
+import { useId } from "react";
 import type { AnalyticsRange, RevenueTrend } from "./types";
 import { formatDateLabel } from "./utils";
 
@@ -7,6 +8,8 @@ interface RevenueChartProps {
 }
 
 export default function RevenueChart({ data, range }: RevenueChartProps) {
+  const gradientId = `revenueGradient-${useId().replace(/:/g, "")}`;
+
   if (!data.length) {
     return (
       <div className="flex min-h-56 items-center justify-center text-xs text-slate-400">
@@ -79,13 +82,13 @@ export default function RevenueChart({ data, range }: RevenueChartProps) {
           })}
 
           <defs>
-            <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
+            <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.3" />
               <stop offset="100%" stopColor="#3b82f6" stopOpacity="0.01" />
             </linearGradient>
           </defs>
 
-          <path d={areaPath} fill="url(#revenueGradient)" />
+          <path d={areaPath} fill={`url(#${gradientId})`} />
 
           <path
             d={linePath}

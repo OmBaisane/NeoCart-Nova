@@ -11,7 +11,6 @@ import {
   OrderStatus,
 } from "../utils/validators.js";
 
-// Generates a stronger human-readable tracking number.
 const generateTrackingNumber = (): string => {
   const timestamp = Date.now().toString(36).toUpperCase();
   const randomSuffix = randomBytes(4).toString("hex").toUpperCase();
@@ -19,8 +18,6 @@ const generateTrackingNumber = (): string => {
   return `NC-NOV-${timestamp}-${randomSuffix}`;
 };
 
-// MongoDB transactions require a replica set, sharded cluster,
-// or another transaction-capable deployment.
 export const isReplicaSet = (): boolean => {
   if (mongoose.connection.readyState !== 1) return false;
 
@@ -51,9 +48,6 @@ const sendTransactionUnavailable = (res: Response): void => {
 const roundCurrency = (value: number): number =>
   Math.round((value + Number.EPSILON) * 100) / 100;
 
-// Restores inventory inside the caller's active transaction.
-// A missing product is skipped because a deleted product has no
-// inventory record left to restore.
 const restoreOrderInventory = async (
   items: IOrderItemSnapshot[],
   session: mongoose.ClientSession,
@@ -67,7 +61,7 @@ const restoreOrderInventory = async (
   }
 };
 
-// POST /api/orders (Protected - Transaction-Safe Checkout)
+// POST /api/orders
 export const createOrder = async (
   req: Request,
   res: Response,
@@ -149,8 +143,8 @@ export const createOrder = async (
       }
 
       const effectivePrice =
-        updatedProduct.discountPrice !== undefined &&
-        updatedProduct.discountPrice > 0
+        updatedProduct.discountPrice != null &&
+        updatedProduct.discountPrice < updatedProduct.price
           ? updatedProduct.discountPrice
           : updatedProduct.price;
 
@@ -215,7 +209,7 @@ export const createOrder = async (
   }
 };
 
-// GET /api/orders (Protected - Customer & Admin Order History)
+// GET /api/orders
 export const getMyOrders = async (
   req: Request,
   res: Response,
@@ -241,7 +235,7 @@ export const getMyOrders = async (
   }
 };
 
-// GET /api/orders/:id (Protected - Specific Order Details)
+// GET /api/orders/:id
 export const getOrderById = async (
   req: Request,
   res: Response,
@@ -288,7 +282,6 @@ export const getOrderById = async (
 };
 
 // PATCH /api/orders/:id/cancel
-// Protected - Transaction-Safe Exactly-Once Inventory Restoration
 export const cancelOrder = async (
   req: Request,
   res: Response,
@@ -325,8 +318,6 @@ export const cancelOrder = async (
       query.user = userId;
     }
 
-    // The state transition and restoration marker are written
-    // together. Concurrent cancellation attempts cannot both win.
     const order = await Order.findOneAndUpdate(
       query,
       {
@@ -377,7 +368,6 @@ export const cancelOrder = async (
 };
 
 // PATCH /api/orders/:id/status
-// Admin Only - Transaction-Safe State Machine
 export const updateOrderStatus = async (
   req: Request,
   res: Response,
@@ -428,7 +418,6 @@ export const updateOrderStatus = async (
 
     const currentStatus = order.orderStatus as OrderStatus;
     const nextStatus = orderStatus as OrderStatus;
-
     const allowedTransitions = ALLOWED_STATUS_TRANSITIONS[currentStatus] || [];
 
     if (!allowedTransitions.includes(nextStatus)) {
@@ -441,8 +430,6 @@ export const updateOrderStatus = async (
       return;
     }
 
-    // COD orders remain pending until delivery.
-    // Payment integrations and manual refunds are not implemented.
     const resultingPaymentStatus =
       nextStatus === "delivered" ? "paid" : order.paymentStatus;
 
@@ -460,43 +447,74 @@ export const updateOrderStatus = async (
       return;
     }
 
+    if (nextStatus === "cancelled" && order.inventoryRestocked) {
+      await session.abortTransaction();
+
+      res.status(409).json({
+        success: false,
+        message:
+          "Inventory for this order has already been restored. Cancellation cannot be repeated.",
+      });
+      return;
+    }
+
+    // Use the previously-read state as a condition for the write.
+    // A concurrent update cannot silently overwrite a newer order state.
+    const updateFields: Record<string, unknown> = {
+      orderStatus: nextStatus,
+    };
+
     if (nextStatus === "cancelled") {
-      if (order.inventoryRestocked) {
-        await session.abortTransaction();
-
-        res.status(409).json({
-          success: false,
-          message:
-            "Inventory for this order has already been restored. Cancellation cannot be repeated.",
-        });
-        return;
-      }
-
-      await restoreOrderInventory(order.items, session);
-
-      order.inventoryRestocked = true;
-      order.cancelledAt = new Date();
+      updateFields.inventoryRestocked = true;
+      updateFields.cancelledAt = new Date();
     }
 
     if (nextStatus === "delivered") {
-      order.deliveredAt = new Date();
-      order.paymentStatus = "paid";
+      updateFields.deliveredAt = new Date();
+      updateFields.paymentStatus = "paid";
     }
-
-    order.orderStatus = nextStatus;
 
     if (trackingNumber !== undefined) {
-      order.trackingNumber = trackingNumber;
+      updateFields.trackingNumber = trackingNumber;
     }
 
-    await order.save({ session });
+    const updatedOrder = await Order.findOneAndUpdate(
+      {
+        _id: order._id,
+        orderStatus: currentStatus,
+        inventoryRestocked: order.inventoryRestocked,
+      },
+      {
+        $set: updateFields,
+      },
+      {
+        new: true,
+        session,
+        runValidators: true,
+      },
+    );
+
+    if (!updatedOrder) {
+      await session.abortTransaction();
+
+      res.status(409).json({
+        success: false,
+        message:
+          "This order was updated by another request. Refresh the order and try again.",
+      });
+      return;
+    }
+
+    if (nextStatus === "cancelled") {
+      await restoreOrderInventory(updatedOrder.items, session);
+    }
 
     await session.commitTransaction();
 
     res.status(200).json({
       success: true,
       message: `Order status successfully updated to ${nextStatus}`,
-      order,
+      order: updatedOrder,
     });
   } catch (error) {
     if (session?.inTransaction()) {

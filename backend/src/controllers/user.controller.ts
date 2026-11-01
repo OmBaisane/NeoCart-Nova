@@ -5,6 +5,26 @@ import {
   updatePasswordSchema,
 } from "../utils/validators.js";
 
+const getSafeUser = (user: {
+  _id: { toString(): string };
+  name: string;
+  email: string;
+  role: string;
+  avatar?: string;
+  phone?: string;
+  address?: unknown;
+  createdAt?: Date;
+}) => ({
+  id: user._id.toString(),
+  name: user.name,
+  email: user.email,
+  role: user.role,
+  avatar: user.avatar,
+  phone: user.phone,
+  address: user.address,
+  createdAt: user.createdAt,
+});
+
 // GET /api/users/profile (Protected)
 export const getUserProfile = async (
   req: Request,
@@ -24,7 +44,7 @@ export const getUserProfile = async (
 
     res.status(200).json({
       success: true,
-      user,
+      user: getSafeUser(user),
     });
   } catch (error) {
     next(error);
@@ -39,6 +59,7 @@ export const updateUserProfile = async (
 ): Promise<void> => {
   try {
     const validationResult = updateProfileSchema.safeParse(req.body);
+
     if (!validationResult.success) {
       res.status(400).json({
         success: false,
@@ -48,6 +69,7 @@ export const updateUserProfile = async (
     }
 
     const user = await User.findById(req.user!._id);
+
     if (!user) {
       res.status(404).json({
         success: false,
@@ -61,6 +83,7 @@ export const updateUserProfile = async (
     if (name !== undefined) user.name = name;
     if (phone !== undefined) user.phone = phone;
     if (avatar !== undefined) user.avatar = avatar;
+
     if (address !== undefined) {
       user.address = {
         ...user.address,
@@ -73,7 +96,7 @@ export const updateUserProfile = async (
     res.status(200).json({
       success: true,
       message: "Profile updated successfully",
-      user,
+      user: getSafeUser(user),
     });
   } catch (error) {
     next(error);
@@ -88,6 +111,7 @@ export const updateUserPassword = async (
 ): Promise<void> => {
   try {
     const validationResult = updatePasswordSchema.safeParse(req.body);
+
     if (!validationResult.success) {
       res.status(400).json({
         success: false,
@@ -98,8 +122,8 @@ export const updateUserPassword = async (
 
     const { currentPassword, newPassword } = validationResult.data;
 
-    // Explicitly select password field to perform comparison
     const user = await User.findById(req.user!._id).select("+password");
+
     if (!user) {
       res.status(404).json({
         success: false,
@@ -108,8 +132,8 @@ export const updateUserPassword = async (
       return;
     }
 
-    // Verify current password
     const isMatch = await user.comparePassword(currentPassword);
+
     if (!isMatch) {
       res.status(401).json({
         success: false,
@@ -118,7 +142,6 @@ export const updateUserPassword = async (
       return;
     }
 
-    // Set new password (pre-save hook will automatically hash it)
     user.password = newPassword;
     await user.save();
 

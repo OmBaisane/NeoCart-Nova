@@ -67,6 +67,10 @@ const orderItemSnapshotSchema = new Schema<IOrderItemSnapshot>(
       type: Number,
       required: [true, "Item quantity is required"],
       min: 1,
+      validate: {
+        validator: Number.isInteger,
+        message: "Item quantity must be a whole number",
+      },
     },
   },
   { _id: false },
@@ -157,10 +161,7 @@ const orderSchema = new Schema<IOrder>(
       unique: true,
       uppercase: true,
       trim: true,
-      index: true,
     },
-    // Set to true only in the same transaction that restores inventory.
-    // This prevents accidental duplicate stock restoration.
     inventoryRestocked: {
       type: Boolean,
       default: false,

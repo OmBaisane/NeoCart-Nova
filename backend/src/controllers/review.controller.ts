@@ -5,16 +5,25 @@ import { Product } from "../models/product.model.js";
 import { Order } from "../models/order.model.js";
 import { createReviewSchema, updateReviewSchema } from "../utils/validators.js";
 
-// GET /api/products/:productId/reviews (Public)
+const isDuplicateKeyError = (error: unknown): boolean =>
+  typeof error === "object" &&
+  error !== null &&
+  "code" in error &&
+  error.code === 11000;
+
+// GET /api/products/:productId/reviews
 export const getProductReviews = async (
   req: Request,
   res: Response,
   next: NextFunction,
 ): Promise<void> => {
   try {
-    const { productId } = req.params;
+    const productId = req.params.productId;
 
-    if (!mongoose.Types.ObjectId.isValid(productId as string)) {
+    if (
+      typeof productId !== "string" ||
+      !mongoose.Types.ObjectId.isValid(productId)
+    ) {
       res.status(400).json({
         success: false,
         message: "Invalid product ID format",
@@ -36,17 +45,20 @@ export const getProductReviews = async (
   }
 };
 
-// POST /api/products/:productId/reviews (Protected)
+// POST /api/products/:productId/reviews
 export const createReview = async (
   req: Request,
   res: Response,
   next: NextFunction,
 ): Promise<void> => {
   try {
-    const { productId } = req.params;
+    const productId = req.params.productId;
     const userId = req.user!._id;
 
-    if (!mongoose.Types.ObjectId.isValid(productId as string)) {
+    if (
+      typeof productId !== "string" ||
+      !mongoose.Types.ObjectId.isValid(productId)
+    ) {
       res.status(400).json({
         success: false,
         message: "Invalid product ID format",
@@ -55,6 +67,7 @@ export const createReview = async (
     }
 
     const validationResult = createReviewSchema.safeParse(req.body);
+
     if (!validationResult.success) {
       res.status(400).json({
         success: false,
@@ -64,9 +77,10 @@ export const createReview = async (
     }
 
     const { rating, comment, images } = validationResult.data;
+    const productObjectId = new mongoose.Types.ObjectId(productId);
 
-    // 1. Verify product exists and active
-    const product = await Product.findById(productId);
+    const product = await Product.findById(productObjectId);
+
     if (!product || !product.isActive) {
       res.status(404).json({
         success: false,
@@ -75,14 +89,13 @@ export const createReview = async (
       return;
     }
 
-    // 2. Check if user already reviewed this product (One review per user rule)
     const existingReview = await Review.findOne({
       user: userId,
-      product: productId,
+      product: productObjectId,
     });
 
     if (existingReview) {
-      res.status(400).json({
+      res.status(409).json({
         success: false,
         message:
           "You have already reviewed this product. You can update your existing review.",
@@ -90,26 +103,22 @@ export const createReview = async (
       return;
     }
 
-    // 3. Verification Guard: Did user purchase and receive this item?
     const deliveredOrder = await Order.findOne({
       user: userId,
       orderStatus: "delivered",
-      "items.product": new mongoose.Types.ObjectId(productId as string),
-    });
+      "items.product": productObjectId,
+    }).select("_id");
 
-    const isVerifiedPurchase = Boolean(deliveredOrder);
-
-    // 4. Create review document
     const review = new Review({
       user: userId,
-      product: new mongoose.Types.ObjectId(productId as string),
+      product: productObjectId,
       rating,
       comment,
       images: images || [],
-      isVerifiedPurchase,
+      isVerifiedPurchase: Boolean(deliveredOrder),
     });
 
-    await review.save(); // Triggers post('save') to update Product average rating
+    await review.save();
     await review.populate("user", "name avatar");
 
     res.status(201).json({
@@ -118,21 +127,31 @@ export const createReview = async (
       review,
     });
   } catch (error) {
+    // The unique { user, product } index also protects concurrent requests.
+    if (isDuplicateKeyError(error)) {
+      res.status(409).json({
+        success: false,
+        message:
+          "You have already reviewed this product. You can update your existing review.",
+      });
+      return;
+    }
+
     next(error);
   }
 };
 
-// PATCH /api/reviews/:id (Protected - Edit Own Review)
+// PATCH /api/reviews/:id
 export const updateReview = async (
   req: Request,
   res: Response,
   next: NextFunction,
 ): Promise<void> => {
   try {
-    const { id } = req.params;
+    const id = req.params.id;
     const userId = req.user!._id;
 
-    if (!mongoose.Types.ObjectId.isValid(id as string)) {
+    if (typeof id !== "string" || !mongoose.Types.ObjectId.isValid(id)) {
       res.status(400).json({
         success: false,
         message: "Invalid review ID format",
@@ -141,6 +160,7 @@ export const updateReview = async (
     }
 
     const validationResult = updateReviewSchema.safeParse(req.body);
+
     if (!validationResult.success) {
       res.status(400).json({
         success: false,
@@ -150,6 +170,7 @@ export const updateReview = async (
     }
 
     const review = await Review.findById(id);
+
     if (!review) {
       res.status(404).json({
         success: false,
@@ -158,7 +179,6 @@ export const updateReview = async (
       return;
     }
 
-    // Only review author can edit
     if (review.user.toString() !== userId.toString()) {
       res.status(403).json({
         success: false,
@@ -168,11 +188,12 @@ export const updateReview = async (
     }
 
     const { rating, comment, images } = validationResult.data;
+
     if (rating !== undefined) review.rating = rating;
     if (comment !== undefined) review.comment = comment;
     if (images !== undefined) review.images = images;
 
-    await review.save(); // Triggers post('save') average rating update
+    await review.save();
     await review.populate("user", "name avatar");
 
     res.status(200).json({
@@ -185,18 +206,18 @@ export const updateReview = async (
   }
 };
 
-// DELETE /api/reviews/:id (Protected - Delete Own Review or Admin)
+// DELETE /api/reviews/:id
 export const deleteReview = async (
   req: Request,
   res: Response,
   next: NextFunction,
 ): Promise<void> => {
   try {
-    const { id } = req.params;
+    const id = req.params.id;
     const userId = req.user!._id;
     const isAdmin = req.user!.role === "admin";
 
-    if (!mongoose.Types.ObjectId.isValid(id as string)) {
+    if (typeof id !== "string" || !mongoose.Types.ObjectId.isValid(id)) {
       res.status(400).json({
         success: false,
         message: "Invalid review ID format",
@@ -205,6 +226,7 @@ export const deleteReview = async (
     }
 
     const review = await Review.findById(id);
+
     if (!review) {
       res.status(404).json({
         success: false,
@@ -213,7 +235,6 @@ export const deleteReview = async (
       return;
     }
 
-    // Must be owner or admin
     if (review.user.toString() !== userId.toString() && !isAdmin) {
       res.status(403).json({
         success: false,
@@ -223,9 +244,9 @@ export const deleteReview = async (
     }
 
     const productId = review.product;
+
     await review.deleteOne();
 
-    // Recalculate average rating after deletion
     await (Review as IReviewModel).calculateAverageRating(productId);
 
     res.status(200).json({

@@ -35,6 +35,10 @@ const reviewSchema = new Schema<IReview, IReviewModel>(
       required: [true, "Please provide a rating between 1 and 5"],
       min: [1, "Rating cannot be less than 1"],
       max: [5, "Rating cannot be more than 5"],
+      validate: {
+        validator: Number.isInteger,
+        message: "Rating must be a whole number",
+      },
     },
     comment: {
       type: String,
@@ -46,10 +50,15 @@ const reviewSchema = new Schema<IReview, IReviewModel>(
       type: [String],
       default: [],
       validate: {
-        validator: function (v: string[]) {
-          return v.length <= 3;
+        validator: function (images: string[]) {
+          return (
+            images.length <= 3 &&
+            images.every(
+              (image) => typeof image === "string" && image.trim().length > 0,
+            )
+          );
         },
-        message: "A review cannot exceed 3 attached proof images",
+        message: "A review can contain up to 3 valid proof images",
       },
     },
     isVerifiedPurchase: {
@@ -62,10 +71,8 @@ const reviewSchema = new Schema<IReview, IReviewModel>(
   },
 );
 
-// Enforce rule: 1 review per user per product
 reviewSchema.index({ user: 1, product: 1 }, { unique: true });
 
-// Static method to recalculate product's average rating and reviewCount
 reviewSchema.statics.calculateAverageRating = async function (
   productId: Types.ObjectId,
 ): Promise<void> {
@@ -76,28 +83,28 @@ reviewSchema.statics.calculateAverageRating = async function (
     {
       $group: {
         _id: "$product",
-        nRating: { $sum: 1 },
-        avgRating: { $avg: "$rating" },
+        reviewCount: { $sum: 1 },
+        averageRating: { $avg: "$rating" },
       },
     },
   ]);
 
-  if (stats.length > 0) {
-    await Product.findByIdAndUpdate(productId, {
-      numReviews: stats[0].nRating,
-      reviewCount: stats[0].nRating,
-      rating: Math.round(stats[0].avgRating * 10) / 10,
-    });
-  } else {
-    await Product.findByIdAndUpdate(productId, {
-      numReviews: 0,
-      reviewCount: 0,
-      rating: 0,
-    });
-  }
+  const ratingData =
+    stats.length > 0
+      ? {
+          reviewCount: stats[0].reviewCount,
+          rating: Math.round(stats[0].averageRating * 10) / 10,
+        }
+      : {
+          reviewCount: 0,
+          rating: 0,
+        };
+
+  await Product.findByIdAndUpdate(productId, {
+    $set: ratingData,
+  });
 };
 
-// Post-save hook to update rating when a review is created or updated
 reviewSchema.post("save", async function () {
   const ReviewModel = this.constructor as IReviewModel;
   await ReviewModel.calculateAverageRating(this.product);

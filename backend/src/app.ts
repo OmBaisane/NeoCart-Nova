@@ -31,14 +31,25 @@ app.use(
   cors({
     origin: (origin, callback) => {
       const allowedOrigins = [ENV.CLIENT_URL.trim()];
+
       if (ENV.NODE_ENV !== "production") {
         allowedOrigins.push("http://localhost:3000", "http://127.0.0.1:3000");
       }
+
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS policy."));
+        return;
       }
+
+      const corsError = new Error("Request origin is not allowed.") as Error & {
+        statusCode: number;
+        code: string;
+      };
+
+      corsError.statusCode = 403;
+      corsError.code = "CORS_ORIGIN_BLOCKED";
+
+      callback(corsError);
     },
     credentials: true,
   }),
@@ -52,10 +63,10 @@ app.use(cookieParser());
 // 4. CSRF Middleware on state-changing requests
 app.use(csrfProtection);
 
-// 5. Auth-Specific Rate Limiting (Prevents Brute-Force Attacks)
+// 5. Auth-Specific Rate Limiting
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes window
-  max: 30, // Limit each IP to 30 authentication requests per window
+  windowMs: 15 * 60 * 1000,
+  max: 30,
   standardHeaders: true,
   legacyHeaders: false,
   message: {
@@ -78,7 +89,10 @@ app.use("/api/admin", adminRoutes);
 
 // Health Endpoint
 app.get("/health", (_req, res) => {
-  res.status(200).json({ status: "OK", timestamp: new Date().toISOString() });
+  res.status(200).json({
+    status: "OK",
+    timestamp: new Date().toISOString(),
+  });
 });
 
 // Centralized Error Handling

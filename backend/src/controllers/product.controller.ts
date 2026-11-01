@@ -8,6 +8,25 @@ import {
 } from "../utils/validators.js";
 import { boundedPositiveInt, escapeRegex } from "../utils/querySafety.js";
 
+const effectivePriceExpression = {
+  $cond: [
+    {
+      $and: [
+        { $ne: ["$discountPrice", null] },
+        { $lt: ["$discountPrice", "$price"] },
+      ],
+    },
+    "$discountPrice",
+    "$price",
+  ],
+};
+
+const isDuplicateKeyError = (error: unknown): boolean =>
+  typeof error === "object" &&
+  error !== null &&
+  "code" in error &&
+  error.code === 11000;
+
 const generateUniqueProductSlug = async (
   name: string,
   excludeProductId?: mongoose.Types.ObjectId,
@@ -26,12 +45,7 @@ const generateUniqueProductSlug = async (
   return candidate;
 };
 
-// Effective selling price: discountPrice when present, otherwise regular price.
-const effectivePriceExpression = {
-  $ifNull: ["$discountPrice", "$price"],
-};
-
-// GET /api/products (Public with Search, Filter, Sort, Pagination)
+// GET /api/products
 export const getProducts = async (
   req: Request,
   res: Response,
@@ -62,7 +76,7 @@ export const getProducts = async (
       query.stock = { $gt: 0 };
     }
 
-    if (search && typeof search === "string" && search.trim() !== "") {
+    if (typeof search === "string" && search.trim() !== "") {
       const sanitized = escapeRegex(search.trim().slice(0, 80));
 
       query.$or = [
@@ -71,7 +85,7 @@ export const getProducts = async (
       ];
     }
 
-    if (category && typeof category === "string") {
+    if (typeof category === "string" && category.trim() !== "") {
       let selectedCategoryId: string | null = null;
 
       if (mongoose.Types.ObjectId.isValid(category)) {
@@ -94,7 +108,6 @@ export const getProducts = async (
         : { $in: [] };
     }
 
-    // Validate and apply price filters against effective selling price.
     if (minPrice !== undefined || maxPrice !== undefined) {
       const parsedMin = minPrice === undefined ? undefined : Number(minPrice);
       const parsedMax = maxPrice === undefined ? undefined : Number(maxPrice);
@@ -130,24 +143,12 @@ export const getProducts = async (
         });
       }
 
-      query.$expr = {
-        $and: priceConditions,
-      };
+      query.$expr = { $and: priceConditions };
     }
 
     if (featured === "true") {
       query.isFeatured = true;
     }
-
-    let sortOptions: Record<string, 1 | -1> = { createdAt: -1 };
-
-    if (sort === "price-asc") sortOptions = { price: 1 };
-    if (sort === "price-desc") sortOptions = { price: -1 };
-    if (sort === "rating") sortOptions = { rating: -1 };
-    if (sort === "name-asc") sortOptions = { name: 1 };
-
-    // _id provides deterministic ordering when primary sort values match.
-    sortOptions._id = 1;
 
     const pageNumber = boundedPositiveInt(page, 1, 1_000_000);
     const limitNumber = boundedPositiveInt(limit, 12, 100);
@@ -155,11 +156,49 @@ export const getProducts = async (
 
     const totalProducts = await Product.countDocuments(query);
 
-    const products = await Product.find(query)
-      .populate("category", "name slug")
-      .sort(sortOptions)
-      .skip(skip)
-      .limit(limitNumber);
+    let products;
+
+    if (sort === "price-asc" || sort === "price-desc") {
+      // Sort by actual selling price, not the original list price.
+      const direction = sort === "price-asc" ? 1 : -1;
+
+      const sortedIds = await Product.aggregate([
+        { $match: query },
+        { $addFields: { effectivePrice: effectivePriceExpression } },
+        { $sort: { effectivePrice: direction, _id: 1 } },
+        { $skip: skip },
+        { $limit: limitNumber },
+        { $project: { _id: 1 } },
+      ]);
+
+      const ids = sortedIds.map((item) => item._id);
+
+      const fetchedProducts = await Product.find({
+        _id: { $in: ids },
+      }).populate("category", "name slug");
+
+      // $in does not preserve the aggregation's sort order.
+      const productById = new Map(
+        fetchedProducts.map((product) => [product._id.toString(), product]),
+      );
+
+      products = ids
+        .map((id) => productById.get(id.toString()))
+        .filter((product) => product !== undefined);
+    } else {
+      let sortOptions: Record<string, 1 | -1> = { createdAt: -1 };
+
+      if (sort === "rating") sortOptions = { rating: -1 };
+      if (sort === "name-asc") sortOptions = { name: 1 };
+
+      sortOptions._id = 1;
+
+      products = await Product.find(query)
+        .populate("category", "name slug")
+        .sort(sortOptions)
+        .skip(skip)
+        .limit(limitNumber);
+    }
 
     res.status(200).json({
       success: true,
@@ -174,7 +213,7 @@ export const getProducts = async (
   }
 };
 
-// GET /api/products/:slug (Public by Slug)
+// GET /api/products/:slug
 export const getProductBySlug = async (
   req: Request,
   res: Response,
@@ -198,10 +237,7 @@ export const getProductBySlug = async (
       return;
     }
 
-    res.status(200).json({
-      success: true,
-      product,
-    });
+    res.status(200).json({ success: true, product });
   } catch (error) {
     next(error);
   }
@@ -241,16 +277,13 @@ export const getProductById = async (
       return;
     }
 
-    res.status(200).json({
-      success: true,
-      product,
-    });
+    res.status(200).json({ success: true, product });
   } catch (error) {
     next(error);
   }
 };
 
-// POST /api/products (Admin Only)
+// POST /api/products
 export const createProduct = async (
   req: Request,
   res: Response,
@@ -313,11 +346,20 @@ export const createProduct = async (
       product,
     });
   } catch (error) {
+    if (isDuplicateKeyError(error)) {
+      res.status(409).json({
+        success: false,
+        message:
+          "A product with this URL slug already exists. Please try again.",
+      });
+      return;
+    }
+
     next(error);
   }
 };
 
-// PATCH /api/products/:id (Admin Only)
+// PATCH /api/products/:id
 export const updateProduct = async (
   req: Request,
   res: Response,
@@ -392,33 +434,15 @@ export const updateProduct = async (
       product.slug = await generateUniqueProductSlug(data.name, product._id);
     }
 
-    if (data.description !== undefined) {
-      product.description = data.description;
-    }
-
-    if (data.price !== undefined) {
-      product.price = data.price;
-    }
-
+    if (data.description !== undefined) product.description = data.description;
+    if (data.price !== undefined) product.price = data.price;
     if (data.discountPrice !== undefined) {
       product.discountPrice = data.discountPrice;
     }
-
-    if (data.images !== undefined) {
-      product.images = data.images;
-    }
-
-    if (data.stock !== undefined) {
-      product.stock = data.stock;
-    }
-
-    if (data.isFeatured !== undefined) {
-      product.isFeatured = data.isFeatured;
-    }
-
-    if (data.isActive !== undefined) {
-      product.isActive = data.isActive;
-    }
+    if (data.images !== undefined) product.images = data.images;
+    if (data.stock !== undefined) product.stock = data.stock;
+    if (data.isFeatured !== undefined) product.isFeatured = data.isFeatured;
+    if (data.isActive !== undefined) product.isActive = data.isActive;
 
     await product.save();
 
@@ -428,11 +452,20 @@ export const updateProduct = async (
       product,
     });
   } catch (error) {
+    if (isDuplicateKeyError(error)) {
+      res.status(409).json({
+        success: false,
+        message:
+          "A product with this URL slug already exists. Please try another name.",
+      });
+      return;
+    }
+
     next(error);
   }
 };
 
-// DELETE /api/products/:id (Admin Soft-Delete / Deactivation)
+// DELETE /api/products/:id
 export const deleteProduct = async (
   req: Request,
   res: Response,
@@ -472,7 +505,7 @@ export const deleteProduct = async (
   }
 };
 
-// Suggestions Controller
+// GET /api/products/suggestions
 export const getProductSuggestions = async (
   req: Request,
   res: Response,
@@ -513,7 +546,7 @@ export const getProductSuggestions = async (
   }
 };
 
-// Facets Controller
+// GET /api/products/facets
 export const getCatalogFacets = async (
   req: Request,
   res: Response,
@@ -549,12 +582,8 @@ export const getCatalogFacets = async (
       {
         $group: {
           _id: null,
-          minPrice: {
-            $min: effectivePriceExpression,
-          },
-          maxPrice: {
-            $max: effectivePriceExpression,
-          },
+          minPrice: { $min: effectivePriceExpression },
+          maxPrice: { $max: effectivePriceExpression },
           totalInStock: {
             $sum: {
               $cond: [{ $gt: ["$stock", 0] }, 1, 0],

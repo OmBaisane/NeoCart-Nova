@@ -18,7 +18,7 @@ import {
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { user, login } = useAuth();
+  const { user, login, isLoading } = useAuth();
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -28,17 +28,22 @@ export default function RegisterPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    if (user) {
-      router.push("/");
+    if (!isLoading && user) {
+      router.replace("/");
     }
-  }, [user, router]);
+  }, [user, isLoading, router]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
 
     if (name.trim().length < 2) {
       setError("Name must be at least 2 characters.");
+      return;
+    }
+
+    if (!email.trim()) {
+      setError("Please enter your email address.");
       return;
     }
 
@@ -49,6 +54,7 @@ export default function RegisterPage() {
 
     try {
       setIsSubmitting(true);
+
       const response = await api.post("/auth/register", {
         name: name.trim(),
         email: email.trim().toLowerCase(),
@@ -56,10 +62,13 @@ export default function RegisterPage() {
         phone: phone.trim() || undefined,
       });
 
-      if (response.data?.success && response.data?.user) {
-        login(response.data.user);
-        router.push("/");
+      if (!response.data?.success || !response.data?.user) {
+        setError("Unable to create your account. Please try again.");
+        return;
       }
+
+      login(response.data.user);
+      router.replace("/");
     } catch (err: unknown) {
       const message =
         (err as { response?: { data?: { message?: string } } })?.response?.data
@@ -67,6 +76,7 @@ export default function RegisterPage() {
         (err instanceof Error
           ? err.message
           : "Registration failed. Please try again.");
+
       setError(message);
     } finally {
       setIsSubmitting(false);
@@ -90,7 +100,10 @@ export default function RegisterPage() {
         </div>
 
         {error && (
-          <div className="flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-300">
+          <div
+            role="alert"
+            className="flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-300"
+          >
             <AlertCircle className="h-4 w-4 shrink-0" />
             <span>{error}</span>
           </div>
@@ -109,6 +122,7 @@ export default function RegisterPage() {
                 id="name"
                 type="text"
                 required
+                autoComplete="name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="John Doe"
@@ -130,6 +144,7 @@ export default function RegisterPage() {
                 id="email"
                 type="email"
                 required
+                autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="name@example.com"
@@ -172,6 +187,7 @@ export default function RegisterPage() {
               <input
                 id="phone"
                 type="tel"
+                autoComplete="tel"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="+91 98765 43210"
@@ -183,7 +199,7 @@ export default function RegisterPage() {
 
           <button
             type="submit"
-            disabled={isSubmitting}
+            disabled={isSubmitting || isLoading || !!user}
             className="flex w-full items-center justify-center gap-2 rounded-lg bg-brand-blue py-2.5 sm:py-3 text-xs sm:text-sm font-semibold text-white shadow-md shadow-blue-500/20 transition hover:bg-blue-600 focus:ring-2 focus:ring-brand-blue focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-blue-600 dark:hover:bg-blue-500"
           >
             {isSubmitting ? (

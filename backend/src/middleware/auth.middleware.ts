@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { verifyToken } from "../utils/jwt.js";
+import { InvalidTokenError, verifyToken } from "../utils/jwt.js";
 import { User } from "../models/user.model.js";
 
 export const protect = async (
@@ -7,26 +7,22 @@ export const protect = async (
   res: Response,
   next: NextFunction,
 ): Promise<void> => {
+  let token: string | undefined = req.cookies?.token;
+
+  if (!token && req.headers.authorization?.startsWith("Bearer ")) {
+    token = req.headers.authorization.slice(7).trim();
+  }
+
+  if (!token) {
+    res.status(401).json({
+      success: false,
+      message: "Not authorized. Please log in to access this resource.",
+    });
+    return;
+  }
+
   try {
-    let token: string | undefined = req.cookies?.token;
-
-    // Fallback support for Authorization: Bearer <token> header
-    if (!token && req.headers.authorization?.startsWith("Bearer ")) {
-      token = req.headers.authorization.split(" ")[1];
-    }
-
-    if (!token) {
-      res.status(401).json({
-        success: false,
-        message: "Not authorized. Please log in to access this resource.",
-      });
-      return;
-    }
-
-    // Verify token signature & expiration
     const decoded = verifyToken(token);
-
-    // Fetch user from DB to ensure account still exists
     const currentUser = await User.findById(decoded.userId);
 
     if (!currentUser) {
@@ -37,43 +33,60 @@ export const protect = async (
       return;
     }
 
-    // Attach user to express request object for subsequent controllers
     req.user = currentUser;
     next();
   } catch (error: unknown) {
-    res.status(401).json({
-      success: false,
-      message: "Invalid or expired session. Please log in again.",
-    });
+    if (error instanceof InvalidTokenError) {
+      res.status(401).json({
+        success: false,
+        message: "Invalid or expired session. Please log in again.",
+      });
+      return;
+    }
+
+    next(error);
   }
 };
 
 /**
- * Optional authentication: extracts req.user if a valid token is present,
- * but does not reject anonymous visitors with 401.
+ * Optional authentication: attaches req.user when a valid token
+ * is present, but allows anonymous visitors to continue.
  */
 export const optionalProtect = async (
   req: Request,
   _res: Response,
   next: NextFunction,
 ): Promise<void> => {
-  try {
-    let token: string | undefined = req.cookies?.token;
+  const tokenFromCookie: string | undefined = req.cookies?.token;
+  const authorization = req.headers.authorization;
 
-    if (!token && req.headers.authorization?.startsWith("Bearer ")) {
-      token = req.headers.authorization.split(" ")[1];
-    }
+  const token =
+    tokenFromCookie ||
+    (authorization?.startsWith("Bearer ")
+      ? authorization.slice(7).trim()
+      : undefined);
 
-    if (token) {
-      const decoded = verifyToken(token);
-      const currentUser = await User.findById(decoded.userId);
-      if (currentUser) {
-        req.user = currentUser;
-      }
-    }
-  } catch {
-    // Silently continue for unauthenticated visitors
+  if (!token) {
+    next();
+    return;
   }
+
+  try {
+    const decoded = verifyToken(token);
+    const currentUser = await User.findById(decoded.userId);
+
+    if (currentUser) {
+      req.user = currentUser;
+    }
+  } catch (error: unknown) {
+    if (!(error instanceof InvalidTokenError)) {
+      next(error);
+      return;
+    }
+
+    // Invalid tokens are treated as anonymous visitors.
+  }
+
   next();
 };
 

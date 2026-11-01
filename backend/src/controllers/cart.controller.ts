@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from "express";
+import mongoose from "mongoose";
 import { Cart, recalculateCart } from "../models/cart.model.js";
 import { Product } from "../models/product.model.js";
 import { addToCartSchema, updateCartItemSchema } from "../utils/validators.js";
@@ -19,6 +20,9 @@ const handleCartWriteError = (
 
   next(error);
 };
+
+const isValidProductId = (productId: string): boolean =>
+  mongoose.isValidObjectId(productId);
 
 // Safely find or create a cart, handling simultaneous first requests.
 const findOrCreateCart = async (userId: string) => {
@@ -45,7 +49,16 @@ const findOrCreateCart = async (userId: string) => {
   }
 };
 
-// GET /api/cart (Protected)
+const populateCartProducts = async (cart: InstanceType<typeof Cart>) => {
+  await cart.populate({
+    path: "items.product",
+    select: "name slug price discountPrice images stock isActive",
+  });
+
+  return cart;
+};
+
+// GET /api/cart
 export const getCart = async (
   req: Request,
   res: Response,
@@ -53,13 +66,9 @@ export const getCart = async (
 ): Promise<void> => {
   try {
     const userId = req.user!._id.toString();
-
     const cart = await findOrCreateCart(userId);
 
-    await cart.populate({
-      path: "items.product",
-      select: "name slug price discountPrice images stock isActive",
-    });
+    await populateCartProducts(cart);
 
     res.status(200).json({
       success: true,
@@ -70,7 +79,7 @@ export const getCart = async (
   }
 };
 
-// GET /api/cart/validate (Protected - Live Stock & Price Validation)
+// GET /api/cart/validate
 export const validateCart = async (
   req: Request,
   res: Response,
@@ -78,7 +87,6 @@ export const validateCart = async (
 ): Promise<void> => {
   try {
     const userId = req.user!._id;
-
     const cart = await Cart.findOne({ user: userId });
 
     if (!cart || cart.items.length === 0) {
@@ -147,7 +155,7 @@ export const validateCart = async (
       }
 
       const livePrice =
-        product.discountPrice !== undefined && product.discountPrice > 0
+        product.discountPrice != null && product.discountPrice < product.price
           ? product.discountPrice
           : product.price;
 
@@ -157,7 +165,6 @@ export const validateCart = async (
       }
     }
 
-    // Update cart totals only when product prices actually change.
     if (hasPriceChanged) {
       recalculateCart(cart);
       await cart.save();
@@ -174,7 +181,7 @@ export const validateCart = async (
   }
 };
 
-// POST /api/cart/items (Protected - Add item or increment)
+// POST /api/cart/items
 export const addToCart = async (
   req: Request,
   res: Response,
@@ -224,7 +231,7 @@ export const addToCart = async (
     }
 
     const effectivePrice =
-      product.discountPrice !== undefined && product.discountPrice > 0
+      product.discountPrice != null && product.discountPrice < product.price
         ? product.discountPrice
         : product.price;
 
@@ -242,10 +249,7 @@ export const addToCart = async (
     recalculateCart(cart);
     await cart.save();
 
-    await cart.populate({
-      path: "items.product",
-      select: "name slug price discountPrice images stock isActive",
-    });
+    await populateCartProducts(cart);
 
     res.status(200).json({
       success: true,
@@ -257,7 +261,7 @@ export const addToCart = async (
   }
 };
 
-// PATCH /api/cart/items/:productId (Protected - Set exact quantity)
+// PATCH /api/cart/items/:productId
 export const updateCartItemQuantity = async (
   req: Request,
   res: Response,
@@ -265,6 +269,14 @@ export const updateCartItemQuantity = async (
 ): Promise<void> => {
   try {
     const { productId } = req.params;
+
+    if (typeof productId !== "string" || !isValidProductId(productId)) {
+      res.status(400).json({
+        success: false,
+        message: "Invalid product ID",
+      });
+      return;
+    }
 
     const validationResult = updateCartItemSchema.safeParse(req.body);
 
@@ -323,7 +335,7 @@ export const updateCartItemQuantity = async (
       }
 
       const effectivePrice =
-        product.discountPrice !== undefined && product.discountPrice > 0
+        product.discountPrice != null && product.discountPrice < product.price
           ? product.discountPrice
           : product.price;
 
@@ -334,10 +346,7 @@ export const updateCartItemQuantity = async (
     recalculateCart(cart);
     await cart.save();
 
-    await cart.populate({
-      path: "items.product",
-      select: "name slug price discountPrice images stock isActive",
-    });
+    await populateCartProducts(cart);
 
     res.status(200).json({
       success: true,
@@ -349,7 +358,7 @@ export const updateCartItemQuantity = async (
   }
 };
 
-// DELETE /api/cart/items/:productId (Protected - Remove single item)
+// DELETE /api/cart/items/:productId
 export const removeCartItem = async (
   req: Request,
   res: Response,
@@ -357,8 +366,16 @@ export const removeCartItem = async (
 ): Promise<void> => {
   try {
     const { productId } = req.params;
-    const userId = req.user!._id;
 
+    if (typeof productId !== "string" || !isValidProductId(productId)) {
+      res.status(400).json({
+        success: false,
+        message: "Invalid product ID",
+      });
+      return;
+    }
+
+    const userId = req.user!._id;
     const cart = await Cart.findOne({ user: userId });
 
     if (!cart) {
@@ -376,10 +393,7 @@ export const removeCartItem = async (
     recalculateCart(cart);
     await cart.save();
 
-    await cart.populate({
-      path: "items.product",
-      select: "name slug price discountPrice images stock isActive",
-    });
+    await populateCartProducts(cart);
 
     res.status(200).json({
       success: true,
@@ -391,7 +405,7 @@ export const removeCartItem = async (
   }
 };
 
-// DELETE /api/cart (Protected - Clear entire cart)
+// DELETE /api/cart
 export const clearCart = async (
   req: Request,
   res: Response,
@@ -399,7 +413,6 @@ export const clearCart = async (
 ): Promise<void> => {
   try {
     const userId = req.user!._id;
-
     const cart = await Cart.findOne({ user: userId });
 
     if (cart) {

@@ -1,29 +1,61 @@
 import app from "./app.js";
 import { ENV } from "./config/env.js";
 import { connectDB } from "./config/db.js";
+import mongoose from "mongoose";
 
-const startServer = async () => {
-  // Establish database connection prior to binding the HTTP listener
+const startServer = async (): Promise<void> => {
   await connectDB();
 
-  // Start HTTP server listener
   const server = app.listen(ENV.PORT, () => {
     console.log(
       `[NeoCart Nova Engine] Server listening on port ${ENV.PORT} in ${ENV.NODE_ENV} mode`,
     );
   });
 
-  // Handle graceful process termination on operational signals
-  const shutdown = () => {
-    console.log("Closing HTTP server and database connections gracefully...");
-    server.close(() => {
-      console.log("HTTP server closed.");
-      process.exit(0);
+  let isShuttingDown = false;
+
+  const shutdown = (signal: string): void => {
+    if (isShuttingDown) {
+      return;
+    }
+
+    isShuttingDown = true;
+
+    console.log(
+      `[NeoCart Nova Engine] ${signal} received. Starting graceful shutdown...`,
+    );
+
+    server.close(async (serverError) => {
+      if (serverError) {
+        console.error(
+          "[NeoCart Nova Engine] Error while closing HTTP server:",
+          serverError,
+        );
+        process.exitCode = 1;
+      } else {
+        console.log("[NeoCart Nova Engine] HTTP server closed.");
+      }
+
+      try {
+        await mongoose.disconnect();
+        console.log(
+          "[NeoCart Nova Database] MongoDB connection closed gracefully.",
+        );
+      } catch (error: unknown) {
+        console.error(
+          "[NeoCart Nova Database] Error closing MongoDB connection:",
+          error,
+        );
+        process.exitCode = 1;
+      }
     });
   };
 
-  process.on("SIGTERM", shutdown);
-  process.on("SIGINT", shutdown);
+  process.on("SIGTERM", () => shutdown("SIGTERM"));
+  process.on("SIGINT", () => shutdown("SIGINT"));
 };
 
-startServer();
+void startServer().catch((error: unknown) => {
+  console.error("[NeoCart Nova Engine] Failed to start server:", error);
+  process.exitCode = 1;
+});

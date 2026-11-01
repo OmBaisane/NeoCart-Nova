@@ -1,10 +1,17 @@
 import { Request, Response, NextFunction } from "express";
+import mongoose from "mongoose";
 import { Category, slugify } from "../models/category.model.js";
 import {
   createCategorySchema,
   updateCategorySchema,
 } from "../utils/validators.js";
 import { Product } from "../models/product.model.js";
+
+const isDuplicateKeyError = (error: unknown): boolean =>
+  typeof error === "object" &&
+  error !== null &&
+  "code" in error &&
+  error.code === 11000;
 
 // GET /api/categories
 export const getCategories = async (
@@ -36,8 +43,18 @@ export const getCategoryById = async (
   next: NextFunction,
 ): Promise<void> => {
   try {
+    const id = req.params.id;
+
+    if (typeof id !== "string" || !mongoose.Types.ObjectId.isValid(id)) {
+      res.status(400).json({
+        success: false,
+        message: "Invalid category ID",
+      });
+      return;
+    }
+
     const isAdmin = req.user?.role === "admin";
-    const filter: Record<string, unknown> = { _id: req.params.id };
+    const filter: Record<string, unknown> = { _id: id };
 
     if (!isAdmin) {
       filter.isActive = true;
@@ -53,10 +70,7 @@ export const getCategoryById = async (
       return;
     }
 
-    res.status(200).json({
-      success: true,
-      category,
-    });
+    res.status(200).json({ success: true, category });
   } catch (error) {
     next(error);
   }
@@ -115,6 +129,14 @@ export const createCategory = async (
       category,
     });
   } catch (error) {
+    if (isDuplicateKeyError(error)) {
+      res.status(409).json({
+        success: false,
+        message: "A category with this name or URL slug already exists.",
+      });
+      return;
+    }
+
     next(error);
   }
 };
@@ -126,6 +148,16 @@ export const updateCategory = async (
   next: NextFunction,
 ): Promise<void> => {
   try {
+    const id = req.params.id;
+
+    if (typeof id !== "string" || !mongoose.Types.ObjectId.isValid(id)) {
+      res.status(400).json({
+        success: false,
+        message: "Invalid category ID",
+      });
+      return;
+    }
+
     const validationResult = updateCategorySchema.safeParse(req.body);
 
     if (!validationResult.success) {
@@ -136,7 +168,7 @@ export const updateCategory = async (
       return;
     }
 
-    const category = await Category.findById(req.params.id);
+    const category = await Category.findById(id);
 
     if (!category) {
       res.status(404).json({
@@ -176,17 +208,9 @@ export const updateCategory = async (
       category.slug = generatedSlug;
     }
 
-    if (description !== undefined) {
-      category.description = description;
-    }
-
-    if (image !== undefined) {
-      category.image = image;
-    }
-
-    if (isActive !== undefined) {
-      category.isActive = isActive;
-    }
+    if (description !== undefined) category.description = description;
+    if (image !== undefined) category.image = image;
+    if (isActive !== undefined) category.isActive = isActive;
 
     await category.save();
 
@@ -196,6 +220,14 @@ export const updateCategory = async (
       category,
     });
   } catch (error) {
+    if (isDuplicateKeyError(error)) {
+      res.status(409).json({
+        success: false,
+        message: "Another category already uses this name or URL slug.",
+      });
+      return;
+    }
+
     next(error);
   }
 };
@@ -208,6 +240,17 @@ export const deleteCategory = async (
 ): Promise<void> => {
   try {
     const categoryId = req.params.id;
+
+    if (
+      typeof categoryId !== "string" ||
+      !mongoose.Types.ObjectId.isValid(categoryId)
+    ) {
+      res.status(400).json({
+        success: false,
+        message: "Invalid category ID",
+      });
+      return;
+    }
 
     const category = await Category.findById(categoryId);
 

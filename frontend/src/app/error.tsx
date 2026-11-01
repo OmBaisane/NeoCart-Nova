@@ -27,8 +27,8 @@ export default function GlobalError({
       </h1>
 
       <p className="mt-2 max-w-md text-xs leading-relaxed text-slate-500 sm:text-sm dark:text-slate-400">
-        An unexpected application error occurred. We have isolated the fault to
-        preserve your session.
+        An unexpected application error occurred. Please try again or return to
+        the homepage.
       </p>
 
       <div className="mt-8 flex flex-wrap items-center justify-center gap-3">

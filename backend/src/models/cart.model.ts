@@ -3,7 +3,7 @@ import mongoose, { Document, Model, Schema, Types } from "mongoose";
 export interface ICartItem {
   product: Types.ObjectId;
   quantity: number;
-  price: number; // Trusted snapshot price when added/updated
+  price: number;
 }
 
 export interface ICart extends Document {
@@ -27,6 +27,10 @@ const cartItemSchema = new Schema<ICartItem>(
       required: [true, "Item quantity is required"],
       min: [1, "Quantity cannot be less than 1"],
       default: 1,
+      validate: {
+        validator: Number.isInteger,
+        message: "Quantity must be a whole number",
+      },
     },
     price: {
       type: Number,
@@ -43,7 +47,7 @@ const cartSchema = new Schema<ICart>(
       type: Schema.Types.ObjectId,
       ref: "User",
       required: [true, "Cart must belong to a user"],
-      unique: true, // Exactly one active cart per user
+      unique: true,
       index: true,
     },
     items: {
@@ -54,6 +58,10 @@ const cartSchema = new Schema<ICart>(
       type: Number,
       default: 0,
       min: 0,
+      validate: {
+        validator: Number.isInteger,
+        message: "Total items must be a whole number",
+      },
     },
     subtotal: {
       type: Number,
@@ -67,14 +75,14 @@ const cartSchema = new Schema<ICart>(
   },
 );
 
-// Helper function to recalculate cart metrics server-side
 export const recalculateCart = (cart: ICart): void => {
   cart.totalItems = cart.items.reduce((sum, item) => sum + item.quantity, 0);
+
   cart.subtotal = cart.items.reduce(
     (sum, item) => sum + item.quantity * item.price,
     0,
   );
-  // Clean decimal precision
+
   cart.subtotal = Math.round(cart.subtotal * 100) / 100;
 };
 

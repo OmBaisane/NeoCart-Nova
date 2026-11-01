@@ -10,48 +10,43 @@ import { Mail, Lock, AlertCircle, ArrowRight, Loader2 } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { user, login } = useAuth();
+  const { user, login, isLoading } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // If already logged in, redirect away from login page
   useEffect(() => {
-    if (user) {
-      if (user.role === "admin") {
-        router.push("/admin");
-      } else {
-        router.push("/");
-      }
+    if (!isLoading && user) {
+      router.replace(user.role === "admin" ? "/admin" : "/");
     }
-  }, [user, router]);
+  }, [user, isLoading, router]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
 
-    if (!email || !password) {
+    if (!email.trim() || !password) {
       setError("Please fill in all required fields.");
       return;
     }
 
     try {
       setIsSubmitting(true);
+
       const response = await api.post("/auth/login", {
         email: email.trim().toLowerCase(),
         password,
       });
 
-      if (response.data?.success && response.data?.user) {
-        login(response.data.user);
-        if (response.data.user.role === "admin") {
-          router.push("/admin");
-        } else {
-          router.push("/");
-        }
+      if (!response.data?.success || !response.data?.user) {
+        setError("Unable to sign in. Please try again.");
+        return;
       }
+
+      login(response.data.user);
+      router.replace(response.data.user.role === "admin" ? "/admin" : "/");
     } catch (err: unknown) {
       const message =
         (err as { response?: { data?: { message?: string } } })?.response?.data
@@ -59,6 +54,7 @@ export default function LoginPage() {
         (err instanceof Error
           ? err.message
           : "Invalid credentials. Please try again.");
+
       setError(message);
     } finally {
       setIsSubmitting(false);
@@ -81,7 +77,10 @@ export default function LoginPage() {
         </div>
 
         {error && (
-          <div className="flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-300">
+          <div
+            role="alert"
+            className="flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-300"
+          >
             <AlertCircle className="h-4 w-4 shrink-0" />
             <span>{error}</span>
           </div>
@@ -100,6 +99,7 @@ export default function LoginPage() {
                 id="email"
                 type="email"
                 required
+                autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="name@example.com"
@@ -133,7 +133,7 @@ export default function LoginPage() {
 
           <button
             type="submit"
-            disabled={isSubmitting}
+            disabled={isSubmitting || isLoading || !!user}
             className="flex w-full items-center justify-center gap-2 rounded-lg bg-brand-blue py-2.5 sm:py-3 text-xs sm:text-sm font-semibold text-white shadow-md shadow-blue-500/20 transition hover:bg-blue-600 focus:ring-2 focus:ring-brand-blue focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-blue-600 dark:hover:bg-blue-500"
           >
             {isSubmitting ? (
