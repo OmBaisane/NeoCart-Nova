@@ -11,14 +11,16 @@ export const csrfProtection = (
   next: NextFunction,
 ): void => {
   const safeMethods = ["GET", "HEAD", "OPTIONS"];
+
   if (safeMethods.includes(req.method)) {
     return next();
   }
 
-  // Extract originating URL
   const originHeader = req.headers["origin"];
   const refererHeader = req.headers["referer"];
+
   let requestOrigin: string | null = null;
+
   try {
     requestOrigin = originHeader
       ? new URL(originHeader).origin
@@ -33,14 +35,26 @@ export const csrfProtection = (
     return;
   }
 
-  const allowedOrigins = [ENV.CLIENT_URL.trim()];
-  if (ENV.NODE_ENV !== "production") {
-    allowedOrigins.push("http://localhost:3000", "http://127.0.0.1:3000");
+  let configuredClientOrigin: string;
+
+  try {
+    configuredClientOrigin = new URL(ENV.CLIENT_URL.trim()).origin;
+  } catch {
+    res.status(500).json({
+      success: false,
+      message: "Server client URL configuration is invalid.",
+    });
+    return;
   }
 
-  // In production, require valid cross-origin header for state-changing calls
+  const allowedOrigins = new Set([
+    configuredClientOrigin,
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+  ]);
+
   if (ENV.NODE_ENV === "production") {
-    if (!requestOrigin || !allowedOrigins.includes(requestOrigin)) {
+    if (!requestOrigin || !allowedOrigins.has(requestOrigin)) {
       res.status(403).json({
         success: false,
         message:
