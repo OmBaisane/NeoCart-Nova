@@ -19,24 +19,25 @@ import adminRoutes from "./routes/admin.routes.js";
 
 const app: Application = express();
 
-// 1. Security Headers
-app.use(
-  helmet({
-    crossOriginResourcePolicy: { policy: "cross-origin" },
-  }),
-);
+// Normalize configured frontend URL.
+const configuredClientOrigin = new URL(ENV.CLIENT_URL.trim()).origin;
 
-// 2. Strict Dynamic CORS Configuration
+// Explicitly allowed frontend origins.
+// Local development origins are intentionally allowed even when
+// the backend is deployed in production.
+const allowedOrigins = new Set([
+  configuredClientOrigin,
+  "http://localhost:3000",
+  "http://127.0.0.1:3000",
+]);
+
+// 1. CORS Configuration
 app.use(
   cors({
     origin: (origin, callback) => {
-      const allowedOrigins = [ENV.CLIENT_URL.trim()];
-
-      if (ENV.NODE_ENV !== "production") {
-        allowedOrigins.push("http://localhost:3000", "http://127.0.0.1:3000");
-      }
-
-      if (!origin || allowedOrigins.includes(origin)) {
+      // Allow requests without an Origin header, such as server-to-server
+      // requests and health checks.
+      if (!origin || allowedOrigins.has(origin)) {
         callback(null, true);
         return;
       }
@@ -52,6 +53,16 @@ app.use(
       callback(corsError);
     },
     credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-CSRF-Token"],
+    optionsSuccessStatus: 204,
+  }),
+);
+
+// 2. Security Headers
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" },
   }),
 );
 

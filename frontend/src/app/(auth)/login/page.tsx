@@ -8,6 +8,22 @@ import { api } from "@/lib/api";
 import { Logo } from "@/components/layout/Logo";
 import { Mail, Lock, AlertCircle, ArrowRight, Loader2 } from "lucide-react";
 
+function getSafeRedirect(): string | null {
+  const params = new URLSearchParams(window.location.search);
+  const redirect = params.get("redirect");
+
+  if (
+    !redirect ||
+    !redirect.startsWith("/") ||
+    redirect.startsWith("//") ||
+    redirect.includes("\\")
+  ) {
+    return null;
+  }
+
+  return redirect;
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const { user, login, isLoading } = useAuth();
@@ -19,7 +35,9 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!isLoading && user) {
-      router.replace(user.role === "admin" ? "/admin" : "/");
+      const redirect = getSafeRedirect();
+
+      router.replace(user.role === "admin" ? "/admin" : redirect || "/");
     }
   }, [user, isLoading, router]);
 
@@ -45,8 +63,15 @@ export default function LoginPage() {
         return;
       }
 
-      login(response.data.user);
-      router.replace(response.data.user.role === "admin" ? "/admin" : "/");
+      const authenticatedUser = response.data.user;
+
+      login(authenticatedUser);
+
+      const redirect = getSafeRedirect();
+
+      router.replace(
+        authenticatedUser.role === "admin" ? "/admin" : redirect || "/",
+      );
     } catch (err: unknown) {
       const message =
         (err as { response?: { data?: { message?: string } } })?.response?.data

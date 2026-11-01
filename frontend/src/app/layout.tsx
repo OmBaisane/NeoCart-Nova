@@ -17,39 +17,48 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL || "https://neo-cart-nova.vercel.app",
+  ),
   title: {
     default: "NeoCart Nova — Premium Electronics & Verified Gear",
     template: "%s | NeoCart Nova",
   },
   description:
-    "Production-grade e-commerce platform delivering high-performance audio, mechanical keyboards, gaming accessories, and verified consumer tech with doorstep Cash on Delivery.",
+    "Discover premium electronics, mechanical keyboards, audio gear and gaming accessories at NeoCart Nova. Explore verified products with secure Cash on Delivery.",
   keywords: [
-    "Electronics",
+    "NeoCart Nova",
+    "Premium Electronics",
     "Mechanical Keyboards",
     "Audio Gear",
-    "Gaming Mouse",
-    "E-commerce",
+    "Gaming Accessories",
+    "Electronics Store",
     "Cash on Delivery",
-    "NeoCart Nova",
   ],
-  authors: [{ name: "NeoCart Nova Engineering" }],
-  metadataBase: new URL(
-    process.env.NEXT_PUBLIC_SITE_URL || "https://neo-cart-nova.vercel.app",
-  ),
+  authors: [{ name: "NeoCart Nova" }],
   openGraph: {
     type: "website",
-    locale: "en_US",
+    locale: "en_IN",
     url: "/",
     siteName: "NeoCart Nova",
     title: "NeoCart Nova — Premium Electronics & Tech Gear",
     description:
-      "Explore curated tech products with live inventory reservation and secure doorstep delivery.",
+      "Explore premium electronics, verified products and gaming gear with secure Cash on Delivery.",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1648,
+        height: 928,
+        alt: "NeoCart Nova — Premium Electronics & Tech Gear",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "NeoCart Nova — High Performance Electronics",
+    title: "NeoCart Nova — Premium Electronics & Tech Gear",
     description:
-      "Explore verified audio, productivity, and gaming gear with authentic customer reviews.",
+      "Discover verified electronics, audio and gaming accessories at NeoCart Nova.",
+    images: ["/og-image.png"],
   },
 };
 

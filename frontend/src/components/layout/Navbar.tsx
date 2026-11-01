@@ -220,7 +220,10 @@ export const Navbar = () => {
         <div className="flex shrink-0 items-center gap-2 sm:gap-6">
           <Logo size="md" />
 
-          <nav className="hidden items-center gap-1 md:flex">
+          <nav
+            aria-label="Main navigation"
+            className="hidden items-center gap-1 md:flex"
+          >
             <Link
               href="/products"
               className="rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
@@ -233,6 +236,8 @@ export const Navbar = () => {
                 <button
                   type="button"
                   onClick={() => setCategoryMenuOpen((prev) => !prev)}
+                  aria-expanded={categoryMenuOpen}
+                  aria-haspopup="true"
                   className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
                 >
                   <span>Categories</span>
@@ -264,9 +269,10 @@ export const Navbar = () => {
           ref={searchContainerRef}
           className="relative mx-6 hidden max-w-md flex-1 sm:max-w-sm md:block"
         >
-          <form onSubmit={handleSearchSubmit}>
+          <form role="search" onSubmit={handleSearchSubmit}>
             <input
               type="text"
+              aria-label="Search products"
               placeholder="Search keyboards, audio, gear..."
               value={searchQuery}
               onFocus={() => setIsSearchFocused(true)}
@@ -277,10 +283,16 @@ export const Navbar = () => {
               className="w-full rounded-xl border border-slate-200 bg-slate-50/80 py-2 pl-9 pr-9 text-xs text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-brand-blue focus:bg-white focus:ring-2 focus:ring-brand-blue/10 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-cyan-500 dark:focus:bg-slate-900"
             />
 
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400 dark:text-slate-500" />
+            <Search
+              aria-hidden="true"
+              className="absolute left-3 top-2.5 h-4 w-4 text-slate-400 dark:text-slate-500"
+            />
 
             {isSearching && (
-              <Loader2 className="absolute right-3 top-2.5 h-4 w-4 animate-spin text-brand-blue dark:text-cyan-400" />
+              <Loader2
+                aria-hidden="true"
+                className="absolute right-3 top-2.5 h-4 w-4 animate-spin text-brand-blue dark:text-cyan-400"
+              />
             )}
           </form>
 
@@ -306,7 +318,7 @@ export const Navbar = () => {
                             item.images?.[0] ||
                             "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&q=80"
                           }
-                          alt={item.name}
+                          alt=""
                           className="h-9 w-9 shrink-0 rounded-lg border border-slate-100 bg-slate-100 object-cover dark:border-slate-800 dark:bg-slate-800"
                         />
 
@@ -368,36 +380,42 @@ export const Navbar = () => {
 
         {/* Right Actions */}
         <div className="flex shrink-0 items-center gap-1 sm:gap-3">
-          {/* Theme Toggle - Hidden on very small screens */}
+          {/* Theme Toggle */}
           <div className="hidden sm:block">
             <ThemeToggle />
           </div>
 
-          {/* Compare - Desktop Only */}
+          {/* Compare */}
           <Link
             href="/compare"
             className="relative hidden h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200/80 text-slate-700 transition hover:bg-slate-100 hover:text-slate-900 md:flex dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
             aria-label={`Compare products${compareCount > 0 ? `, ${compareCount} selected` : ""}`}
           >
-            <ArrowLeftRight className="h-4 w-4" />
+            <ArrowLeftRight aria-hidden="true" className="h-4 w-4" />
 
             {compareCount > 0 && (
-              <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-brand-blue px-1 text-[10px] font-extrabold text-white">
+              <span
+                aria-hidden="true"
+                className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-brand-blue px-1 text-[10px] font-extrabold text-white"
+              >
                 {compareCount}
               </span>
             )}
           </Link>
 
-          {/* Wishlist - Desktop Only */}
+          {/* Wishlist */}
           <Link
             href="/wishlist"
             className="relative hidden h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200/80 text-slate-700 transition hover:bg-slate-100 hover:text-slate-900 sm:flex dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
-            aria-label="Wishlist"
+            aria-label={`Wishlist${wishlistItemCount > 0 ? `, ${wishlistItemCount} items` : ""}`}
           >
-            <Heart className="h-4 w-4" />
+            <Heart aria-hidden="true" className="h-4 w-4" />
 
             {wishlistItemCount > 0 && (
-              <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-extrabold text-white">
+              <span
+                aria-hidden="true"
+                className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-extrabold text-white"
+              >
                 {wishlistItemCount}
               </span>
             )}
@@ -407,12 +425,15 @@ export const Navbar = () => {
           <Link
             href="/cart"
             className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200/80 text-slate-700 transition hover:bg-slate-100 hover:text-slate-900 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
-            aria-label="Shopping Cart"
+            aria-label={`Shopping cart${cartItemCount > 0 ? `, ${cartItemCount} items` : ""}`}
           >
-            <ShoppingCart className="h-4 w-4" />
+            <ShoppingCart aria-hidden="true" className="h-4 w-4" />
 
             {cartItemCount > 0 && (
-              <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-brand-blue px-1 text-[10px] font-extrabold text-white">
+              <span
+                aria-hidden="true"
+                className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-brand-blue px-1 text-[10px] font-extrabold text-white"
+              >
                 {cartItemCount}
               </span>
             )}
@@ -424,9 +445,14 @@ export const Navbar = () => {
               <button
                 type="button"
                 onClick={() => setUserDropdownOpen((prev) => !prev)}
+                aria-expanded={userDropdownOpen}
+                aria-haspopup="true"
                 className="flex items-center gap-2 rounded-xl border border-slate-200/80 bg-slate-50 py-1.5 pl-2 pr-2.5 text-xs font-semibold text-slate-800 transition hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
               >
-                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-blue text-[11px] font-bold uppercase text-white dark:bg-cyan-600">
+                <div
+                  aria-hidden="true"
+                  className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-blue text-[11px] font-bold uppercase text-white dark:bg-cyan-600"
+                >
                   {user.name.charAt(0)}
                 </div>
 
@@ -434,7 +460,10 @@ export const Navbar = () => {
                   {user.name}
                 </span>
 
-                <ChevronDown className="hidden h-3 w-3 text-slate-400 sm:block dark:text-slate-500" />
+                <ChevronDown
+                  aria-hidden="true"
+                  className="hidden h-3 w-3 text-slate-400 sm:block dark:text-slate-500"
+                />
               </button>
 
               {userDropdownOpen && (
@@ -457,7 +486,7 @@ export const Navbar = () => {
                       onClick={() => setUserDropdownOpen(false)}
                       className="flex items-center gap-2 px-4 py-2 text-xs font-semibold text-brand-blue transition hover:bg-blue-50 dark:text-cyan-400 dark:hover:bg-slate-800"
                     >
-                      <ShieldCheck className="h-3.5 w-3.5" />
+                      <ShieldCheck aria-hidden="true" className="h-3.5 w-3.5" />
                       <span>Admin Control</span>
                     </Link>
                   )}
@@ -467,7 +496,10 @@ export const Navbar = () => {
                     onClick={() => setUserDropdownOpen(false)}
                     className="flex items-center gap-2 px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800"
                   >
-                    <Package className="h-3.5 w-3.5 text-slate-400" />
+                    <Package
+                      aria-hidden="true"
+                      className="h-3.5 w-3.5 text-slate-400"
+                    />
                     <span>My Orders</span>
                   </Link>
 
@@ -476,7 +508,10 @@ export const Navbar = () => {
                     onClick={() => setUserDropdownOpen(false)}
                     className="flex items-center gap-2 px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800"
                   >
-                    <UserIcon className="h-3.5 w-3.5 text-slate-400" />
+                    <UserIcon
+                      aria-hidden="true"
+                      className="h-3.5 w-3.5 text-slate-400"
+                    />
                     <span>Profile Settings</span>
                   </Link>
 
@@ -485,7 +520,7 @@ export const Navbar = () => {
                     onClick={handleLogout}
                     className="flex w-full items-center gap-2 px-4 py-2 text-left text-xs font-semibold text-rose-600 transition hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/40"
                   >
-                    <LogOut className="h-3.5 w-3.5" />
+                    <LogOut aria-hidden="true" className="h-3.5 w-3.5" />
                     <span>Sign Out</span>
                   </button>
                 </div>
@@ -496,7 +531,7 @@ export const Navbar = () => {
               href="/login"
               className="flex shrink-0 items-center gap-1 rounded-xl bg-slate-900 px-2.5 py-2 text-xs font-bold text-white transition hover:bg-blue-600 sm:gap-1.5 sm:px-3.5 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-blue-600"
             >
-              <UserIcon className="h-3.5 w-3.5" />
+              <UserIcon aria-hidden="true" className="h-3.5 w-3.5" />
               <span>Sign In</span>
             </Link>
           )}
@@ -510,11 +545,12 @@ export const Navbar = () => {
               mobileMenuOpen ? "Close mobile menu" : "Open mobile menu"
             }
             aria-expanded={mobileMenuOpen}
+            aria-controls="mobile-navigation"
           >
             {mobileMenuOpen ? (
-              <X className="h-5 w-5" />
+              <X aria-hidden="true" className="h-5 w-5" />
             ) : (
-              <Menu className="h-5 w-5" />
+              <Menu aria-hidden="true" className="h-5 w-5" />
             )}
           </button>
         </div>
@@ -523,19 +559,31 @@ export const Navbar = () => {
       {/* Mobile Drawer */}
       {mobileMenuOpen && (
         <div className="border-t border-slate-200 bg-white px-4 py-4 md:hidden dark:border-slate-800 dark:bg-slate-950">
-          <form onSubmit={handleSearchSubmit} className="relative mb-4">
+          <form
+            role="search"
+            onSubmit={handleSearchSubmit}
+            className="relative mb-4"
+          >
             <input
               type="text"
+              aria-label="Search catalog"
               placeholder="Search catalog..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pl-9 pr-4 text-xs text-slate-900 outline-none dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
             />
 
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+            <Search
+              aria-hidden="true"
+              className="absolute left-3 top-2.5 h-4 w-4 text-slate-400"
+            />
           </form>
 
-          <nav className="flex flex-col space-y-1">
+          <nav
+            id="mobile-navigation"
+            aria-label="Mobile navigation"
+            className="flex flex-col space-y-1"
+          >
             <Link
               href="/products"
               onClick={() => setMobileMenuOpen(false)}
@@ -550,12 +598,18 @@ export const Navbar = () => {
               className="flex items-center justify-between rounded-lg px-3 py-2 text-xs font-semibold text-slate-800 transition hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
             >
               <span className="flex items-center gap-2">
-                <ArrowLeftRight className="h-4 w-4 text-slate-500" />
+                <ArrowLeftRight
+                  aria-hidden="true"
+                  className="h-4 w-4 text-slate-500"
+                />
                 Compare Products
               </span>
 
               {compareCount > 0 && (
-                <span className="rounded-full bg-brand-blue px-2 py-0.5 text-[10px] font-bold text-white">
+                <span
+                  aria-hidden="true"
+                  className="rounded-full bg-brand-blue px-2 py-0.5 text-[10px] font-bold text-white"
+                >
                   {compareCount}
                 </span>
               )}
@@ -567,12 +621,15 @@ export const Navbar = () => {
               className="flex items-center justify-between rounded-lg px-3 py-2 text-xs font-semibold text-slate-800 transition hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
             >
               <span className="flex items-center gap-2">
-                <Heart className="h-4 w-4 text-slate-500" />
+                <Heart aria-hidden="true" className="h-4 w-4 text-slate-500" />
                 Wishlist
               </span>
 
               {wishlistItemCount > 0 && (
-                <span className="rounded-full bg-rose-500 px-2 py-0.5 text-[10px] font-bold text-white">
+                <span
+                  aria-hidden="true"
+                  className="rounded-full bg-rose-500 px-2 py-0.5 text-[10px] font-bold text-white"
+                >
                   {wishlistItemCount}
                 </span>
               )}
