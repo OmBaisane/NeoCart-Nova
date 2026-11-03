@@ -149,9 +149,11 @@ export const Navbar = () => {
     updateCompareCount();
 
     window.addEventListener("storage", updateCompareCount);
+    window.addEventListener("neocart:compare-updated", updateCompareCount);
 
     return () => {
       window.removeEventListener("storage", updateCompareCount);
+      window.removeEventListener("neocart:compare-updated", updateCompareCount);
     };
   }, [pathname]);
 
@@ -160,13 +162,13 @@ export const Navbar = () => {
     queryKey: ["cart"],
     queryFn: async () => {
       const res = await api.get("/cart");
-      return res.data?.cart;
+      return res.data;
     },
     enabled: !!user,
     staleTime: 0,
   });
 
-  const cartItemCount = cartData?.totalItems || 0;
+  const cartItemCount = cartData?.cart?.totalItems || 0;
 
   // Wishlist total items count
   const { data: wishlistData } = useQuery({

@@ -73,11 +73,13 @@ export default function ComparePage() {
 
     setCompareIds(updated);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    window.dispatchEvent(new Event("neocart:compare-updated"));
   };
 
   const handleClear = () => {
     setCompareIds([]);
     localStorage.removeItem(STORAGE_KEY);
+    window.dispatchEvent(new Event("neocart:compare-updated"));
   };
 
   const formatPrice = (price: number) => `₹${price.toLocaleString("en-IN")}`;
