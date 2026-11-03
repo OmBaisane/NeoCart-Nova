@@ -31,7 +31,8 @@ export default function NewProductPage() {
     setIsSubmitting(true);
     try {
       await api.post("/products", payload);
-      queryClient.invalidateQueries({ queryKey: ["admin-products-list"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-products"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-stats"] });
       queryClient.invalidateQueries({ queryKey: ["products"] });
       router.push("/admin/products");
     } finally {

@@ -39,12 +39,11 @@ export default function EditProductPage({
   } = useQuery<AdminProductDetails>({
     queryKey: ["admin-edit-product", id],
     queryFn: async () => {
-      const res = await api.get(`/products?limit=100`);
-      const found = res.data?.products?.find(
-        (p: AdminProductDetails) => p._id === id,
-      );
-      if (!found) throw new Error("Product not found");
-      return found;
+      const res = await api.get(`/admin/products/${id}`);
+      if (!res.data?.success || !res.data?.product) {
+        throw new Error("Product not found");
+      }
+      return res.data.product as AdminProductDetails;
     },
   });
 
@@ -52,7 +51,8 @@ export default function EditProductPage({
     setIsSubmitting(true);
     try {
       await api.patch(`/products/${id}`, payload);
-      queryClient.invalidateQueries({ queryKey: ["admin-products-list"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-products"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-stats"] });
       queryClient.invalidateQueries({ queryKey: ["products"] });
       router.push("/admin/products");
     } finally {

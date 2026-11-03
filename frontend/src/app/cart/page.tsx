@@ -72,20 +72,24 @@ export default function CartPage() {
       productId: string;
       quantity: number;
     }) => {
-      return api.patch(`/cart/items/${productId}`, { quantity });
+      const response = await api.patch(`/cart/items/${productId}`, {
+        quantity,
+      });
+      return response.data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["cart"] });
+    onSuccess: (updatedCart) => {
+      queryClient.setQueryData(["cart"], updatedCart);
     },
   });
 
   // 3. Remove Item Mutation
   const removeItemMutation = useMutation({
     mutationFn: async (productId: string) => {
-      return api.delete(`/cart/items/${productId}`);
+      const response = await api.delete(`/cart/items/${productId}`);
+      return response.data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["cart"] });
+    onSuccess: (updatedCart) => {
+      queryClient.setQueryData(["cart"], updatedCart);
     },
   });
 

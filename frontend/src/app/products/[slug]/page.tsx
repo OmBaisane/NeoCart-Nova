@@ -129,13 +129,14 @@ export default function ProductDetailsPage({ params }: ProductPageProps) {
     mutationFn: async () => {
       if (!product) throw new Error("Product not found.");
 
-      return api.post("/cart/items", {
+      const response = await api.post("/cart/items", {
         productId: product._id,
         quantity,
       });
+      return response.data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["cart"] });
+    onSuccess: (updatedCart) => {
+      queryClient.setQueryData(["cart"], updatedCart);
     },
   });
 
@@ -214,6 +215,9 @@ export default function ProductDetailsPage({ params }: ProductPageProps) {
       const updated = [...uniqueIds, product._id];
 
       localStorage.setItem(storageKey, JSON.stringify(updated));
+
+      // Notify Navbar and other components immediately.
+      window.dispatchEvent(new Event("neocart:compare-updated"));
 
       setCompareMessage({
         text: "Product added to comparison list.",

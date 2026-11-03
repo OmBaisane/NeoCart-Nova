@@ -3,6 +3,7 @@ import {
   getDashboardStats,
   getAllUsers,
   getAdminProducts,
+  getAdminProductById,
   toggleProductStatus,
   getAdminOrders,
   updateOrderStatus,
@@ -21,6 +22,7 @@ router.get("/analytics", getAdminAnalytics);
 router.get("/users", getAllUsers);
 
 router.get("/products", getAdminProducts);
+router.get("/products/:id", getAdminProductById);
 router.patch("/products/:id/toggle-status", toggleProductStatus);
 
 router.get("/orders/export", exportAdminOrders);

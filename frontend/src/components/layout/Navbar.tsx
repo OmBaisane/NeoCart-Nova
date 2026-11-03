@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
@@ -47,6 +47,10 @@ interface ProductSuggestion {
   };
 }
 
+const COMPARE_STORAGE_KEY = "neocart_compare";
+const COMPARE_UPDATED_EVENT = "neocart:compare-updated";
+const MAX_COMPARE_PRODUCTS = 4;
+
 export const Navbar = () => {
   const router = useRouter();
   const pathname = usePathname();
@@ -62,6 +66,69 @@ export const Navbar = () => {
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const categoryMenuRef = useRef<HTMLDivElement>(null);
   const debouncedSearch = useDebounce(searchQuery.trim(), 300);
+
+  const updateCompareCount = useCallback(() => {
+    try {
+      const stored = localStorage.getItem(COMPARE_STORAGE_KEY);
+
+      if (!stored) {
+        setCompareCount(0);
+        return;
+      }
+
+      const parsed: unknown = JSON.parse(stored);
+
+      if (!Array.isArray(parsed)) {
+        localStorage.removeItem(COMPARE_STORAGE_KEY);
+        setCompareCount(0);
+        return;
+      }
+
+      const validIds = parsed.filter(
+        (id): id is string => typeof id === "string" && id.trim().length > 0,
+      );
+
+      const uniqueIds = [...new Set(validIds)].slice(0, MAX_COMPARE_PRODUCTS);
+
+      if (uniqueIds.length !== parsed.length) {
+        localStorage.setItem(COMPARE_STORAGE_KEY, JSON.stringify(uniqueIds));
+      }
+
+      setCompareCount(uniqueIds.length);
+    } catch {
+      localStorage.removeItem(COMPARE_STORAGE_KEY);
+      setCompareCount(0);
+    }
+  }, []);
+
+  // Compare count synchronization
+  useEffect(() => {
+    updateCompareCount();
+
+    const handleStorageChange = (event: StorageEvent) => {
+      if (!event.key || event.key === COMPARE_STORAGE_KEY) {
+        updateCompareCount();
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        updateCompareCount();
+      }
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+    window.addEventListener(COMPARE_UPDATED_EVENT, updateCompareCount);
+    window.addEventListener("pageshow", updateCompareCount);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      window.removeEventListener(COMPARE_UPDATED_EVENT, updateCompareCount);
+      window.removeEventListener("pageshow", updateCompareCount);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [updateCompareCount, pathname]);
 
   // Fetch live debounced suggestions
   const { data: suggestionsData, isFetching: isSearching } = useQuery<{
@@ -111,51 +178,6 @@ export const Navbar = () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
-
-  // Compare count synchronization
-  useEffect(() => {
-    const updateCompareCount = () => {
-      try {
-        const stored = localStorage.getItem("neocart_compare");
-
-        if (!stored) {
-          setCompareCount(0);
-          return;
-        }
-
-        const parsed: unknown = JSON.parse(stored);
-
-        if (!Array.isArray(parsed)) {
-          setCompareCount(0);
-          localStorage.removeItem("neocart_compare");
-          return;
-        }
-
-        const validIds = parsed.filter(
-          (id): id is string => typeof id === "string" && id.length > 0,
-        );
-
-        const uniqueIds = [...new Set(validIds)].slice(0, 4);
-
-        setCompareCount(uniqueIds.length);
-
-        localStorage.setItem("neocart_compare", JSON.stringify(uniqueIds));
-      } catch {
-        setCompareCount(0);
-        localStorage.removeItem("neocart_compare");
-      }
-    };
-
-    updateCompareCount();
-
-    window.addEventListener("storage", updateCompareCount);
-    window.addEventListener("neocart:compare-updated", updateCompareCount);
-
-    return () => {
-      window.removeEventListener("storage", updateCompareCount);
-      window.removeEventListener("neocart:compare-updated", updateCompareCount);
-    };
-  }, [pathname]);
 
   // Cart total items count
   const { data: cartData } = useQuery({
@@ -382,7 +404,6 @@ export const Navbar = () => {
 
         {/* Right Actions */}
         <div className="flex shrink-0 items-center gap-1 sm:gap-3">
-          {/* Theme Toggle */}
           <div className="hidden sm:block">
             <ThemeToggle />
           </div>

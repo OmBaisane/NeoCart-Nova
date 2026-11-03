@@ -1,10 +1,16 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Star, ShoppingCart, Heart, Loader2 } from "lucide-react";
+import {
+  Star,
+  ShoppingCart,
+  Heart,
+  Loader2,
+  GitCompareArrows,
+} from "lucide-react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 
@@ -30,10 +36,17 @@ interface ProductCardProps {
   product: ProductItem;
 }
 
+const COMPARE_STORAGE_KEY = "neocart_compare";
+const COMPARE_UPDATED_EVENT = "neocart:compare-updated";
+const MAX_COMPARE_PRODUCTS = 4;
+
 export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const router = useRouter();
   const { user, isLoading: authLoading } = useAuth();
   const queryClient = useQueryClient();
+
+  const [isInCompare, setIsInCompare] = useState(false);
+  const [compareLimitReached, setCompareLimitReached] = useState(false);
 
   const hasDiscount =
     product.discountPrice !== undefined &&
@@ -41,8 +54,74 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     product.discountPrice < product.price;
 
   const currentPrice = hasDiscount ? product.discountPrice! : product.price;
-
   const isOutOfStock = product.stock <= 0;
+
+  const getCompareProducts = (): string[] => {
+    try {
+      const stored = localStorage.getItem(COMPARE_STORAGE_KEY);
+      const parsed: unknown = stored ? JSON.parse(stored) : [];
+
+      if (!Array.isArray(parsed)) return [];
+
+      return [
+        ...new Set(
+          parsed.filter(
+            (id): id is string =>
+              typeof id === "string" && id.trim().length > 0,
+          ),
+        ),
+      ].slice(0, MAX_COMPARE_PRODUCTS);
+    } catch {
+      return [];
+    }
+  };
+
+  useEffect(() => {
+    const updateCompareState = () => {
+      const ids = getCompareProducts();
+      setIsInCompare(ids.includes(product._id));
+      setCompareLimitReached(
+        !ids.includes(product._id) && ids.length >= MAX_COMPARE_PRODUCTS,
+      );
+    };
+
+    updateCompareState();
+
+    window.addEventListener("storage", updateCompareState);
+    window.addEventListener(COMPARE_UPDATED_EVENT, updateCompareState);
+
+    return () => {
+      window.removeEventListener("storage", updateCompareState);
+      window.removeEventListener(COMPARE_UPDATED_EVENT, updateCompareState);
+    };
+  }, [product._id]);
+
+  const handleCompareClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const ids = getCompareProducts();
+
+    if (ids.includes(product._id)) {
+      setIsInCompare(true);
+      setCompareLimitReached(false);
+      return;
+    }
+
+    if (ids.length >= MAX_COMPARE_PRODUCTS) {
+      setCompareLimitReached(true);
+      return;
+    }
+
+    const updatedIds = [...ids, product._id];
+
+    localStorage.setItem(COMPARE_STORAGE_KEY, JSON.stringify(updatedIds));
+
+    setIsInCompare(true);
+    setCompareLimitReached(false);
+
+    window.dispatchEvent(new Event(COMPARE_UPDATED_EVENT));
+  };
 
   const { data: wishlistData, isLoading: wishlistLoading } = useQuery({
     queryKey: ["wishlist"],
@@ -193,6 +272,38 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             <span>View</span>
           </Link>
         </div>
+
+        {/* Compare Button */}
+        <button
+          type="button"
+          onClick={handleCompareClick}
+          disabled={isInCompare || compareLimitReached}
+          className={`mt-3 flex w-full items-center justify-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold transition ${
+            isInCompare
+              ? "cursor-default border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-400"
+              : compareLimitReached
+                ? "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400 dark:border-slate-800 dark:bg-slate-800 dark:text-slate-500"
+                : "border-slate-200 bg-white text-slate-600 hover:border-brand-blue hover:text-brand-blue dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-cyan-500 dark:hover:text-cyan-400"
+          }`}
+          aria-label={
+            isInCompare ? "Already added to comparison" : "Add to comparison"
+          }
+          aria-pressed={isInCompare}
+          title={
+            compareLimitReached
+              ? "You can compare up to 4 products. Remove one to add another."
+              : undefined
+          }
+        >
+          <GitCompareArrows className="h-4 w-4" />
+          <span>
+            {isInCompare
+              ? "Added to Compare"
+              : compareLimitReached
+                ? "Compare Limit Reached"
+                : "Add to Compare"}
+          </span>
+        </button>
       </div>
     </article>
   );

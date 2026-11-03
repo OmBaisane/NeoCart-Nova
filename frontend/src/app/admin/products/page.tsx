@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
+import Link from "next/link";
 import {
   Package,
   Search,
@@ -12,6 +13,8 @@ import {
   Loader2,
   ChevronLeft,
   ChevronRight,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 
 interface AdminProduct {
@@ -78,6 +81,27 @@ export default function AdminProductsPage() {
       });
     },
   });
+
+  const deleteProductMutation = useMutation({
+    mutationFn: async (productId: string) => {
+      const response = await api.delete(`/products/${productId}`);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-products"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["featured-products"] });
+    },
+  });
+
+  const handleDeleteProduct = (product: AdminProduct) => {
+    const confirmed = window.confirm(
+      `Delete "${product.name}" from the active catalog? This is a reversible soft delete.`,
+    );
+
+    if (confirmed) deleteProductMutation.mutate(product._id);
+  };
 
   const products = data?.products ?? [];
   const totalProducts = data?.totalProducts ?? 0;
@@ -275,18 +299,36 @@ export default function AdminProductsPage() {
                     </td>
 
                     <td className="px-4 py-3 text-right">
-                      <button
-                        type="button"
-                        onClick={() => toggleStatusMutation.mutate(prod._id)}
-                        disabled={toggleStatusMutation.isPending}
-                        className="inline-flex items-center gap-1 font-semibold text-brand-blue hover:underline disabled:cursor-not-allowed disabled:opacity-50 dark:text-cyan-400"
-                      >
-                        {toggleStatusMutation.isPending && (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        )}
-
-                        {prod.isActive ? "Deactivate" : "Activate"}
-                      </button>
+                      <div className="inline-flex items-center justify-end gap-3">
+                        <Link
+                          href={`/admin/products/${prod._id}/edit`}
+                          className="inline-flex items-center gap-1 font-semibold text-brand-blue hover:underline dark:text-cyan-400"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                          Edit
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={() => toggleStatusMutation.mutate(prod._id)}
+                          disabled={toggleStatusMutation.isPending}
+                          className="font-semibold text-slate-600 hover:underline disabled:cursor-not-allowed disabled:opacity-50 dark:text-slate-300"
+                        >
+                          {prod.isActive ? "Deactivate" : "Activate"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteProduct(prod)}
+                          disabled={deleteProductMutation.isPending}
+                          className="inline-flex items-center gap-1 font-semibold text-rose-600 hover:underline disabled:cursor-not-allowed disabled:opacity-50 dark:text-rose-400"
+                        >
+                          {deleteProductMutation.isPending ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-3.5 w-3.5" />
+                          )}
+                          Delete
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -337,9 +379,12 @@ export default function AdminProductsPage() {
       )}
 
       {/* Mutation Error */}
-      {toggleStatusMutation.isError && (
-        <p className="text-xs font-medium text-rose-600 dark:text-rose-400">
-          Failed to update product status. Please try again.
+      {(toggleStatusMutation.isError || deleteProductMutation.isError) && (
+        <p
+          role="alert"
+          className="text-xs font-medium text-rose-600 dark:text-rose-400"
+        >
+          Failed to update this product. Please try again.
         </p>
       )}
     </main>
