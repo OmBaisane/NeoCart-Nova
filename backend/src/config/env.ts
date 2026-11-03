@@ -62,12 +62,16 @@ const envSchema = z
       // URL validation is also handled by the schema.
     }
 
+    const clientHostname = clientUrl?.hostname
+      .replace(/^\[|\]$/g, "")
+      .toLowerCase();
+
     if (
       !clientUrl ||
       clientUrl.protocol !== "https:" ||
-      clientUrl.hostname === "localhost" ||
-      clientUrl.hostname === "127.0.0.1" ||
-      clientUrl.hostname === "::1"
+      clientHostname === "localhost" ||
+      clientHostname === "127.0.0.1" ||
+      clientHostname === "::1"
     ) {
       ctx.addIssue({
         code: "custom",

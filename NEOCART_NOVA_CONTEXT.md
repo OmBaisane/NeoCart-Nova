@@ -1,358 +1,472 @@
 # NeoCart Nova — Current Project Context
 
+> Last updated: 2026-11-02
+> Project release: NeoCart Nova V1.1
+> Current focus: Final documentation review, Git review and push, followed by live customer/admin E2E verification.
+
 ## 1. Project Identity
 
 - **Project:** NeoCart Nova
-- **Type:** Modern full-stack e-commerce platform and serious portfolio project.
-- **Goal:** Production-oriented e-commerce application demonstrating Next.js, TypeScript, Tailwind, Node.js, Express, MongoDB/Mongoose, REST APIs, JWT authentication, authorization, Zod validation, e-commerce business logic, responsive UI, admin management, security, accessibility, performance, and deployment.
-- **Build approach:** Fresh implementation from scratch.
-- **Old NeoCart:** Reference-only. Never copy or migrate the old PHP/MySQL/Bootstrap/Vanilla JS architecture.
-- **Source of truth:** This context + Master Build Prompt + actual repository.
-- **V1 scope:** Locked. No feature expansion during final verification.
+- **Type:** Full-stack e-commerce platform and portfolio project.
+- **Goal:** Demonstrate practical, production-oriented full-stack engineering.
+- **Implementation:** Built from scratch.
+- **Old NeoCart:** Reference-only. Do not copy or migrate the old PHP/MySQL/Bootstrap/Vanilla JS architecture.
+- **Repository:** https://github.com/OmBaisane/NeoCart-Nova
+- **Frontend:** https://neo-cart-nova.vercel.app
+- **Backend:** https://neocart-nova-backend.onrender.com
+- **Database:** MongoDB Atlas M0 Free tier.
+- **License:** MIT License.
+- **Current release:** V1.1 finalization.
+
+The actual repository is the source of truth for implementation. This context file records the intended architecture, verified progress, remaining work, and project-specific rules.
 
 ## 2. Locked Architecture
-
-```text
-Next.js Frontend
-      ↓
-REST API
-      ↓
-Express + Node.js Backend
-      ↓
-Mongoose
-      ↓
-MongoDB Atlas
-```
 
 ### Frontend
 
 - Next.js App Router
+- React
 - TypeScript
 - Tailwind CSS
 - TanStack Query
 - Axios
 - Lucide React
-- shadcn/ui only where useful
-- Storefront and admin shells remain isolated
+- Separate storefront and admin experiences
 
 ### Backend
 
 - Node.js
 - Express
 - TypeScript
-- REST
+- REST API
 - Mongoose
 - MongoDB Atlas
+- Zod validation
 
 ### Authentication
 
-- JWT
-- Secure HttpOnly cookies
-- No JWT/token in localStorage
-- bcryptjs
-- `protect` and `adminOnly`
-- Production cross-site cookies use `SameSite=None` + `Secure`
+- JWT authentication
+- HttpOnly cookies
+- bcryptjs password hashing
+- No JWT/token storage in localStorage
+- `protect` and `adminOnly` middleware
+- Secure production cookie configuration, including `SameSite=None` and `Secure` where required
 
 ### Validation
 
-- Zod at runtime boundaries
-- TypeScript types for compile-time safety
+- Zod runtime validation
+- TypeScript compile-time safety
+- Server-side business-rule validation
 
-## 3. Locked V1 Scope
+## 3. Current Feature Scope
 
-### Customer
+The following describes the intended V1.1 application scope. Final production behavior must be confirmed through the release verification.
 
-- Home/landing
+### Customer Storefront
+
+- Home and landing page
 - Featured products
 - Categories
-- Product listing
-- Search/filter/sort/pagination
-- Product details
-- Product images
-- Ratings/reviews
+- Product catalog
+- Search
+- Category and price filters
+- Sorting and pagination
+- Product details and image gallery
+- Ratings and reviews
 
-### Authentication & Account
+### Authentication and Account
 
-- Register/login/logout
+- Registration
+- Login and logout
 - JWT authentication
 - Protected routes
-- Profile
-- Shipping address/profile management
-- Password change
+- Profile management
+- Shipping address management
+- Password management
 - Admin authorization
 
-### Shopping & Orders
+### Shopping
 
-- Add/update/remove cart items
+- Add, update, and remove cart items
 - Persistent user cart
-- Stock validation
-- Checkout
+- Cart validation
+- Server-side stock validation
+
+### Checkout and Orders
+
+- Cash on Delivery
 - Shipping information
-- COD
+- Server-side price and total calculation
+- Stock validation during checkout
+- Transaction-based order creation
 - Historical order snapshots
-- Order history/details
-- Tracking number
-- Valid cancellation
-- Restock after cancellation
+- Order history and details
+- Tracking numbers
+- Eligible cancellation
+- Inventory restoration after cancellation
 
 ### Reviews
 
-- 1–5 rating
-- Comment
-- One review per user/product
-- Edit own review
-- Delete own review
-- Product rating/review count
+- 1–5 star ratings
+- Written comments
+- One review per user per product
+- Review ownership checks
+- Review editing and deletion
+- Product rating and review-count recalculation
 
-### Admin
+### Admin Portal
 
-- Admin authentication
-- Dashboard
-- Product/inventory management
-- Stock management
-- Order management/status/tracking
-- Customer/user list
+- Admin-only access
+- Dashboard and statistics
+- Product management
+- Product creation and editing
+- Product deactivation
+- Inventory management
+- Category management
+- Order management
+- Order-status updates
+- Customer/user directory
 
-### Explicitly OUT of V1
+Do not remove implemented V1.1 features merely because they were absent from the original V1 scope.
 
-- Wishlist
-- Coupons
-- Loyalty
-- Chat
-- Notifications
-- Marketplace/multi-vendor
-- Product variants
-- Advanced analytics
-- AI recommendations
-- Complex payment gateway
-- Multiple admin roles
-- Advanced moderation
-- Microservices
-- Unnecessary abstractions
+## 4. Backend Business Rules
 
-## 4. Current Status — 2026-09-28
+### Authentication
 
-### Phase 1 — Foundation
+- Passwords are hashed using bcryptjs.
+- User passwords are excluded from normal queries using `select: false`.
+- Authentication uses HttpOnly cookies.
+- User-specific API access requires authentication.
+- Admin APIs require the admin role.
+- Public user responses must not expose passwords or secrets.
 
-**STATUS: COMPLETED**
+### Product and Inventory
 
-### Phase 2 — Backend Core
+- Product slugs are unique.
+- Product prices cannot be negative.
+- Discount prices must be lower than original prices.
+- Stock must be a non-negative integer.
+- Inactive products must not be treated as available for normal customer purchases.
+- Inventory updates must preserve stock consistency.
 
-**STATUS: FEATURE-COMPLETE**
+### Cart
 
-Implemented:
+- Each user has one cart.
+- Cart totals are recalculated from item quantities and prices.
+- Stock and current effective product prices must be validated.
+- Cart concurrency conflicts must be handled safely.
 
-- User, Category, Product, Cart, Order, Review models
-- Auth/user/product/category/cart/order/review/admin APIs
-- JWT + HttpOnly cookie authentication
-- bcrypt password hashing
-- `protect` / `adminOnly`
-- Centralized error handling
-- Zod validation
-- Server-side price/stock/order-total logic
-- Historical order snapshots
-- Review ownership and one-review-per-user/product constraint
-- Database seeder
+### Orders
 
-### Phase 3 — Frontend Core
+- Orders contain product snapshots, not merely live product references.
+- Checkout must validate the cart and inventory.
+- Checkout uses MongoDB transactions.
+- A successful checkout clears the corresponding cart.
+- A failed transaction must not leave partial inventory/order changes.
+- Cancellation is allowed only for eligible order states.
+- Inventory restoration must not happen repeatedly for the same order.
+- Order-status changes must follow the defined transition rules.
 
-**STATUS: COMPLETED**
+### Order Status Transitions
 
-Implemented:
+```text
+pending
+  ├── confirmed
+  ├── processing
+  └── cancelled
 
-- Home
-- Auth pages
-- Product catalog/search/filter/sort/pagination
-- Product details/gallery/reviews
-- Cart
-- Checkout/COD
-- Order success/history/details/cancellation
-- Profile/address/password management
-- TanStack Query integration
-- Responsive storefront UI
+confirmed
+  ├── processing
+  ├── shipped
+  └── cancelled
 
-### Phase 4 — Admin Portal
+processing
+  ├── shipped
+  └── cancelled
 
-**STATUS: COMPLETED**
+shipped
+  └── delivered
 
-Implemented:
+delivered / cancelled
+  └── terminal states
+```
 
-- Isolated admin layout
-- Dashboard/KPIs
-- Responsive sidebar/drawer
-- Product/inventory management
-- Product create/edit/deactivation
-- Order fulfillment/status/tracking
-- Customer directory
-- Frontend admin guard + backend authorization
+For COD, payment is marked paid when the order is delivered, according to the backend business rules.
 
-### Phase 5 — Integration, Security & Hardening
-
-**STATUS: COMPLETED**
-
-Completed:
-
-- Nested `<main>` landmark fix
-- Accessibility/navigation ARIA improvements
-- CSRF Origin/Referer protection
-- Helmet/security headers
-- Authentication rate limiting
-- Strict production CORS
-- Production environment validation
-- Search regex escaping + search length cap
-- Production-safe seeder behavior
-- Product soft-delete/deactivation
-- Category deletion protection
-- Atomic stock decrement
-- Transaction-safe checkout
-- Transaction-safe cancellation/restocking
-- Review edit/delete routes and UI
-- Meaningful TypeScript `any` cleanup
-- Professional comment cleanup
-- Existing loading/empty/error states
-- robots/sitemap and metadata improvements
-- Image optimization configuration
-
-### Phase 6 — Production Deployment
-
-**STATUS: DEPLOYED — FINAL LIVE VERIFICATION**
-
-Deployment state:
-
-- **MongoDB Atlas:** COMPLETED from the beginning; no setup work remaining.
-- **Backend:** DEPLOYED.
-- **Frontend:** DEPLOYED.
-- Production frontend/backend configuration is in place.
-
-Remaining work is verification, not deployment setup.
-
-## 5. Final Production Verification
-
-The remaining checklist is:
-
-- [ ] Actual frontend lint passes
-- [ ] Actual frontend production build passes
-- [ ] Actual backend TypeScript/build passes
-- [ ] Live frontend → backend communication verified
-- [ ] Register/login/logout verified in production
-- [ ] HttpOnly authentication cookie verified in production
-- [ ] CORS/CSRF behavior verified in production
-- [ ] Catalog/search/filter/sort/pagination verified
-- [ ] Cart persistence and stock validation verified
-- [ ] Live COD checkout verified
-- [ ] Order creation + cart clearing verified
-- [ ] Live cancellation + restocking verified
-- [ ] Review create/edit/delete verified
-- [ ] Admin authorization and critical admin flows verified
-- [ ] Final production smoke test completed
-
-Do not claim a check passed unless it was actually verified.
-
-## 6. Security Rules — Preserve
+## 5. Security Requirements — Preserve
 
 Do not regress:
 
 - HttpOnly JWT cookies
 - Secure production cookies
-- SameSite production configuration
-- strict CORS
-- CSRF protection
-- Helmet/security headers
-- auth rate limiting
-- bcrypt
+- Production SameSite configuration
+- Strict CORS
+- CSRF Origin/Referer protection
+- Helmet security headers
+- Authentication rate limiting
+- bcrypt password hashing
 - Zod validation
-- production environment validation
-- production error-message hiding
-- regex search hardening
-- soft-delete/deactivation
-- category deletion protection
-- atomic stock updates
-- transaction-safe checkout
-- transaction-safe cancellation
+- Production environment validation
+- Production-safe error responses
+- Search regex escaping and query bounds
+- Product deactivation instead of unsafe deletion
+- Category deletion protection
+- Atomic stock updates
+- Transaction-safe checkout
+- Transaction-safe cancellation/restocking
+- Admin authorization
+- Ownership checks
+- Unique constraints
+
+Any security change must be reviewed for regressions before release.
+
+## 6. Database and Transaction Testing
+
+- Database provider: MongoDB Atlas.
+- Current tier: M0 Free.
+- The application uses MongoDB transactions for critical order workflows.
+- Transaction support requires a MongoDB deployment configured as a replica set or another transaction-capable deployment.
+- Never use the production database for destructive automated tests.
+- Automated tests must use a separate test database or an isolated test environment.
+- Test data must be uniquely identifiable and safely cleaned up.
+- Never print, commit, or share MongoDB credentials.
+
+Checkout, cancellation, and restocking must be verified against actual transaction behavior before claiming full production integration coverage. Mock-only transaction tests must not be reported as full transaction integration coverage.
 
 ## 7. Seeder Rules
 
-The seeder is **development-only**.
+The seeder is development-only.
 
 Production behavior:
 
 - `NODE_ENV=production` must refuse seeding.
-- No production force flag should bypass this protection.
+- No force flag may bypass production protection.
 - No hardcoded credentials.
 - Development seed credentials must come from environment variables.
 
-Expected seed environment variables:
+Expected seed variables:
 
 ```text
 SEED_ADMIN_EMAIL
 SEED_ADMIN_PASSWORD
-SEED_ADMIN_PHONE
 SEED_DEMO_USER_EMAIL
 SEED_DEMO_USER_PASSWORD
 SEED_DEMO_USER_PHONE
+SEED_ALLOW_RESET
 ```
 
 These values belong only in local/development environment configuration and must never be committed.
 
-The seed script is not part of the live deployment flow.
+The seed script is not part of the production deployment flow.
 
-## 8. Code Quality Rules
+## 8. M11 — Testing and Quality Assurance
 
-- No meaningful `any` unless genuinely unavoidable.
-- Comments should be concise professional English and explain WHY/non-obvious behavior.
+**Status: Backend automated tests and local frontend checks completed. Live E2E verification remains pending.**
+
+### Backend Testing
+
+Implemented and verified:
+
+- Query-safety tests
+- Validator tests
+- Model tests
+- JWT utility tests
+- Environment configuration tests
+- Authentication middleware tests
+- CSRF middleware tests
+- Error-handler tests
+- Selected authentication controller tests
+- Selected user controller tests
+
+**Verified result: 15 test files, 197 tests passing.**
+
+Commands successfully executed:
+
+```bash
+npm run type-check
+npm test
+npm run build
+npm audit
+```
+
+Backend dependency audit: **0 vulnerabilities**.
+
+### Frontend Verification
+
+Successfully executed:
+
+```bash
+npm run lint
+npm run build
+```
+
+Frontend production dependency audit: **0 vulnerabilities**.
+
+Some moderate vulnerabilities remain in the development-only ESLint dependency tree. A forced breaking downgrade was intentionally avoided.
+
+### Testing Limitations
+
+The current automated suite does not establish complete end-to-end coverage of every customer/admin workflow or actual production database transaction behavior.
+
+Do not claim unimplemented frontend tests, complete API integration coverage, or full transaction integration coverage.
+
+### Testing Rules
+
+- Do not mark tests complete until they actually pass.
+- Do not use production data for automated testing.
+- Avoid mocking every controller and calling it integration testing.
+- Do not chase coverage numbers at the cost of meaningful assertions.
+- Keep test configuration compatible with the existing Node.js, TypeScript, and package setup.
+- Add only necessary dependencies.
+- Avoid unnecessary additional tests during finalization unless a concrete critical gap is identified.
+
+## 9. M11 Final Live E2E Checklist
+
+**Status: Pending — production workflows have not yet been signed off.**
+
+After final code verification and Git push, run a consolidated live E2E round.
+
+### Customer Journey
+
+- [ ] Register, login, and logout
+- [ ] Authentication cookie behavior
+- [ ] Product catalog and product details
+- [ ] Search, filters, sorting, and pagination
+- [ ] Cart add/update/remove
+- [ ] Cart persistence and stock validation
+- [ ] Checkout with COD
+- [ ] Order creation
+- [ ] Cart clearing after successful order
+- [ ] Order history and details
+- [ ] Eligible cancellation
+- [ ] Inventory restoration
+- [ ] Review create/edit/delete
+
+### Admin Journey
+
+- [ ] Admin login
+- [ ] Admin route/API authorization
+- [ ] Dashboard and analytics
+- [ ] Product create/edit/deactivation
+- [ ] Category management
+- [ ] Inventory updates
+- [ ] Customer directory
+- [ ] Order listing and details
+- [ ] Valid order-status transitions
+- [ ] Tracking and delivery workflow
+
+### Production Security and Smoke Tests
+
+- [ ] CORS behavior
+- [ ] CSRF behavior
+- [ ] Unauthorized API requests
+- [ ] Admin-only API protection
+- [ ] Invalid input handling
+- [ ] Error response behavior
+- [ ] Production frontend/backend communication
+- [ ] Final health checks
+
+Do not perform destructive tests on real customer data. Use controlled test accounts and test products/orders. Record any production test data created and clean it up safely where appropriate.
+
+## 10. Documentation and Licensing
+
+- Root `README.md` describes the V1.1 application.
+- Root `LICENSE` contains the MIT License.
+- Root `NEOCART_NOVA_CONTEXT.md` is the current-state handoff document.
+- Documentation must not claim unverified tests, deployment checks, or features.
+- Keep environment examples aligned with actual environment validation.
+- Never put secrets in documentation.
+
+## 11. Code Quality Rules
+
+- Avoid meaningful `any` unless genuinely unavoidable.
+- Use concise professional English comments explaining non-obvious behavior.
 - No secrets, passwords, `.env`, node_modules, or generated noise in Git.
 - Prefer readable code over unnecessary abstractions.
 - Preserve the existing architecture.
-- No feature creep.
+- No feature creep during finalization.
+- Do not rewrite working files without a concrete reason.
+- Provide complete updated files when changes are needed.
 
-## 9. Git Workflow
+## 12. Git Workflow
 
-For every meaningful milestone:
+Follow this sequence:
 
 ```text
 Inspect
-↓
-Explain briefly
-↓
+  ↓
+Explain
+  ↓
 Implement
-↓
+  ↓
 Verify
-↓
+  ↓
 Review changed files
-↓
+  ↓
 git status
-↓
-git add .
-↓
-git commit -m "meaningful message"
-↓
+  ↓
+Run all required checks
+  ↓
+Review staged changes
+  ↓
+git commit
+  ↓
 git push
-↓
-Report exact result
-↓
-STOP
+  ↓
+Verify push result
+  ↓
+Run consolidated live E2E
+  ↓
+Production sign-off
 ```
 
-Never claim a command passed unless it actually passed.
+Never claim a command passed unless it was actually executed and passed.
 
-## 10. Final Project Goal
+Never push unverified code.
 
-NeoCart Nova is no longer in feature-development mode.
+The consolidated live E2E round happens after the final code push.
 
-Current goal:
+## 13. Current Release Plan
 
 ```text
-V1 Complete
-   ↓
-Production Hardening Complete
-   ↓
-MongoDB Atlas + Backend + Frontend Deployed
-   ↓
-Final Live Verification
-   ↓
+V1.1 Repository Audit
+          ↓
+M11 Test Infrastructure
+          ↓
+Backend Automated Tests
+          ↓
+Frontend Lint and Build
+          ↓
+Fix Verified Issues
+          ↓
+Final Local Verification
+          ↓
+README + LICENSE + Context Finalization
+          ↓
+Final Git Review and Push
+          ↓
+Customer + Admin Live E2E
+          ↓
 Production Sign-off
+          ↓
+NeoCart Nova V1.1 Closed
 ```
 
-After the final live verification passes, NeoCart Nova should move to maintenance/portfolio status. Do not restart architecture or begin another feature cycle unless a future V1.1 scope is explicitly defined.
+## 14. Final Closure Criteria
 
-**This file is the current-state handoff document for NeoCart Nova.**
+NeoCart Nova V1.1 can be marked closed only after:
+
+1. Necessary code changes are complete.
+2. Automated tests have actually passed.
+3. Frontend lint and production build pass.
+4. Backend type-check and production build pass.
+5. Documentation matches the final implementation.
+6. Final changes are pushed to GitHub.
+7. Customer and admin live E2E workflows are verified.
+8. Critical production issues are resolved or explicitly documented.
+
+After closure, move the project to maintenance and portfolio status.
+
+Do not restart architecture or begin another feature cycle unless a future scope is explicitly defined.
+
+**This file is the current-state handoff document for NeoCart Nova V1.1.**

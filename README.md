@@ -1,314 +1,363 @@
-🛍️ NeoCart Nova
+# 🛍️ NeoCart Nova
 
-A production-oriented full-stack e-commerce platform built from scratch with Next.js 16, TypeScript, Node.js, Express, and MongoDB Atlas.
+A production-oriented full-stack e-commerce platform built with Next.js 16, React, TypeScript, Node.js, Express, and MongoDB Atlas.
 
-NeoCart Nova focuses on real-world e-commerce workflows, secure authentication, reliable inventory management, transaction-safe order processing, and a responsive user experience.
+NeoCart Nova demonstrates practical full-stack engineering through secure authentication, product discovery, persistent shopping, inventory management, transaction-aware order processing, and a dedicated administration portal.
+
+**Live Storefront:** https://neo-cart-nova.vercel.app
+
+**Backend API:** https://neocart-nova-backend.onrender.com/api
+
+**GitHub Repository:** https://github.com/OmBaisane/NeoCart-Nova
 
 ---
 
-🌟 Overview
+## 🌟 Overview
 
-NeoCart Nova is a modern e-commerce application designed to demonstrate production-oriented full-stack development rather than just basic CRUD functionality.
+NeoCart Nova is a modern e-commerce application built from scratch with a clear separation between the frontend, REST API, and database layers.
 
-The platform includes:
+The project focuses on realistic e-commerce workflows and production-oriented engineering practices rather than basic CRUD functionality alone.
 
-- Customer-facing storefront and product discovery
-- Secure authentication and authorization
+### Highlights
+
+- Customer storefront and product discovery
+- Secure authentication and role-based authorization
 - Persistent shopping cart
-- Stock-aware checkout
-- Transaction-safe order processing
-- Order tracking and cancellation
+- Stock-aware checkout with Cash on Delivery
+- Transaction-based order processing
+- Order history, tracking, and cancellation
 - Product reviews and ratings
 - Dedicated administration portal
-- Inventory and order management
-- Production-focused security and validation
-
-The application was built from scratch with a clear separation between the frontend, REST API, and database layers.
-
----
-
-🏗️ Architecture
-
-┌─────────────────────────────────────────────┐
-│ Next.js 16 Frontend │
-│ App Router + React + TanStack Query │
-└──────────────────────┬──────────────────────┘
-│
-REST API + Secure
-HttpOnly Cookies
-│
-┌──────────────────────▼──────────────────────┐
-│ Node.js + Express Backend │
-│ TypeScript + Zod + Mongoose │
-└──────────────────────┬──────────────────────┘
-│
-Mongoose / Sessions
-│
-┌──────────────────────▼──────────────────────┐
-│ MongoDB Atlas │
-│ Persistent Cloud Database │
-└─────────────────────────────────────────────┘
+- Product, category, inventory, and order management
+- Input validation and application security
+- Responsive user interface
 
 ---
 
-✨ Core Features
+## 🏗️ Architecture
 
-👤 Customer Experience
+```text
+┌──────────────────────────────────────────┐
+│              Next.js Frontend            │
+│       App Router · React · TypeScript    │
+│       Tailwind CSS · TanStack Query      │
+└─────────────────────┬────────────────────┘
+                      │
+               REST API + Cookies
+                      │
+┌─────────────────────▼────────────────────┐
+│             Express Backend              │
+│        Node.js · TypeScript · Zod         │
+│                 Mongoose                 │
+└─────────────────────┬────────────────────┘
+                      │
+               MongoDB Connection
+                      │
+┌─────────────────────▼────────────────────┐
+│               MongoDB Atlas              │
+│              Cloud Database              │
+└──────────────────────────────────────────┘
+```
 
-Product Discovery
+The frontend communicates with the backend through REST APIs. The backend handles authentication, authorization, validation, business logic, and database operations.
 
-- Product catalog
+---
+
+## ✨ Features
+
+### 👤 Customer Experience
+
+**Product Discovery**
+
+- Product catalog and product detail pages
 - Keyword search
-- Category filtering
-- Price range filtering
-- Multi-criteria sorting
-- Responsive pagination
-- Product detail pages
+- Category and price filtering
+- Sorting and pagination
+- Featured products
+- Product image gallery
 
-Authentication & Profile
+**Authentication and Account**
 
 - User registration and login
-- Email-based authentication
 - JWT-based authentication
-- Secure HttpOnly cookies
-- Protected routes
+- Secure HttpOnly authentication cookies
+- Protected account routes
 - Profile management
-- Role-based authorization
+- Shipping address management
+- Password management
 
-Shopping Cart
+**Shopping**
 
-- Persistent cart
+- Persistent user cart
+- Add, update, and remove cart items
 - Server-side stock validation
-- Quantity management
-- Automatic cart synchronization
-- TanStack Query cache synchronization
+- Cart validation and price synchronization
 
-Checkout & Orders
+**Checkout and Orders**
 
 - Cash on Delivery checkout
-- Server-side price and total validation
+- Server-side price and total calculation
 - Stock validation during checkout
-- Transaction-safe inventory updates
-- Order history
-- Order details
-- Human-readable tracking numbers
-- Order cancellation
-- Automatic stock restoration after eligible cancellation
+- Transaction-based order creation
+- Historical product and price snapshots
+- Order history and details
+- Tracking numbers
+- Eligible order cancellation
+- Inventory restoration after cancellation
 
-Reviews
+**Reviews**
 
-- 1–5 star ratings
-- Product reviews
+- 1–5 star product ratings
+- Written product reviews
 - One review per user per product
 - Review ownership validation
-- Review editing
-- Review deletion
+- Review editing and deletion
+- Product rating and review-count calculation
 
----
+### 🛡️ Admin Portal
 
-🛡️ Admin Management
+The administration experience is separated from the public storefront and protected by backend authorization.
 
-NeoCart Nova includes a dedicated administrative experience separated from the public storefront.
+**Dashboard and Analytics**
 
-Dashboard
+- Store statistics and dashboard information
+- Product and customer statistics
+- Inventory monitoring
 
-- Product and catalog statistics
-- Registered user statistics
-- Low-stock monitoring
-- Out-of-stock monitoring
+**Product and Category Management**
 
-Product & Inventory Management
-
-- Create products
-- Edit products
-- Manage inventory
-- Monitor stock levels
-- Configure stock thresholds
-- Soft-delete/deactivate products
+- Create and edit products
+- Product inventory management
+- Product activation and deactivation
 - Category management
 
-Order Management
+**Order Management**
 
-- View customer orders
-- Update order status
-- Manage fulfillment workflow
-- Generate tracking numbers
+- Review customer orders
+- Review order details
+- Manage order fulfillment
+- Apply validated order-status transitions
+- Manage tracking information
 
-Order lifecycle:
+**Customer Management**
 
-Pending → Confirmed → Shipped → Delivered
-
-Customer Management
-
-- View registered customers
-- Review contact information
-- View saved shipping information
+- View registered users
+- Review customer information
 - Review user roles
 
 ---
 
-🔒 Security & Reliability
+## 📦 Order Lifecycle
 
-Security and data consistency were major considerations throughout the project.
+The backend supports defined order-status transitions.
 
-Authentication
+```text
+Pending
+   ├── Confirmed
+   ├── Processing
+   └── Cancelled
+
+Confirmed
+   ├── Processing
+   ├── Shipped
+   └── Cancelled
+
+Processing
+   ├── Shipped
+   └── Cancelled
+
+Shipped
+   └── Delivered
+```
+
+Delivered and cancelled orders are terminal states.
+
+For Cash on Delivery, payment is marked as paid when the order is delivered, according to the backend business rules.
+
+Cancellation and inventory restoration are handled through transaction-aware backend operations.
+
+---
+
+## 🔒 Security and Reliability
+
+Security and data consistency are important parts of NeoCart Nova.
+
+**Authentication and Authorization**
 
 - JWT-based authentication
-- Secure HttpOnly cookies
-- Password hashing with bcrypt
+- HttpOnly cookies
+- Password hashing with bcryptjs
 - Protected API routes
-- Role-based authorization
+- Admin-only authorization
 - Ownership checks for user-specific resources
 
-Request & Data Validation
+**Request Validation**
 
-- Zod schema validation
+- Zod runtime validation
 - Server-side input validation
-- Server-side price validation
-- Server-side order total calculation
-- Server-side inventory validation
+- Server-side price and total calculation
+- Server-side stock validation
 - Environment variable validation
 
-Application Security
+**Application Security**
 
 - Helmet security headers
 - CORS configuration
-- CSRF protection
-- API rate limiting
-- Search/input hardening
-- Secure cookie configuration
+- CSRF Origin/Referer protection
+- Authentication rate limiting
+- Secure production cookie configuration
+- Search input and regular-expression hardening
 - Centralized error handling
+- Production-safe error responses
 
-Data Consistency
+**Data Consistency**
 
-Checkout and cancellation operations use MongoDB transactions where multiple related database changes must succeed together.
+- MongoDB transactions for critical order workflows
+- Atomic inventory updates
+- Historical order item snapshots
+- Cart concurrency protection
+- Unique constraints for important records
 
-This helps maintain consistency between:
-
-- Orders
-- Order items
-- Product inventory
-- Cart state
-
-Inventory updates are also handled with server-side checks and atomic database operations to reduce the risk of overselling.
+Transaction support requires a MongoDB deployment configured to support transactions, such as a replica-set deployment.
 
 ---
 
-🛠️ Tech Stack
+## 🛠️ Tech Stack
 
-Frontend
-
-- Next.js 16
-- React
-- TypeScript
-- Tailwind CSS
-- TanStack Query
-- Axios
-- Lucide React
-
-Backend
-
-- Node.js
-- Express.js
-- TypeScript
-- Mongoose
-
-Database
-
-- MongoDB Atlas
-
-Validation & Security
-
-- Zod
-- JSON Web Tokens (JWT)
-- bcryptjs
-- Helmet
-- Express Rate Limit
-- CSRF protection
-
-Deployment
-
-- Vercel — Frontend
-- Render — Backend
-- MongoDB Atlas — Database
+| Layer            | Technologies                                      |
+| ---------------- | ------------------------------------------------- |
+| Frontend         | Next.js 16, React 19, TypeScript                  |
+| Styling          | Tailwind CSS                                      |
+| Data fetching    | TanStack Query, Axios                             |
+| Icons            | Lucide React                                      |
+| Backend          | Node.js, Express 5, TypeScript                    |
+| Database         | MongoDB Atlas, Mongoose                           |
+| Validation       | Zod                                               |
+| Authentication   | JWT, bcryptjs, HttpOnly cookies                   |
+| Security         | Helmet, CORS, express-rate-limit, CSRF protection |
+| Frontend hosting | Vercel                                            |
+| Backend hosting  | Render                                            |
 
 ---
 
-📁 Project Structure
+## 📁 Project Structure
 
+```text
 NeoCart-Nova/
 │
-├── frontend/
-│ ├── app/
-│ ├── components/
-│ ├── hooks/
-│ ├── lib/
-│ └── ...
-│
 ├── backend/
-│ ├── controllers/
-│ ├── middleware/
-│ ├── models/
-│ ├── routes/
-│ ├── services/
-│ ├── utils/
-│ └── ...
+│   ├── src/
+│   │   ├── config/
+│   │   ├── controllers/
+│   │   ├── middleware/
+│   │   ├── models/
+│   │   ├── routes/
+│   │   ├── types/
+│   │   ├── utils/
+│   │   ├── app.ts
+│   │   └── server.ts
+│   ├── package.json
+│   ├── package-lock.json
+│   └── tsconfig.json
 │
-└── README.md
+├── frontend/
+│   ├── public/
+│   ├── src/
+│   │   ├── app/
+│   │   ├── components/
+│   │   ├── context/
+│   │   ├── hooks/
+│   │   ├── lib/
+│   │   └── providers/
+│   ├── package.json
+│   ├── package-lock.json
+│   └── tsconfig.json
+│
+├── LICENSE
+├── README.md
+└── NEOCART_NOVA_CONTEXT.md
+```
 
 ---
 
-🚀 Getting Started
+## 🚀 Getting Started
 
-Prerequisites
+### Prerequisites
 
-- Node.js 18+
-- MongoDB Atlas account or local MongoDB instance
+- Node.js 22
+- npm
+- Git
+- MongoDB Atlas account or a transaction-capable MongoDB deployment
 
-1. Clone the Repository
+### 1. Clone the Repository
 
-git clone https://github.com/your-username/neocart-nova.git
-cd neocart-nova
+```bash
+git clone https://github.com/OmBaisane/NeoCart-Nova.git
+cd NeoCart-Nova
+```
 
-2. Install Dependencies
+### 2. Install Backend Dependencies
 
-Backend:
-
+```bash
 cd backend
 npm install
+```
 
-Frontend:
+### 3. Install Frontend Dependencies
 
-cd ../frontend
+Open another terminal at the repository root:
+
+```bash
+cd frontend
 npm install
+```
 
-3. Configure Environment Variables
+### 4. Configure Environment Variables
 
-Backend — "backend/.env"
+Create `backend/.env` using `backend/.env.example` as the reference.
 
+Example:
+
+```env
 PORT=5000
 NODE_ENV=development
 MONGO_URI=your_mongodb_connection_string
-JWT_SECRET=your_jwt_secret_key
+JWT_SECRET=your_long_random_secret
 CLIENT_URL=http://localhost:3000
+```
 
-Frontend — "frontend/.env.local"
+Create `frontend/.env.local` using `frontend/.env.example` as the reference.
 
+Example:
+
+```env
 NEXT_PUBLIC_API_URL=http://localhost:5000/api
+```
 
-«Never commit real credentials, JWT secrets, or database connection strings to the repository.»
+Use the exact variable names and any additional required values documented in the environment example files.
 
-4. Run the Development Servers
+**Security reminders**
 
-Backend:
+- Never commit `.env` or `.env.local`.
+- Never expose database credentials or JWT secrets.
+- Do not use production credentials in local testing.
+- Keep development seeding separate from production.
 
-cd backend
+### 5. Start the Backend
+
+From the `backend` directory:
+
+```bash
 npm run dev
+```
 
-Frontend:
+### 6. Start the Frontend
 
-cd frontend
+From the `frontend` directory:
+
+```bash
 npm run dev
+```
 
 Open:
 
@@ -316,54 +365,87 @@ http://localhost:3000
 
 ---
 
-🌐 Live Project
+## 🧪 Testing and Verification
 
-Frontend:
-https://neo-cart-nova.vercel.app
+Testing is part of the NeoCart Nova V1.1 quality and release process.
 
-Backend API:
-https://neocart-nova-backend.onrender.com/api
+### Backend
+
+The backend includes an automated Vitest suite covering utility functions, validation, models, authentication, authorization, middleware, and selected controller behavior.
+
+**Verified backend test result:**
+
+- 15 test files
+- 197 tests passing
+
+Verified commands:
+
+```bash
+npm run type-check
+npm test
+npm run build
+npm audit
+```
+
+The backend dependency audit reports **0 vulnerabilities**.
+
+### Frontend
+
+Verified commands:
+
+```bash
+npm run lint
+npm run build
+```
+
+The frontend production dependency audit reports **0 vulnerabilities**.
+
+Some moderate findings remain in the development-only ESLint dependency tree. They are documented rather than addressed through potentially breaking dependency downgrades.
+
+### Remaining Verification
+
+Live customer and admin workflows still require final production verification.
+
+Passing local automated checks does not, by itself, establish that every production workflow has been verified.
 
 ---
 
-📸 Project Highlights
+## 🌐 Live Deployment
 
-NeoCart Nova includes dedicated experiences for:
+| Service     | URL                                           |
+| ----------- | --------------------------------------------- |
+| Storefront  | https://neo-cart-nova.vercel.app              |
+| Backend API | https://neocart-nova-backend.onrender.com/api |
+| GitHub      | https://github.com/OmBaisane/NeoCart-Nova     |
 
-- Product discovery
-- Product details and reviews
-- Shopping cart
-- Checkout
-- Order management
-- User profile
-- Admin dashboard
-- Inventory management
-- Order fulfillment
+The application uses Vercel for the frontend, Render for the backend, and MongoDB Atlas for persistent data storage.
 
 ---
 
-🎯 Project Goals
+## 🎯 Project Goals
 
-The primary goal of NeoCart Nova was to build a realistic full-stack e-commerce system while strengthening practical understanding of:
+NeoCart Nova was built to strengthen practical understanding of:
 
-- Full-stack architecture
+- Full-stack application architecture
 - REST API design
-- Authentication & authorization
-- Database modeling
-- Transaction handling
+- Authentication and authorization
+- Database modeling and relationships
+- MongoDB transactions
 - Inventory consistency
 - Server-side validation
 - Application security
-- State management
+- Frontend state management
 - Error handling
+- Responsive UI development
 - Accessibility
-- Responsive UI
 - Production deployment
 
-The project emphasizes understanding the engineering decisions behind the features, not simply making the application work.
+The project emphasizes understanding the engineering decisions behind real-world features, not simply making the application work.
 
 ---
 
-📄 License
+## 📄 License
 
-This project is licensed under the MIT License.
+NeoCart Nova is licensed under the **MIT License**.
+
+See the [LICENSE](./LICENSE) file for the complete license text.
