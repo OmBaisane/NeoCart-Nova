@@ -25,6 +25,10 @@ interface CompareMessage {
   error: boolean;
 }
 
+const COMPARE_STORAGE_KEY = "neocart_compare";
+const COMPARE_UPDATED_EVENT = "neocart:compare-updated";
+const MAX_COMPARE_PRODUCTS = 4;
+
 function getErrorMessage(error: unknown, fallback: string): string {
   const apiError = error as {
     response?: { data?: { message?: string } };
@@ -32,6 +36,26 @@ function getErrorMessage(error: unknown, fallback: string): string {
   };
 
   return apiError.response?.data?.message || apiError.message || fallback;
+}
+
+function getCompareIds(): string[] {
+  try {
+    const parsed: unknown = JSON.parse(
+      localStorage.getItem(COMPARE_STORAGE_KEY) || "[]",
+    );
+
+    if (!Array.isArray(parsed)) return [];
+
+    return [
+      ...new Set(
+        parsed.filter(
+          (id): id is string => typeof id === "string" && id.trim().length > 0,
+        ),
+      ),
+    ].slice(0, MAX_COMPARE_PRODUCTS);
+  } catch {
+    return [];
+  }
 }
 
 export default function ProductDetailsPage({ params }: ProductPageProps) {
@@ -46,6 +70,9 @@ export default function ProductDetailsPage({ params }: ProductPageProps) {
   const [compareMessage, setCompareMessage] = useState<CompareMessage | null>(
     null,
   );
+
+  const [isInCompare, setIsInCompare] = useState(false);
+  const [compareLimitReached, setCompareLimitReached] = useState(false);
 
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState("");
@@ -67,6 +94,31 @@ export default function ProductDetailsPage({ params }: ProductPageProps) {
     },
     enabled: Boolean(slug),
   });
+
+  // Sync comparison state across components and tabs
+  useEffect(() => {
+    if (!product?._id) return;
+
+    const updateCompareState = () => {
+      const ids = getCompareIds();
+      const alreadyAdded = ids.includes(product._id);
+
+      setIsInCompare(alreadyAdded);
+      setCompareLimitReached(
+        !alreadyAdded && ids.length >= MAX_COMPARE_PRODUCTS,
+      );
+    };
+
+    updateCompareState();
+
+    window.addEventListener("storage", updateCompareState);
+    window.addEventListener(COMPARE_UPDATED_EVENT, updateCompareState);
+
+    return () => {
+      window.removeEventListener("storage", updateCompareState);
+      window.removeEventListener(COMPARE_UPDATED_EVENT, updateCompareState);
+    };
+  }, [product?._id]);
 
   // Wishlist
   const { data: wishlistData, isLoading: isWishlistLoading } = useQuery<{
@@ -127,14 +179,18 @@ export default function ProductDetailsPage({ params }: ProductPageProps) {
   // Cart
   const cartMutation = useMutation({
     mutationFn: async () => {
-      if (!product) throw new Error("Product not found.");
+      if (!product) {
+        throw new Error("Product not found.");
+      }
 
       const response = await api.post("/cart/items", {
         productId: product._id,
         quantity,
       });
+
       return response.data;
     },
+
     onSuccess: (updatedCart) => {
       queryClient.setQueryData(["cart"], updatedCart);
     },
@@ -146,17 +202,20 @@ export default function ProductDetailsPage({ params }: ProductPageProps) {
       return;
     }
 
-    if (!product || product.stock <= 0) return;
+    if (!product || product.stock <= 0 || cartMutation.isPending) {
+      return;
+    }
 
     cartMutation.mutate();
   };
 
   // Recently viewed products
   useEffect(() => {
-    if (!product?._id || typeof window === "undefined") return;
+    if (!product?._id) return;
 
     try {
       const storageKey = "neocart_recent_viewed";
+
       const parsed: unknown = JSON.parse(
         localStorage.getItem(storageKey) || "[]",
       );
@@ -183,41 +242,40 @@ export default function ProductDetailsPage({ params }: ProductPageProps) {
     if (!product) return;
 
     try {
-      const storageKey = "neocart_compare";
-      const parsed: unknown = JSON.parse(
-        localStorage.getItem(storageKey) || "[]",
-      );
+      const existing = getCompareIds();
 
-      const existing = Array.isArray(parsed)
-        ? parsed.filter(
-            (id): id is string => typeof id === "string" && id.length > 0,
-          )
-        : [];
+      if (existing.includes(product._id)) {
+        setIsInCompare(true);
+        setCompareLimitReached(false);
 
-      const uniqueIds = [...new Set(existing)].slice(0, 4);
-
-      if (uniqueIds.includes(product._id)) {
         setCompareMessage({
           text: "This product is already in your comparison list.",
-          error: true,
+          error: false,
         });
+
         return;
       }
 
-      if (uniqueIds.length >= 4) {
+      if (existing.length >= MAX_COMPARE_PRODUCTS) {
+        setIsInCompare(false);
+        setCompareLimitReached(true);
+
         setCompareMessage({
           text: "You can compare a maximum of 4 products. Remove one to add another.",
           error: true,
         });
+
         return;
       }
 
-      const updated = [...uniqueIds, product._id];
+      const updated = [...existing, product._id];
 
-      localStorage.setItem(storageKey, JSON.stringify(updated));
+      localStorage.setItem(COMPARE_STORAGE_KEY, JSON.stringify(updated));
 
-      // Notify Navbar and other components immediately.
-      window.dispatchEvent(new Event("neocart:compare-updated"));
+      setIsInCompare(true);
+      setCompareLimitReached(false);
+
+      window.dispatchEvent(new Event(COMPARE_UPDATED_EVENT));
 
       setCompareMessage({
         text: "Product added to comparison list.",
@@ -250,13 +308,16 @@ export default function ProductDetailsPage({ params }: ProductPageProps) {
 
   const reviewMutation = useMutation({
     mutationFn: async () => {
-      if (!product) throw new Error("Product not found.");
+      if (!product) {
+        throw new Error("Product not found.");
+      }
 
       return api.post(`/products/${product._id}/reviews`, {
         rating: reviewRating,
         comment: reviewComment.trim(),
       });
     },
+
     onSuccess: () => {
       setReviewRating(5);
       setReviewComment("");
@@ -265,10 +326,12 @@ export default function ProductDetailsPage({ params }: ProductPageProps) {
       queryClient.invalidateQueries({
         queryKey: ["reviews", product?._id],
       });
+
       queryClient.invalidateQueries({
         queryKey: ["product", slug],
       });
     },
+
     onError: (error: unknown) => {
       setReviewSubmitError(
         getErrorMessage(error, "Unable to submit your review."),
@@ -313,10 +376,12 @@ export default function ProductDetailsPage({ params }: ProductPageProps) {
         comment,
       });
     },
+
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ["reviews", product?._id],
       });
+
       queryClient.invalidateQueries({
         queryKey: ["product", slug],
       });
@@ -340,10 +405,12 @@ export default function ProductDetailsPage({ params }: ProductPageProps) {
     mutationFn: async (reviewId: string) => {
       return api.delete(`/reviews/${reviewId}`);
     },
+
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ["reviews", product?._id],
       });
+
       queryClient.invalidateQueries({
         queryKey: ["product", slug],
       });
@@ -375,7 +442,9 @@ export default function ProductDetailsPage({ params }: ProductPageProps) {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center px-4 text-center">
         <AlertCircle className="h-12 w-12 text-destructive" />
+
         <h1 className="mt-4 text-2xl font-bold">Product Not Found</h1>
+
         <p className="mt-2 text-muted-foreground">
           This product may have been removed or is currently unavailable.
         </p>
@@ -424,6 +493,7 @@ export default function ProductDetailsPage({ params }: ProductPageProps) {
         )}
 
         <ChevronRight className="h-4 w-4" />
+
         <span className="max-w-45 truncate text-foreground">
           {product.name}
         </span>
@@ -456,7 +526,8 @@ export default function ProductDetailsPage({ params }: ProductPageProps) {
                   )
                 : null
             }
-            isComparing={false}
+            isComparing={isInCompare}
+            compareLimitReached={compareLimitReached}
             compareMessage={compareMessage}
             wishlistError={wishlistMutation.isError}
             onQuantityChange={(value) => {

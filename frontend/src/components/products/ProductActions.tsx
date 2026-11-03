@@ -17,6 +17,7 @@ interface ProductActionsProps {
   cartSuccess: boolean;
   cartError: string | null;
   isComparing: boolean;
+  compareLimitReached: boolean;
   compareMessage: {
     text: string;
     error: boolean;
@@ -34,6 +35,7 @@ export default function ProductActions({
   cartSuccess,
   cartError,
   isComparing,
+  compareLimitReached,
   compareMessage,
   wishlistError,
   onQuantityChange,
@@ -84,17 +86,37 @@ export default function ProductActions({
           ) : (
             <ShoppingCart className="h-5 w-5" />
           )}
-          {isOutOfStock ? "Out of Stock" : "Add to Cart"}
+          {isOutOfStock
+            ? "Out of Stock"
+            : isAddingToCart
+              ? "Adding to Cart..."
+              : "Add to Cart"}
         </button>
 
         <button
           type="button"
           onClick={onCompare}
-          disabled={isComparing}
-          className="flex items-center justify-center gap-2 rounded-xl border border-border px-6 py-4 font-semibold transition hover:bg-muted disabled:opacity-50"
+          disabled={isComparing || compareLimitReached}
+          aria-pressed={isComparing}
+          className={`flex items-center justify-center gap-2 rounded-xl border px-6 py-4 font-semibold transition disabled:cursor-not-allowed ${
+            isComparing
+              ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-400"
+              : compareLimitReached
+                ? "border-border bg-muted text-muted-foreground"
+                : "border-border hover:bg-muted"
+          }`}
+          title={
+            compareLimitReached
+              ? "You can compare up to 4 products. Remove one to add another."
+              : undefined
+          }
         >
           <Scale className="h-5 w-5" />
-          Compare
+          {isComparing
+            ? "Added to Compare"
+            : compareLimitReached
+              ? "Compare Limit Reached"
+              : "Add to Compare"}
         </button>
       </div>
 

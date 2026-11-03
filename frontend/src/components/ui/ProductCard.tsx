@@ -3,14 +3,17 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Star,
   ShoppingCart,
   Heart,
   Loader2,
   GitCompareArrows,
+  CheckCircle,
+  AlertCircle,
 } from "lucide-react";
+
 import { api } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 
@@ -51,6 +54,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const hasDiscount =
     product.discountPrice !== undefined &&
     product.discountPrice !== null &&
+    product.discountPrice > 0 &&
     product.discountPrice < product.price;
 
   const currentPrice = hasDiscount ? product.discountPrice! : product.price;
@@ -76,15 +80,16 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     }
   };
 
-  useEffect(() => {
-    const updateCompareState = () => {
-      const ids = getCompareProducts();
-      setIsInCompare(ids.includes(product._id));
-      setCompareLimitReached(
-        !ids.includes(product._id) && ids.length >= MAX_COMPARE_PRODUCTS,
-      );
-    };
+  const updateCompareState = () => {
+    const ids = getCompareProducts();
 
+    setIsInCompare(ids.includes(product._id));
+    setCompareLimitReached(
+      !ids.includes(product._id) && ids.length >= MAX_COMPARE_PRODUCTS,
+    );
+  };
+
+  useEffect(() => {
     updateCompareState();
 
     window.addEventListener("storage", updateCompareState);
@@ -103,8 +108,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     const ids = getCompareProducts();
 
     if (ids.includes(product._id)) {
-      setIsInCompare(true);
-      setCompareLimitReached(false);
+      updateCompareState();
       return;
     }
 
@@ -123,6 +127,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     window.dispatchEvent(new Event(COMPARE_UPDATED_EVENT));
   };
 
+  // Wishlist
   const { data: wishlistData, isLoading: wishlistLoading } = useQuery({
     queryKey: ["wishlist"],
     queryFn: async () => {
@@ -169,6 +174,38 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     }
   };
 
+  // Add to Cart
+  const addToCartMutation = useMutation({
+    mutationFn: async () => {
+      const response = await api.post("/cart/items", {
+        productId: product._id,
+        quantity: 1,
+      });
+
+      return response.data;
+    },
+    onSuccess: (updatedCart) => {
+      queryClient.setQueryData(["cart"], updatedCart);
+      queryClient.invalidateQueries({ queryKey: ["cart"] });
+    },
+  });
+
+  const handleAddToCart = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!user) {
+      router.push(
+        `/login?redirect=${encodeURIComponent(`/products/${product.slug}`)}`,
+      );
+      return;
+    }
+
+    if (isOutOfStock || addToCartMutation.isPending) return;
+
+    addToCartMutation.mutate();
+  };
+
   return (
     <article className="group relative flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:shadow-slate-200/60 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-700 dark:hover:shadow-slate-950/60">
       {/* Wishlist Button */}
@@ -179,7 +216,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           authLoading ||
           (!!user && (wishlistLoading || toggleWishlistMutation.isPending))
         }
-        className={`absolute top-3 right-3 z-10 flex h-8 w-8 items-center justify-center rounded-full backdrop-blur-md shadow-sm transition-all ${
+        className={`absolute right-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-full shadow-sm backdrop-blur-md transition-all ${
           isInWishlist
             ? "bg-rose-50 text-rose-500 hover:bg-rose-100 dark:bg-rose-500/20 dark:text-rose-400 dark:hover:bg-rose-500/40"
             : "bg-white/70 text-slate-400 hover:bg-white hover:text-rose-500 dark:bg-slate-900/60 dark:text-slate-300 dark:hover:bg-slate-900 dark:hover:text-rose-400"
@@ -201,7 +238,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       >
         <img
           src={
-            product.images[0] ||
+            product.images?.[0] ||
             "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&q=80"
           }
           alt={product.name}
@@ -209,7 +246,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         />
 
         {hasDiscount && (
-          <span className="absolute top-3 left-3 rounded-full bg-rose-600 px-2.5 py-0.5 text-[11px] font-bold text-white shadow-sm">
+          <span className="absolute left-3 top-3 rounded-full bg-rose-600 px-2.5 py-0.5 text-[11px] font-bold text-white shadow-sm">
             SAVE ₹{(product.price - currentPrice).toLocaleString("en-IN")}
           </span>
         )}
@@ -251,7 +288,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           </span>
         </div>
 
-        <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-2 dark:border-slate-800">
+        {/* Price */}
+        <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3 dark:border-slate-800">
           <div className="flex flex-col">
             <span className="text-base font-extrabold text-brand-charcoal dark:text-white">
               ₹{currentPrice.toLocaleString("en-IN")}
@@ -266,19 +304,49 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
           <Link
             href={`/products/${product.slug}`}
-            className="flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-blue dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-cyan-600"
+            className="text-xs font-semibold text-brand-blue transition hover:underline dark:text-cyan-400"
           >
-            <ShoppingCart className="h-3.5 w-3.5" />
-            <span>View</span>
+            View Details
           </Link>
         </div>
 
-        {/* Compare Button */}
+        {/* Add to Cart */}
+        <button
+          type="button"
+          onClick={handleAddToCart}
+          disabled={isOutOfStock || authLoading || addToCartMutation.isPending}
+          className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg bg-slate-900 px-3 py-2.5 text-xs font-semibold text-white transition hover:bg-brand-blue disabled:cursor-not-allowed disabled:opacity-50 dark:bg-blue-600 dark:hover:bg-cyan-600"
+        >
+          {addToCartMutation.isPending ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : addToCartMutation.isSuccess ? (
+            <CheckCircle className="h-4 w-4" />
+          ) : (
+            <ShoppingCart className="h-4 w-4" />
+          )}
+
+          {isOutOfStock
+            ? "Out of Stock"
+            : addToCartMutation.isPending
+              ? "Adding to Cart..."
+              : addToCartMutation.isSuccess
+                ? "Added to Cart"
+                : "Add to Cart"}
+        </button>
+
+        {addToCartMutation.isError && (
+          <p className="mt-2 flex items-start gap-1.5 text-xs text-rose-600 dark:text-rose-400">
+            <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+            Unable to add this product to your cart. Please try again.
+          </p>
+        )}
+
+        {/* Compare */}
         <button
           type="button"
           onClick={handleCompareClick}
           disabled={isInCompare || compareLimitReached}
-          className={`mt-3 flex w-full items-center justify-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold transition ${
+          className={`mt-2 flex w-full items-center justify-center gap-2 rounded-lg border px-3 py-2.5 text-xs font-semibold transition ${
             isInCompare
               ? "cursor-default border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-400"
               : compareLimitReached
