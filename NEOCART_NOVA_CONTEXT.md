@@ -1,8 +1,8 @@
 # NeoCart Nova — Current Project Context
 
-> Last updated: 2026-11-02
-> Project release: NeoCart Nova V1.1
-> Current focus: Final documentation review, Git review and push, followed by live customer/admin E2E verification.
+> Last updated: 2026-11-03  
+> Project release: NeoCart Nova V1.1  
+> Current focus: Final documentation, Git review and push, followed by remaining live customer/admin E2E verification.
 
 ## 1. Project Identity
 
@@ -60,7 +60,7 @@ The actual repository is the source of truth for implementation. This context fi
 
 ## 3. Current Feature Scope
 
-The following describes the intended V1.1 application scope. Final production behavior must be confirmed through the release verification.
+The following describes the intended V1.1 application scope. Final production behavior must be confirmed through release verification.
 
 ### Customer Storefront
 
@@ -220,6 +220,8 @@ Do not regress:
 
 Any security change must be reviewed for regressions before release.
 
+**Credential safety reminder:** An admin JWT cookie/token was previously pasted into chat. Treat that token as exposed. If not already completed, rotate `JWT_SECRET` in Render, redeploy the backend to invalidate old tokens, and log in again. Never paste a new token into chat or commit it.
+
 ## 6. Database and Transaction Testing
 
 - Database provider: MongoDB Atlas.
@@ -261,7 +263,7 @@ The seed script is not part of the production deployment flow.
 
 ## 8. M11 — Testing and Quality Assurance
 
-**Status: Backend automated tests and local frontend checks completed. Live E2E verification remains pending.**
+**Status: Backend automated tests and local frontend checks completed. Live E2E verification is partially complete and remains pending.**
 
 ### Backend Testing
 
@@ -278,18 +280,24 @@ Implemented and verified:
 - Selected authentication controller tests
 - Selected user controller tests
 
-**Verified result: 15 test files, 197 tests passing.**
+**Latest verified result: 16 test files, 205 tests passing.**
 
 Commands successfully executed:
 
 ```bash
-npm run type-check
 npm test
+npm run type-check
 npm run build
 npm audit
 ```
 
-Backend dependency audit: **0 vulnerabilities**.
+Backend results:
+
+- 16 test files passed.
+- 205 tests passed.
+- Type-check passed.
+- Production build passed.
+- Dependency audit: **0 vulnerabilities**.
 
 ### Frontend Verification
 
@@ -298,11 +306,20 @@ Successfully executed:
 ```bash
 npm run lint
 npm run build
+npm audit
+npm audit --omit=dev
 ```
 
-Frontend production dependency audit: **0 vulnerabilities**.
+Frontend results:
 
-Some moderate vulnerabilities remain in the development-only ESLint dependency tree. A forced breaking downgrade was intentionally avoided.
+- ESLint passed.
+- Next.js 16.4.3 production build passed.
+- TypeScript validation passed during build.
+- 21 static pages generated.
+- Production dependency audit (`npm audit --omit=dev`): **0 vulnerabilities**.
+- Full dependency audit: **15 moderate findings** in the development-only ESLint/tooling dependency tree.
+
+The dependency tree was inspected. A forced breaking downgrade was intentionally avoided. Do not claim the full frontend audit is clean; distinguish production dependencies from development tooling.
 
 ### Testing Limitations
 
@@ -322,15 +339,21 @@ Do not claim unimplemented frontend tests, complete API integration coverage, or
 
 ## 9. M11 Final Live E2E Checklist
 
-**Status: Pending — production workflows have not yet been signed off.**
+**Status: Partially verified — production workflows have not yet been fully signed off.**
 
-After final code verification and Git push, run a consolidated live E2E round.
+### Confirmed live checks
 
-### Customer Journey
+- [x] Admin Product Edit page loads.
+- [x] Admin Product Save/Update works.
+- [x] Product Details page checked.
+- [x] Product images checked.
+- [x] Product Details compare-count event issue fixed and confirmed by user.
+
+### Customer Journey — Remaining Verification
 
 - [ ] Register, login, and logout
 - [ ] Authentication cookie behavior
-- [ ] Product catalog and product details
+- [ ] Product catalog and product details — full journey
 - [ ] Search, filters, sorting, and pagination
 - [ ] Cart add/update/remove
 - [ ] Cart persistence and stock validation
@@ -342,12 +365,14 @@ After final code verification and Git push, run a consolidated live E2E round.
 - [ ] Inventory restoration
 - [ ] Review create/edit/delete
 
-### Admin Journey
+### Admin Journey — Remaining Verification
 
-- [ ] Admin login
+- [ ] Admin login and logout
 - [ ] Admin route/API authorization
 - [ ] Dashboard and analytics
-- [ ] Product create/edit/deactivation
+- [ ] Product creation
+- [ ] Product edit/update — confirmed above
+- [ ] Product activation/deactivation
 - [ ] Category management
 - [ ] Inventory updates
 - [ ] Customer directory
@@ -355,7 +380,7 @@ After final code verification and Git push, run a consolidated live E2E round.
 - [ ] Valid order-status transitions
 - [ ] Tracking and delivery workflow
 
-### Production Security and Smoke Tests
+### Production Security and Smoke Tests — Remaining Verification
 
 - [ ] CORS behavior
 - [ ] CSRF behavior
@@ -365,6 +390,7 @@ After final code verification and Git push, run a consolidated live E2E round.
 - [ ] Error response behavior
 - [ ] Production frontend/backend communication
 - [ ] Final health checks
+- [ ] Confirm admin JWT secret rotation after prior token exposure, if not already done
 
 Do not perform destructive tests on real customer data. Use controlled test accounts and test products/orders. Record any production test data created and clean it up safely where appropriate.
 
@@ -454,7 +480,7 @@ NeoCart Nova V1.1 Closed
 
 ## 14. Final Closure Criteria
 
-NeoCart Nova V1.1 can be marked closed only after:
+NeoCart Nova V1.1 can be marked fully closed only after:
 
 1. Necessary code changes are complete.
 2. Automated tests have actually passed.
@@ -464,6 +490,7 @@ NeoCart Nova V1.1 can be marked closed only after:
 6. Final changes are pushed to GitHub.
 7. Customer and admin live E2E workflows are verified.
 8. Critical production issues are resolved or explicitly documented.
+9. Credential exposure follow-up is completed.
 
 After closure, move the project to maintenance and portfolio status.
 
